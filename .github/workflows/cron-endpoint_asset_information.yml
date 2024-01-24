@@ -1,5 +1,5 @@
 
-name: Python application
+name: cron-endpoint-asset-information weekly Monday
 on:
   push:
     branches: [ "develop" ]

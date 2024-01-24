@@ -1,5 +1,5 @@
 
-name: Python application
+name: write-create-csv-file
 on:
   push:
     branches: [ "develop" ]
