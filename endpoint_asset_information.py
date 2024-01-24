@@ -28,9 +28,9 @@ def Crowdstrike_Devices():
     mac_details = hosts.get_device_details(ids=mac_filt.data)
     linux_details = hosts.get_device_details(ids=linux_filt.data)
 
-    windows_csv_file_path = 'crowdstrike_windows_hostname.csv'
-    mac_csv_file_path = 'crowdstrike_mac_hostname.csv'
-    linux_csv_file_path = 'crowdstrike_linux_hostname.csv'
+    windows_csv_file_path = 'data/crowdstrike_windows_hostname.csv'
+    mac_csv_file_path = 'data/crowdstrike_mac_hostname.csv'
+    linux_csv_file_path = 'data/crowdstrike_linux_hostname.csv'
 
     with open(windows_csv_file_path, 'w', newline='') as windows_csvfile:
         windows_csv_writer = csv.writer(windows_csvfile)
@@ -83,9 +83,9 @@ def Automox():
             print(response.status_code)
             break
     
-    windows_csv_file_path = 'automox_windows_hostname.csv'
-    mac_csv_file_path = 'automox_mac_hostname.csv'
-    linux_csv_file_path = 'automox_linux_hostname.csv'
+    windows_csv_file_path = 'data/automox_windows_hostname.csv'
+    mac_csv_file_path = 'data/automox_mac_hostname.csv'
+    linux_csv_file_path = 'data/automox_linux_hostname.csv'
     
     windows_data = []
     mac_data = []
