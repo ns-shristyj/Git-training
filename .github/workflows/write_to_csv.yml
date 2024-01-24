@@ -1,19 +1,26 @@
-name: Create a CSV File with sample data
+
+name: Python application
 on:
   push:
-    branches: ["develop"]
+    branches: [ "develop" ]
   pull_request:
-    branches: ["develop"]
+    branches: [ "develop" ]
+  workflow_dispatch:
+  schedule:
+    - cron: '1 * * * 1'
+
 
 jobs:
   build:
+
     runs-on: ["self-hosted", "linux", "x64", "sz-XS", "gh", "cheap"]
+
     steps:
-    - name: Setup python
+    - uses: actions/checkout@v4.0.0
+    - name: Set up Python 3.8 - 10 
       uses: actions/setup-python@v4.0.0
       with:
         python-version: 3.8
-
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
@@ -28,5 +35,3 @@ jobs:
     - name: Run Test File
       run: |
         python write_to_sheets.py
-      
-
