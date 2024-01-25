@@ -1,9 +1,5 @@
-import argparse
+import os
 
-parser = argparse.ArgumentParser()
-parser.add_argument('-s', '--secret', help="Secret key to store", action='store', required=True)
+SUPER_SECRET = os.environ['SUPER_SECRET']
 
-args = parser.parse_args()
-
-
-print(f"The KEY is {args.secret}")
+print(SUPER_SECRET)
