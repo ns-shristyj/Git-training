@@ -1,0 +1,32 @@
+# For more informatio on how to setup GitHub Actions with Terraform, documentation is here:
+# https://developer.hashicorp.com/terraform/tutorials/automation/github-actions
+
+name: Terraform Plan Action
+
+on:
+  push:
+    branches: [ "ns-cquinlan" ]
+  pull_request:
+    branches: [ "ns-cquinlan" ]
+
+jobs:
+  terraform:
+    if: github.repository != 'netSkope/GIS-SecEng-Intern/ns-cquinlan'
+    name: "Terraform Plan"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+    # Checkout checks out the repository. Uses defines the GitHub action or Docker image to run that specific step. 
+    # The checkout step uses GitHub's actions/checkout@v3 action.
+    - name: Checkout
+      uses: actions/checkout@v3
+    # Create Plan Run creates a speculative plan run in Terraform Cloud using the configuration uploaded.
+    - name: Create Plan Run
+      uses: hashicorp/tfc-workflows-github/actions/create-run@v1.0.0
+      id: plan-run
+    # Get Plan Output extracts the plan output from the speculative run.
+    - name: Get Plan Output
+      uses: hashicorp/tfc-workflows-github/actions/plan-output@v1.0.0
+      id: plan-output

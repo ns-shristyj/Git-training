@@ -1,0 +1,57 @@
+# For more informatio on how to setup GitHub Actions with Terraform, documentation is here:
+# https://developer.hashicorp.com/terraform/tutorials/automation/github-actions
+
+# https://www.pluralsight.com/resources/blog/cloud/how-to-use-github-actions-to-automate-terraform
+
+name: Terraform Apply Action
+
+on:
+  push:
+    branches: [ "ns-cquinlan" ]
+  pull_request:
+    branches: [ "ns-cquinlan" ]
+
+
+jobs:
+  terraform:
+    if: github.repository != 'netSkope/GIS-SecEng-Intern/ns-cquinlan'
+    name: "Terraform Apply"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+      # Responsible for 
+    - name: Terraform Init
+      uses: hashicorp/terraform-github-actions/init@v0.4.0
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        TF_ACTION_WORKING_DIR: 'terraform'
+        AWS_ACCESS_KEY_ID:  ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY:  ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+    - name: Terraform Validate
+      uses: hashicorp/terraform-github-actions/validate@v0.3.7
+    # Create Apply Run creates a Terraform apply run using the configuration uploaded in the previous step.
+    - name: Create Apply Run
+      uses: hashicorp/tfc-workflows-github/actions/create-run@v1.0.0
+      id: apply-run
+    # Apply confirms and applies the run.
+    - name: Apply
+      uses: hashicorp/tfc-workflows-github/actions/apply-run@v1.0.0
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}                       # Needs to be changed
+        TF_ACTION_WORKING_DIR: 'terraform'                              # Needs to be changed
+        AWS_ACCESS_KEY_ID:  ${{ secrets.AWS_ACCESS_KEY_ID }}            # Needs to be changed
+        AWS_SECRET_ACCESS_KEY:  ${{ secrets.AWS_SECRET_ACCESS_KEY }}    # Needs to be changed
+      with:
+        run: ${{ steps.apply-run.outputs.run_id }}
+        comment: "Apply Run from GitHub Actions CI ${{ github.sha }}"
+    # - name: Sync S3
+    #   uses: jakejarvis/s3-sync-action@master
+    #   env:
+    #     SOURCE_DIR: './src'
+    #     AWS_REGION: 'us-east-1'
+    #     AWS_S3_BUCKET: '[BUCKET_NAME_HERE]'
+    #     AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+    #     AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
