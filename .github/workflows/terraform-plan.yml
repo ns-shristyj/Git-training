@@ -20,13 +20,23 @@ jobs:
     steps:
     # Checkout checks out the repository. Uses defines the GitHub action or Docker image to run that specific step. 
     # The checkout step uses GitHub's actions/checkout@v3 action.
-    - name: Checkout
-      uses: actions/checkout@v3
-    # Create Plan Run creates a speculative plan run in Terraform Cloud using the configuration uploaded.
-    - name: Create Plan Run
-      uses: hashicorp/tfc-workflows-github/actions/create-run@v1.0.0
-      id: plan-run
-    # Get Plan Output extracts the plan output from the speculative run.
-    - name: Get Plan Output
-      uses: hashicorp/tfc-workflows-github/actions/plan-output@v1.0.0
-      id: plan-output
+    - uses: actions/checkout@v3
+    - uses: hashicorp/setup-terraform@v3
+
+    - name: Terraform fmt
+      id: fmt
+      run: terraform fmt -check
+      continue-on-error: true
+
+    - name: Terraform Init
+      id: init
+      run: terraform init
+
+    - name: Terraform Validate
+      id: validate
+      run: terraform validate -no-color
+
+    - name: Terraform Plan
+      id: plan
+      run: terraform plan -no-color
+      continue-on-error: true
