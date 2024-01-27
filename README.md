@@ -19,10 +19,14 @@ on:
 ```
 # Endpoint asset inventory
 
-This script congregates stack logs into a single ingest with dict_keys(['automox', 'crowdstrike'])
-and values [hostname, os]
+This script:
+```
+endpoint_asset_inventory.py
+```
+> congregates stack logs into a single ingest with 
+- dict_keys(['automox', 'crowdstrike'])
+- and values [hostname, os]
 
-outputs to json
 
 # Compatibility 
 
