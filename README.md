@@ -17,16 +17,12 @@ on:
     - cron: '1 * * * 1'
 
 ```
+# Endpoint asset inventory
 
+This script congregates stack logs into a single ingest with dict_keys(['automox', 'crowdstrike'])
+and values [hostname, os]
 
-# Runs the following Script 
-
-```
-- name: Run endpoint-asset-information Script
-      run: |
-        python endpoint_asset_information.py
-
-```
+outputs to json
 
 # Compatibility 
 
