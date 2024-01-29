@@ -30,5 +30,17 @@ resource "aws_instance" "my-first-server" {
   ami           = data.aws_ami.ubuntu.id        // Needs to be changed, might be something like "ami-239842dafklfh832"
   instance_type = "t3.micro"                    // Needs to be changed
 
-  tags = { Name = "NS-CQ-EC2INSTANCE" }
+  tags = { Name = "NS-CQ-EC2INSTANCE-UBUNTU" }
+}
+
+resource "aws_vpc" "AWS-VPC" {
+  cidr_block = "10.0.0.0/16"
+  instance_tenancy = "dedicated"
+  tags = { name = "NS-CQUINLAN-AWS-VPC" }
+}
+resource "aws_subnet" "AWS-SUBNET-1" {
+  vpc_id = "${aws_vpc.AWS-VPC.id}"
+  // make sure the CIDR block falls within the VPC range
+  cidr_block = "10.0.1.0/24"
+  tags = { name = "NS-CQUINLAN-SUBNET" }
 }

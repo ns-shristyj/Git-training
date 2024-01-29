@@ -1,5 +1,6 @@
 # For more informatio on how to setup GitHub Actions with Terraform, documentation is here:
 # https://developer.hashicorp.com/terraform/tutorials/automation/github-actions
+# https://www.pluralsight.com/resources/blog/cloud/how-to-use-github-actions-to-automate-terraform
 
 name: Terraform Plan Action
 
@@ -13,14 +14,14 @@ jobs:
   terraform:
     if: github.repository != 'netSkope/GIS-SecEng-Intern/ns-cquinlan'
     name: "Terraform Plan"
-    runs-on: ubuntu-latest
+    runs-on: ["self-hosted", "linux", "x64", "sz-XS", "gh", "cheap"]
     permissions:
       contents: read
       pull-requests: write
     steps:
     # Checkout checks out the repository. Uses defines the GitHub action or Docker image to run that specific step. 
     # The checkout step uses GitHub's actions/checkout@v3 action.
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - uses: hashicorp/setup-terraform@v3
 
     - name: Downloading necessary Terraform AWS Ec2 Packages...
@@ -34,4 +35,13 @@ jobs:
     # - name: Planning AWS Ec2 Server...
     #   id: plan
     #   run: terraform plan -no-color
+    # THIS CAN BE UNCOMMENTED WHEN AWS SERVER IS RUNNING
+    # - name: Applying AWS Ec2 Server...
+    #   id: apply
+    #   run: terraform apply -no-color --auto-approve
+    # THIS CAN BE UNCOMMENTED WHEN AWS SERVER IS RUNNING
+    # - name: Destroying AWS Ec2 Server...                  # this action needs to be checked
+    #   id: destroy
+    #   run: terraform destroy -no-color
+    #   | yes
     #   continue-on-error: true

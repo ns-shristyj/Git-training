@@ -1,5 +1,5 @@
-### Weekly Cron to Obtain Asset Information
+### Configuring GitHub Actions to run Terraform that launches a AWS Ec2 Instance
 
 ```
-cron-action-test.yml
+This branch is responsible for configuring GitHub Actions with Terraform that works with the AWS provider. AWS launches a Ec2 instance containing Cobalt Strike. This application will be built for the SOC Team at Netskope.
 ```
