@@ -39,7 +39,7 @@ resource "aws_vpc" "AWS-VPC" {
   tags = { name = "NS-CQUINLAN-AWS-VPC" }
 }
 resource "aws_subnet" "AWS-SUBNET-1" {
-  vpc_id = "${aws_vpc.AWS-VPC.id}"
+  vpc_id = "temp id" // ${aws_vpc.AWS-VPC.id}
   // make sure the CIDR block falls within the VPC range
   cidr_block = "10.0.1.0/24"
   tags = { name = "NS-CQUINLAN-SUBNET" }

@@ -23,6 +23,8 @@ jobs:
     # The checkout step uses GitHub's actions/checkout@v3 action.
     - uses: actions/checkout@v4
     - uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_wrapper: false
 
     - name: Downloading necessary Terraform AWS Ec2 Packages...
       id: init
