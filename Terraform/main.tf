@@ -17,15 +17,15 @@ terraform {
   required_version = ">=0.14.9"
 
   backend "s3" {
-    bucket =  "seceng-terraform-state"
+    bucket =  "seceng-terraform-state-storage"
     key =     "terraform.tfstate"
-    region =  "ap-northeast-2"
+    region =  "us-west-1"
   }
 }
 
 // Configure the AWS Provider with Credentials
 provider "aws" {
-    region = "ap-northeast-2"
+    region = "us-west-1"
 }
 
 // Create the VPC
@@ -58,7 +58,7 @@ resource "aws_subnet" "AWS-SUBNET-1" {
   vpc_id            = "${aws_vpc.AWS-VPC.id}"
   // Make sure the CIDR block falls within the VPC range
   cidr_block        = "10.0.1.0/24"
-  availability_zone = "ap-northeast-2a"
+  availability_zone = "us-west-1a"
   tags              = { name = "NS-CQUINLAN-SUBNET-1" }
 }
 
@@ -150,7 +150,7 @@ resource "aws_eip" "EIP-1" {
 resource "aws_instance" "cobalt" {
   ami               = "ami-0f3a440bbcff3d043"
   instance_type     = "t2.medium"
-  availability_zone = "ap-northeast-2a"
+  availability_zone = "us-west-1a"
   key_name          = "conor-intern-key-pair"
 
   network_interface {
