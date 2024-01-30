@@ -23,18 +23,20 @@ terraform {
   # }
 }
 
+variable access_key {
+  type = string
+  sensitive = true
+}
+variable secret_key {
+  type = string
+  sensitive = true
+}
+
 // Configure the AWS Provider with Credentials
 provider "aws" {
     region = "ap-northeast-2"
-    access_key = ""                             // Needs to be changed
-    secret_key = ""                             // Needs to be changed
-}
-
-
-resource "aws_instance" "NS-CQUINLAN-AWS1" {
-  ami           = "ami-0ce2cb35386fc22e9"
-  instance_type = "t2.medium"
-  tags = { Name = "NS-CQ-EC2INSTANCE-UBUNTU" }
+    access_key = var.access_key
+    secret_key = var.secret_key
 }
 
 // Create the VPC
@@ -160,19 +162,19 @@ resource "aws_instance" "cobalt" {
   }
 
 // This needs to be changed to be right. Example run of commands below.
-  user_data = <<-EOF
-              #!/bin/bash
-              sudo apt update -y
-              sudo apt install cobalt_strike -y
-              sudo systelctl start cobalt_strike
-              sudo bash -c 'echo your very first web server > /var/www/html/index.html'
-              EOF
+  # user_data = <<-EOF
+  #             #!/bin/bash
+  #             sudo apt update -y
+  #             sudo apt install cobalt_strike -y
+  #             sudo systelctl start cobalt_strike
+  #             sudo bash -c 'echo your very first web server > /var/www/html/index.html'
+  #             EOF
 }
 
 # Useful Commands:
-# output "server_public_ip" {
-#   value = aws_eip.EIP-1.public_ip
-# }
+output "server_public_ip" {
+  value = aws_eip.EIP-1.public_ip
+}
 # Use: It can print out a value from a resource, this can print out all of the details we are concerned with. Only one value per output, but can have multiple outputs.
 #
 # variable "subnet_prefix" {

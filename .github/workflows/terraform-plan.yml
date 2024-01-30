@@ -29,17 +29,17 @@ jobs:
     - name: Downloading necessary Terraform AWS Ec2 Packages...
       id: init
       run: terraform init
-    - name: Validating Terraform AWS Ec2 Packages...
-      id: validate
-      run: terraform validate -no-color
     # THIS CAN BE UNCOMMENTED WHEN AWS SERVER IS RUNNING
     # - name: Planning AWS Ec2 Server...
     #   id: plan
     #   run: terraform plan -no-color
     # THIS CAN BE UNCOMMENTED WHEN AWS SERVER IS RUNNING
-    # - name: Applying AWS Ec2 Server...
-    #   id: apply
-    #   run: terraform apply -no-color --auto-approve
+    - name: Applying AWS Ec2 Server...
+      id: apply
+      env:
+        TF_VAR_access_key: ${{secrets.AWS_ACCESS_KEY}}
+        TF_VAR_secret_key: ${{secrets.AWS_SECRET_ACCESS_KEY}}
+      run: terraform apply -no-color --auto-approve
     # THIS CAN BE UNCOMMENTED WHEN AWS SERVER IS RUNNING
     # - name: Destroying AWS Ec2 Server...                  # this action needs to be checked
     #   id: destroy
