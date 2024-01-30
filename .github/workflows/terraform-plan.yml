@@ -29,10 +29,9 @@ jobs:
     - name: Downloading necessary Terraform AWS Ec2 Packages...
       id: init
       run: terraform init
-    # THIS CAN BE UNCOMMENTED WHEN AWS SERVER IS RUNNING
-    # - name: Validating Terraform AWS Ec2 Packages...
-    #   id: validate
-    #   run: terraform validate -no-color
+    - name: Validating Terraform AWS Ec2 Packages...
+      id: validate
+      run: terraform validate -no-color
     # THIS CAN BE UNCOMMENTED WHEN AWS SERVER IS RUNNING
     # - name: Planning AWS Ec2 Server...
     #   id: plan

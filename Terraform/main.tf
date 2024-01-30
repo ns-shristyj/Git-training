@@ -31,17 +31,16 @@ provider "aws" {
 }
 
 
-resource "aws_instance" "my-first-server" {
-  ami           = data.aws_ami.ubuntu.id        // Needs to be changed, might be something like "ami-239842dafklfh832"
-  instance_type = "t3.micro"                    // Needs to be changed
-
+resource "aws_instance" "NS-CQUINLAN-AWS1" {
+  ami           = "ami-0ce2cb35386fc22e9"
+  instance_type = "t2.medium"
   tags = { Name = "NS-CQ-EC2INSTANCE-UBUNTU" }
 }
 
 // Create the VPC
 resource "aws_vpc" "AWS-VPC" {
   cidr_block        = "10.0.0.0/16"
-  instance_tenancy  = "dedicated"
+  instance_tenancy  = "default"
   tags              = { name = "NS-CQUINLAN-AWS-VPC" }
 }
 // Create a Internet Gateway
@@ -89,16 +88,16 @@ resource "aws_security_group" "allow_web" {
 // IPv4 - Security Group
 resource "aws_vpc_security_group_ingress_rule" "allow_web_ipv4-1" {
   description       = "HTTPS"
-  security_group_id = aws_security_group.allow_tls.id
-  cidr_ipv4         = aws_vpc.main.cidr_block                   // this is responsible for which IP addresses can come into the Network
+  security_group_id = aws_security_group.allow_web.id
+  cidr_ipv4         = aws_vpc.AWS-VPC.cidr_block                   // this is responsible for which IP addresses can come into the Network
   from_port         = 443
   ip_protocol       = "tcp"
   to_port           = 443 
 }
 resource "aws_vpc_security_group_ingress_rule" "allow_web_ipv4-2" {
   description       = "ALT HTTPS"
-  security_group_id = aws_security_group.allow_tls.id
-  cidr_ipv4         = aws_vpc.main.cidr_block                   // this is responsible for which IP addresses can come into the Network
+  security_group_id = aws_security_group.allow_web.id
+  cidr_ipv4         = aws_vpc.AWS-VPC.cidr_block                   // this is responsible for which IP addresses can come into the Network
   from_port         = 8443
   ip_protocol       = "tcp"
   to_port           = 8443 
@@ -107,29 +106,29 @@ resource "aws_vpc_security_group_ingress_rule" "allow_web_ipv4-2" {
 // IPv6 - Security Group
 resource "aws_vpc_security_group_ingress_rule" "allow_web_ipv6-1" {
   description       = "HTTPS"
-  security_group_id = aws_security_group.allow_tls.id
-  cidr_ipv6         = aws_vpc.main.ipv6_cidr_block              // this is responsible for which IP addresses can come into the Network
+  security_group_id = aws_security_group.allow_web.id
+  cidr_ipv6         = aws_vpc.AWS-VPC.ipv6_cidr_block             // this is responsible for which IP addresses can come into the Network
   from_port         = 443
   ip_protocol       = "tcp"
   to_port           = 443
 }
 resource "aws_vpc_security_group_ingress_rule" "allow_web_ipv6-2" {
   description       = "ALT HTTPS"
-  security_group_id = aws_security_group.allow_tls.id
-  cidr_ipv6         = aws_vpc.main.ipv6_cidr_block              // this is responsible for which IP addresses can come into the Network
-  from_port         = 9443
+  security_group_id = aws_security_group.allow_web.id
+  cidr_ipv6         = aws_vpc.AWS-VPC.ipv6_cidr_block             // this is responsible for which IP addresses can come into the Network
+  from_port         = 8443
   ip_protocol       = "tcp"
-  to_port           = 9443
+  to_port           = 8443
 }
 
 // Egress - Security Group
 resource "aws_vpc_security_group_egress_rule" "allow_all_traffic_ipv4" {
-  security_group_id = aws_security_group.allow_tls.id
+  security_group_id = aws_security_group.allow_web.id
   cidr_ipv4         = "0.0.0.0/0"
   ip_protocol       = "-1" # semantically equivalent to all ports
 }
 resource "aws_vpc_security_group_egress_rule" "allow_all_traffic_ipv6" {
-  security_group_id = aws_security_group.allow_tls.id
+  security_group_id = aws_security_group.allow_web.id
   cidr_ipv6         = "::/0"
   ip_protocol       = "-1" # semantically equivalent to all ports
 }
@@ -150,10 +149,10 @@ resource "aws_eip" "EIP-1" {
 
 // Create Ubuntu Server and install Cobalt Strike
 resource "aws_instance" "cobalt" {
-  ami               = data.aws_ami.ubuntu.id        // Needs to be changed, might be something like "ami-239842dafklfh832"
-  instance_type     = "t2.micro"                    // Needs to be changed
+  ami               = "ami-0ce2cb35386fc22e9"
+  instance_type     = "t2.medium"
   availability_zone = "ap-northeast-2"
-  key_name          = "conor-intern-key-pair"       // Needs to be Checked
+  key_name          = "conor-intern-key-pair"       // Needs to be Checked / Auth
 
   network_interface {
     device_index          = 0
