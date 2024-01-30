@@ -54,7 +54,7 @@ resource "aws_subnet" "AWS-SUBNET-1" {
   vpc_id            = "${aws_vpc.AWS-VPC.id}"
   // Make sure the CIDR block falls within the VPC range
   cidr_block        = "10.0.1.0/24"
-  availability_zone = "us-west-1a"
+  availability_zone = "us-west-1b"
   tags              = { name = "NS-CQUINLAN-SUBNET-1" }
 }
 
@@ -146,7 +146,7 @@ resource "aws_eip" "EIP-1" {
 resource "aws_instance" "cobalt" {
   ami               = "ami-0f3a440bbcff3d043"
   instance_type     = "t2.medium"
-  availability_zone = "us-west-1a"
+  availability_zone = "us-west-1b"
   key_name          = "conor-intern-key-pair"
 
   network_interface {
