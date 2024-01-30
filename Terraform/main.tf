@@ -1,7 +1,4 @@
 // For more about Terraform using EC2: https://registry.terraform.io/providers/hashicorp/aws/latest/docs
-// WARNING
-// ALWAYS MAKE SURE TO DESTROY TERRAFORM AWS EC2 INSTANCE TO AVOID BILLING ISSUES
-// WARNING
 // Terraform block used to configure some high-level behaviors of Terraform
 terraform {
   required_providers {
