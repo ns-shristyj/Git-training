@@ -19,6 +19,7 @@ jobs:
       contents: read
       pull-requests: write
     steps:
+
     # Checkout checks out the repository. Uses defines the GitHub action or Docker image to run that specific step. 
     # The checkout step uses GitHub's actions/checkout@v3 action.
     - uses: actions/checkout@v4
@@ -28,6 +29,7 @@ jobs:
 
     - name: Downloading necessary Terraform AWS Ec2 Packages...
       id: init
+      working-directory: ./Terraform
       run: terraform init
     # THIS CAN BE UNCOMMENTED WHEN AWS SERVER IS RUNNING
     # - name: Planning AWS Ec2 Server...
@@ -36,12 +38,13 @@ jobs:
     # THIS CAN BE UNCOMMENTED WHEN AWS SERVER IS RUNNING
     - name: Applying AWS Ec2 Server...
       id: apply
+      working-directory: ./Terraform
       env:
         TF_VAR_access_key: ${{secrets.AWS_ACCESS_KEY}}
         TF_VAR_secret_key: ${{secrets.AWS_SECRET_ACCESS_KEY}}
       run: terraform apply -no-color --auto-approve
     # THIS CAN BE UNCOMMENTED WHEN AWS SERVER IS RUNNING
-    # - name: Destroying AWS Ec2 Server...                  # this action needs to be checked
+    # - name: Destroying AWS Ec2 Server...
     #   id: destroy
     #   run: terraform destroy -no-color
     #   | yes
