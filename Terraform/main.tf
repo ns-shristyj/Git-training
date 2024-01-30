@@ -4,7 +4,7 @@
 // WARNING
 // WARNING
 // ALWAYS MAKE SURE TO DESTROY TERRAFORM AWS EC2 INSTANCE TO AVOID BILLING ISSUES
-// WARNING
+
 
 // Terraform block used to configure some high-level behaviors of Terraform
 terraform {
