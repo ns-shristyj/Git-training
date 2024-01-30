@@ -123,7 +123,6 @@ resource "aws_network_interface" "net_face" {
 resource "aws_eip" "EIP-1" {
   network_interface         = "${aws_network_interface.net_face.id}"
   associate_with_private_ip = "10.0.1.50"
-  depends_on                = [aws_internet_gateway.gw]
 }
 
 // Create Ubuntu Server and install Cobalt Strike
