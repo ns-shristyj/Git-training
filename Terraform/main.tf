@@ -128,7 +128,7 @@ resource "aws_eip" "EIP-1" {
 
 // Create Ubuntu Server and install Cobalt Strike
 resource "aws_instance" "cobalt" {
-  ami               = "ami-0ce2cb35386fc22e9"
+  ami               = "ami-0f3a440bbcff3d043"
   instance_type     = "t2.medium"
   availability_zone = "ap-northeast-2"
   key_name          = "conor-intern-key-pair"       // Needs to be Checked / Auth
