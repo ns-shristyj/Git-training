@@ -164,7 +164,7 @@ resource "aws_instance" "cobalt" {
   #             EOF
 }
 
-# Useful Commands:
+# Useful Commands-
 output "server_public_ip" {
   value = aws_eip.EIP-1.public_ip
 }
