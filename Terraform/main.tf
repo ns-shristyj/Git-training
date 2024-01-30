@@ -130,7 +130,7 @@ resource "aws_eip" "EIP-1" {
 resource "aws_instance" "cobalt" {
   ami               = "ami-0f3a440bbcff3d043"
   instance_type     = "t2.medium"
-  availability_zone = "ap-northeast-2"
+  availability_zone = "ap-northeast-2a"
   key_name          = "conor-intern-key-pair"       // Needs to be Checked / Auth
 
   network_interface {
