@@ -80,7 +80,7 @@ resource "aws_security_group" "allow_web" {
 resource "aws_vpc_security_group_ingress_rule" "allow_web_ipv4-1" {
   description       = "HTTPS"
   security_group_id = aws_security_group.allow_web.id
-  cidr_ipv4         = ["104.53.62.2/32", "24.206.70.11/32"]                   // this is responsible for which IP addresses can come into the Network
+  cidr_ipv4         = "104.53.62.2/32"                   // this is responsible for which IP addresses can come into the Network
   from_port         = 443
   ip_protocol       = "tcp"
   to_port           = 443 
@@ -88,7 +88,7 @@ resource "aws_vpc_security_group_ingress_rule" "allow_web_ipv4-1" {
 resource "aws_vpc_security_group_ingress_rule" "allow_web_ipv4-2" {
   description       = "ALT HTTPS"
   security_group_id = aws_security_group.allow_web.id
-  cidr_ipv4         = ["104.53.62.2/32", "24.206.70.11/32"]                  // this is responsible for which IP addresses can come into the Network
+  cidr_ipv4         = "104.53.62.2/32"                  // this is responsible for which IP addresses can come into the Network
   from_port         = 8443
   ip_protocol       = "tcp"
   to_port           = 8443 
@@ -96,7 +96,31 @@ resource "aws_vpc_security_group_ingress_rule" "allow_web_ipv4-2" {
 resource "aws_vpc_security_group_ingress_rule" "allow_web_ipv4-3" {
   description       = "ALT HTTPS"
   security_group_id = aws_security_group.allow_web.id
-  cidr_ipv4         = ["104.53.62.2/32", "24.206.70.11/32"]                  // this is responsible for which IP addresses can come into the Network
+  cidr_ipv4         = "104.53.62.2/32"                  // this is responsible for which IP addresses can come into the Network
+  from_port         = 22
+  ip_protocol       = "tcp"
+  to_port           = 22 
+}
+resource "aws_vpc_security_group_ingress_rule" "allow_web_ipv4-4" {
+  description       = "HTTPS"
+  security_group_id = aws_security_group.allow_web.id
+  cidr_ipv4         = "24.206.70.11/32"                   // this is responsible for which IP addresses can come into the Network
+  from_port         = 443
+  ip_protocol       = "tcp"
+  to_port           = 443 
+}
+resource "aws_vpc_security_group_ingress_rule" "allow_web_ipv4-5" {
+  description       = "ALT HTTPS"
+  security_group_id = aws_security_group.allow_web.id
+  cidr_ipv4         = "24.206.70.11/32"                  // this is responsible for which IP addresses can come into the Network
+  from_port         = 8443
+  ip_protocol       = "tcp"
+  to_port           = 8443 
+}
+resource "aws_vpc_security_group_ingress_rule" "allow_web_ipv4-6" {
+  description       = "ALT HTTPS"
+  security_group_id = aws_security_group.allow_web.id
+  cidr_ipv4         = "24.206.70.11/32"                  // this is responsible for which IP addresses can come into the Network
   from_port         = 22
   ip_protocol       = "tcp"
   to_port           = 22 
