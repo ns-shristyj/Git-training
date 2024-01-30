@@ -16,11 +16,11 @@ terraform {
   }
   required_version = ">=0.14.9"
 
-  # backend "s3" {
-  #   bucket =  "seceng-terraform-state"
-  #   key =     "[Remote State Bucket Key]"
-  #   region =  "ap-northeast-2"
-  # }
+  backend "s3" {
+    bucket =  "seceng-terraform-state"
+    key =     "terraform.tfstate"
+    region =  "ap-northeast-2"
+  }
 }
 
 variable access_key {

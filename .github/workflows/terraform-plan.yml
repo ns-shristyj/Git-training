@@ -26,7 +26,20 @@ jobs:
     - uses: hashicorp/setup-terraform@v3
       with:
         terraform_wrapper: false
-
+    # - name: Import Secrets
+    #   id: import-secrets
+    #   uses: hashicorp/vault-action@v2
+    #   with:
+    #     url: "https://www.google.com"
+    #     token: ${{secrets.VAULT_TOKEN}}
+    #     caCertificiate: ${{secrets.VAULT_CA_CERT}}
+    #     roleId: ${{secrets.VAULT_ROLE_ID}}
+    #     secretId: ${{secrets.VAULT_SECRET_ID}}
+    #     secrets: |
+    #         secret/data/ci/aws accessKey | secrets.AWS_ACCESS_KEY ;
+    #         secret/data/ci/aws secretKey | secrets.AWS_SECRET_ACCESS_KEY ;
+    #         secret/data/ci npm_token
+        # secret/data/ci/aws * will specify a wildcard for the key name to get all keys in the path.
     - name: Downloading necessary Terraform AWS Ec2 Packages...
       id: init
       working-directory: ./Terraform
