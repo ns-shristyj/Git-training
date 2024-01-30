@@ -69,7 +69,7 @@ resource "aws_subnet" "AWS-SUBNET-1" {
   vpc_id            = "${aws_vpc.AWS-VPC.id}"
   // Make sure the CIDR block falls within the VPC range
   cidr_block        = "10.0.1.0/24"
-  availability_zone = "ap-northeast-2"
+  availability_zone = "ap-northeast-2a"
   tags              = { name = "NS-CQUINLAN-SUBNET-1" }
 }
 
@@ -105,33 +105,10 @@ resource "aws_vpc_security_group_ingress_rule" "allow_web_ipv4-2" {
   to_port           = 8443 
 }
 
-// IPv6 - Security Group
-resource "aws_vpc_security_group_ingress_rule" "allow_web_ipv6-1" {
-  description       = "HTTPS"
-  security_group_id = aws_security_group.allow_web.id
-  cidr_ipv6         = aws_vpc.AWS-VPC.ipv6_cidr_block             // this is responsible for which IP addresses can come into the Network
-  from_port         = 443
-  ip_protocol       = "tcp"
-  to_port           = 443
-}
-resource "aws_vpc_security_group_ingress_rule" "allow_web_ipv6-2" {
-  description       = "ALT HTTPS"
-  security_group_id = aws_security_group.allow_web.id
-  cidr_ipv6         = aws_vpc.AWS-VPC.ipv6_cidr_block             // this is responsible for which IP addresses can come into the Network
-  from_port         = 8443
-  ip_protocol       = "tcp"
-  to_port           = 8443
-}
-
 // Egress - Security Group
 resource "aws_vpc_security_group_egress_rule" "allow_all_traffic_ipv4" {
   security_group_id = aws_security_group.allow_web.id
   cidr_ipv4         = "0.0.0.0/0"
-  ip_protocol       = "-1" # semantically equivalent to all ports
-}
-resource "aws_vpc_security_group_egress_rule" "allow_all_traffic_ipv6" {
-  security_group_id = aws_security_group.allow_web.id
-  cidr_ipv6         = "::/0"
   ip_protocol       = "-1" # semantically equivalent to all ports
 }
 
