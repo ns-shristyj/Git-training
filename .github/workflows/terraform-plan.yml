@@ -76,6 +76,7 @@ jobs:
     #   continue-on-error: true
     - name: Running Ansible Commands...
       id: Ansible
+      working-directory: ./Ansible
       run: 
           sudo apt install python3-pip |
           pip install ansible |
