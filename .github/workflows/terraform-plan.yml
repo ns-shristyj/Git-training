@@ -65,9 +65,6 @@ jobs:
         AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
       run: terraform apply -auto-approve | 
         echo TF_IP_ADDRESS=$(terraform output -raw server_public_ip) >> $GITHUB_ENV
-    - name: Grabbing Public IP
-      id: publicip
-      run: echo ${{ env.TF_IP_ADDRESS }}
     # THIS CAN BE UNCOMMENTED WHEN AWS SERVER IS RUNNING
     # - name: Destroying AWS Ec2 Server...
     #   id: destroy
@@ -79,6 +76,7 @@ jobs:
       working-directory: ./Ansible
       run: 
           sudo apt install python3-pip
+          sudo apt-get install sshpass
     - name: Installing Ansible Commands...
       id: ansible
       working-directory: ./Ansible
