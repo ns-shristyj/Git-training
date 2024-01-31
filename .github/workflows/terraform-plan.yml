@@ -61,7 +61,7 @@ jobs:
         AWS_ACCESS_KEY_ID: ${{secrets.AWS_ACCESS_KEY}}
         AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
       run: terraform apply -auto-approve | 
-        echo terraform output -raw instance_ip)
+        echo terraform output -raw instance_ip
     # echo "TF_IP_ADDRESS=$(terraform output -raw instance_ip)" >> $GITHUB_ENV
     # THIS CAN BE UNCOMMENTED WHEN AWS SERVER IS RUNNING
     # - name: Destroying AWS Ec2 Server...
