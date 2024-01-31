@@ -7,19 +7,14 @@
     created_username: ns-quinlan
 
   tasks:
-    - name: Install Aptitude
-      apt:
-        name: Aptitude
-        state: latest
-        update_cache: true
     - name: Install nginx
       apt:
         name: nginx
         state: latest
-    - name: Restart nginx
+    - name: Install pip
       apt:
-        service: name=nginx state=restarted
-        become: yes
+        update_cache: yes
+        name: python3-pip
     - name: Setup passwordless sudo
       lineinfile:
         path: /etc/sudoers
@@ -57,5 +52,3 @@
       community.general.ufw:
         state: enabled
         default: deny
-
-ENDL
