@@ -58,13 +58,7 @@ jobs:
       env:
         AWS_ACCESS_KEY_ID: ${{secrets.AWS_ACCESS_KEY}}
         AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
-      run: terraform apply -no-color --auto-approve
-    - name: Test 1
-      run: terraform output server_public_ip
-    - name: Test 2
-      run: echo TEST=$(terraform output server_public_ip) >> $GITHUB_ENV
-    - name: Test 3
-      run: echo ${{ env.TEST }}
+      run: terraform apply -auto-approve
     # THIS CAN BE UNCOMMENTED WHEN AWS SERVER IS RUNNING
     # - name: Destroying AWS Ec2 Server...
     #   id: destroy
