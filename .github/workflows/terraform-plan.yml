@@ -63,7 +63,7 @@ jobs:
       run: terraform apply -auto-approve | 
         echo terraform output -raw instance_ip
     - name: Grabbing Public IP
-      id: apply
+      id: publicip
       working-directory: ./Terraform
       env:
         AWS_ACCESS_KEY_ID: ${{secrets.AWS_ACCESS_KEY}}
