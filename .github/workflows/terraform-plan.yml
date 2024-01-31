@@ -46,7 +46,7 @@ jobs:
       env:
         AWS_ACCESS_KEY_ID: ${{secrets.AWS_ACCESS_KEY}}
         AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
-      run: terraform init
+      run: terraform init 
     # THIS CAN BE UNCOMMENTED WHEN AWS SERVER IS RUNNING
     # - name: Planning AWS Ec2 Server...
     #   id: plan
@@ -58,10 +58,19 @@ jobs:
       env:
         AWS_ACCESS_KEY_ID: ${{secrets.AWS_ACCESS_KEY}}
         AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
-      run: terraform apply -no-color --auto-approve
+      run: terraform apply -no-color --auto-approve |
+        sleep 10 |
+        ec2Address=$(aws ec2 describe-instances --instance-ids cobalt --query "Reservations[*].Instances[*].PublicIpAddress" --output=text) 
     # THIS CAN BE UNCOMMENTED WHEN AWS SERVER IS RUNNING
     # - name: Destroying AWS Ec2 Server...
     #   id: destroy
     #   run: terraform destroy -no-color
     #   | yes
     #   continue-on-error: true
+    - name: Running Ansible Commands...
+      id: Ansible
+      working-directory: ./Ansible
+      run: ansible-playbook playbook.yml -l server_ip -u root -k |
+        ansible-playbook playbook.yml -l server_ip -u ns-cquinlan
+        ssh ns-cquinlan@remote_server_ip
+        sudo ufw status
