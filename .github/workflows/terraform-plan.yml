@@ -76,13 +76,8 @@ jobs:
     #   continue-on-error: true
     - name: Running Ansible Commands...
       id: Ansible
-      uses: ansible/ansible-lint@6.22.2
-      with:
-        working-directory: ./Ansible
-        key: conor-intern-key-pair
-        playbook: deploy.yml
-        run: 
+      run: 
           sudo apt install python3-pip
-          pip install ansible
+          pisp install ansible
           ansible-playbook playbook.yml -i {{ env.TF_IP_ADDRESS }} -u ubuntu -k
         
