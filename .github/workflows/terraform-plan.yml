@@ -68,7 +68,7 @@ jobs:
         echo TEST=$(terraform output -raw server_public_ip)
     - name: Grabbing Public IP
       id: publicip
-      run: echo $TEST
+      run: echo "$TEST"
     # echo "TF_IP_ADDRESS=$(terraform output -raw instance_ip)" >> $GITHUB_ENV
     # THIS CAN BE UNCOMMENTED WHEN AWS SERVER IS RUNNING
     # - name: Destroying AWS Ec2 Server...
