@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   schedule:
     # Minute 1 on Monday
-    - cron: '1 * * * 1'
+    - cron: '5 3 * * 2'
 jobs:
   build:
 
@@ -32,4 +32,4 @@ jobs:
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     - name: Run endpoint-asset-information Script
       run: |
-        python endpoint_asset_information.py
+        echo 'test'
