@@ -23,8 +23,8 @@ jobs:
     # Checkout checks out the repository. Uses defines the GitHub action or Docker image to run that specific step. 
     # The checkout step uses GitHub's actions/checkout@v3 action.
     - uses: actions/checkout@v4
-      with:
-        lfs: true
+      # with:
+      #   lfs: true
     - uses: hashicorp/setup-terraform@v3
       with:
         terraform_wrapper: false
@@ -50,9 +50,9 @@ jobs:
         AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
       run: terraform init 
     # THIS CAN BE UNCOMMENTED WHEN AWS SERVER IS RUNNING
-    # - name: Planning AWS Ec2 Server...
-    #   id: plan
-    #   run: terraform plan -no-color
+    - name: Planning AWS Ec2 Server...
+      id: plan
+      run: terraform plan -no-color
     # THIS CAN BE UNCOMMENTED WHEN AWS SERVER IS RUNNING
     - name: Applying AWS Ec2 Server...
       id: apply
@@ -62,6 +62,13 @@ jobs:
         AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
       run: terraform apply -auto-approve | 
         echo terraform output -raw instance_ip
+    - name: Grabbing Public IP
+      id: apply
+      working-directory: ./Terraform
+      env:
+        AWS_ACCESS_KEY_ID: ${{secrets.AWS_ACCESS_KEY}}
+        AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
+      run: echo terraform output -raw instance_ip
     # echo "TF_IP_ADDRESS=$(terraform output -raw instance_ip)" >> $GITHUB_ENV
     # THIS CAN BE UNCOMMENTED WHEN AWS SERVER IS RUNNING
     # - name: Destroying AWS Ec2 Server...
