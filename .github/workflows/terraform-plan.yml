@@ -74,11 +74,18 @@ jobs:
     #   run: terraform destroy -no-color
     #   | yes
     #   continue-on-error: true
+    - name: Installing Pip...
+      id: Ansible
+      working-directory: ./Ansible
+      run: 
+          sudo apt install python3-pip
+    - name: Installing Ansible Commands...
+      id: Ansible
+      working-directory: ./Ansible
+      run: 
+          pip install ansible
     - name: Running Ansible Commands...
       id: Ansible
       working-directory: ./Ansible
       run: 
-          sudo apt install python3-pip |
-          pip install ansible |
-          ansible-playbook playbook.yml -i {{ env.TF_IP_ADDRESS }} -u ubuntu -k
-        
+          ansible-playbook playbook.yml -i {{ env.TF_IP_ADDRESS }} -u ubuntu -k       
