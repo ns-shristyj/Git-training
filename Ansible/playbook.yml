@@ -52,3 +52,11 @@
       community.general.ufw:
         state: enabled
         default: deny
+    - name: Copy Cobalt Strike
+      copy:
+        src: cobaltstrike-dist.tgz
+        dest: /tmp/cobaltstrike-dist.tgz
+    - name: Install Cobalt Strike
+      apt:
+        deb: /tmp/cobaltstrike-dist.tgz
+      become: true
