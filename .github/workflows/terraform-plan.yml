@@ -77,7 +77,7 @@ jobs:
     - name: Running Ansible Commands...
       id: Ansible
       run: 
-          sudo apt install python3-pip
-          pisp install ansible
+          sudo apt install python3-pip |
+          pip install ansible |
           ansible-playbook playbook.yml -i {{ env.TF_IP_ADDRESS }} -u ubuntu -k
         
