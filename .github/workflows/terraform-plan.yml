@@ -81,5 +81,8 @@ jobs:
         working-directory: ./Ansible
         key: conor-intern-key-pair
         playbook: deploy.yml
-        run: ansible-playbook playbook.yml -i {{ env.TF_IP_ADDRESS }} -u ubuntu -k
+        run: 
+          sudo apt install python3-pip
+          pip install ansible
+          ansible-playbook playbook.yml -i {{ env.TF_IP_ADDRESS }} -u ubuntu -k
         
