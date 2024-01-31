@@ -76,7 +76,7 @@ jobs:
       working-directory: ./Ansible
       run: 
           sudo apt install python3-pip
-          sudo apt-get install sshpass
+          sudo apt install sshpass
     - name: Installing Ansible Commands...
       id: ansible
       working-directory: ./Ansible
