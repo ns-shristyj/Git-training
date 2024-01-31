@@ -75,17 +75,17 @@ jobs:
     #   | yes
     #   continue-on-error: true
     - name: Installing Pip...
-      id: Ansible
+      id: pip
       working-directory: ./Ansible
       run: 
           sudo apt install python3-pip
     - name: Installing Ansible Commands...
-      id: Ansible
+      id: ansible
       working-directory: ./Ansible
       run: 
           pip install ansible
     - name: Running Ansible Commands...
-      id: Ansible
+      id: runansible
       working-directory: ./Ansible
       run: 
           ansible-playbook playbook.yml -i {{ env.TF_IP_ADDRESS }} -u ubuntu -k       
