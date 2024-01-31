@@ -60,7 +60,7 @@ jobs:
         AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
       run: terraform apply -no-color --auto-approve |
         sleep 10 |
-        ec2Address=$(aws ec2 describe-instances --instance-ids cobalt --query "Reservations[*].Instances[*].PublicIpAddress" --output=text) 
+        echo server_publicip
     # THIS CAN BE UNCOMMENTED WHEN AWS SERVER IS RUNNING
     # - name: Destroying AWS Ec2 Server...
     #   id: destroy
