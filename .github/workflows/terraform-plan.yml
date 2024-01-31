@@ -76,7 +76,7 @@ jobs:
     #   continue-on-error: true
     - name: Running Ansible Commands...
       id: Ansible
-      uses: dawidd6/action-ansible-playbook@v2
+      uses: ansible/ansible-lint@6.22.2
       with:
         working-directory: ./Ansible
         key: conor-intern-key-pair
