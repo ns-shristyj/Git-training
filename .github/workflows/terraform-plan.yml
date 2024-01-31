@@ -88,4 +88,5 @@ jobs:
       id: runansible
       working-directory: ./Ansible
       run: 
+          echo ${{ env.TF_IP_ADDRESS }} > hosts |
           ansible-playbook playbook.yml -i ${{ env.TF_IP_ADDRESS }} -u ubuntu -k       
