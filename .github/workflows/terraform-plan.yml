@@ -61,7 +61,8 @@ jobs:
         AWS_ACCESS_KEY_ID: ${{secrets.AWS_ACCESS_KEY}}
         AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
       run: terraform apply -auto-approve |
-        terraform output public_server_ip >> GITHUB_ENV
+        echo "TF_IP_ADDRESS=$(terraform output -raw instance_ip)" >> $GITHUB_ENV ||
+        echo {{ env.TF_IP_ADDRESS }}
     # THIS CAN BE UNCOMMENTED WHEN AWS SERVER IS RUNNING
     # - name: Destroying AWS Ec2 Server...
     #   id: destroy
@@ -71,4 +72,4 @@ jobs:
     - name: Running Ansible Commands...
       id: Ansible
       working-directory: ./Ansible
-      run: ansible-playbook playbook.yml -l $GITHUB_ENV -u root -k
+      run: ansible-playbook playbook.yml -i {{ env.TF_IP_ADDRESS }} -u ubuntu -k
