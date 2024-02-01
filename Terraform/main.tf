@@ -1,5 +1,4 @@
 // For more about Terraform using EC2: https://registry.terraform.io/providers/hashicorp/aws/latest/docs
-// Terraform block used to configure some high-level behaviors of Terraform
 terraform {
   required_providers {
     aws = {
