@@ -24,6 +24,9 @@ jobs:
     # The checkout step uses GitHub's actions/checkout@v3 action.
     - uses: actions/checkout@v4
     - uses: actions/setup-python@v5
+    - uses: webfactory/ssh-agent@v0.8.0
+      with:
+        ssh-private-key: ${{secres.SSH_PRIVATE_KEY}}
     - uses: hashicorp/setup-terraform@v3
       with:
         terraform_wrapper: false
@@ -90,10 +93,10 @@ jobs:
       working-directory: ./Ansible
       run: 
           pip install ansible
-    - name: Running Ansible Commands...
-      id: runansible
-      working-directory: ./Ansible
-      run: 
-          echo ${{ env.TF_IP_ADDRESS }} > hosts |
-          cat hosts |
-          ansible-playbook playbook.yml -u ubuntu -k       
+    # - name: Running Ansible Commands...
+    #   id: runansible
+    #   working-directory: ./Ansible
+    #   run: 
+    #       echo ${{ env.TF_IP_ADDRESS }} > hosts |
+    #       cat hosts |
+    #       ansible-playbook playbook.yml -u ubuntu -k       
