@@ -20,6 +20,7 @@ variable "allowed_ips"{
 resource "aws_vpc_security_group_ingress_rule" "allow_web_ipv4-1" {
   description       = "HTTPS"
   security_group_id = aws_security_group.allow_web.id
+  count             = length(var.allowed_ips)
   cidr_ipv4         = var.allowed_ips[count.index]
   from_port         = 443
   ip_protocol       = "tcp"
