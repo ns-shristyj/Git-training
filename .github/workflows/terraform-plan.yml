@@ -70,7 +70,7 @@ jobs:
       env:
         AWS_ACCESS_KEY_ID: ${{secrets.AWS_ACCESS_KEY}}
         AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
-      run: echo "TF_IP_ADDRESS=$(terraform output -raw server_public_ip)"" >> $GITHUB_ENV
+      run: echo TF_IP_ADDRESS=$(terraform output -raw server_public_ip) >> $GITHUB_ENV
     - name: Grabbing Public Ip...
       id: ip
       working-directory: ./Terraform
