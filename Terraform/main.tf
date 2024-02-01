@@ -69,7 +69,7 @@ resource "aws_network_interface" "net_face" {
 // Create a Security Group
 resource "aws_security_group" "allow_web" {
   name        = "allow_web_traffic"
-  description = "Allow TLS inbound traffic and all outbound traffic"
+  description = "Allow web inbound traffic and all outbound traffic"
   vpc_id      = aws_vpc.AWS-VPC.id
   tags = { Name = "allow_WEB" }
 
