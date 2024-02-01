@@ -8,7 +8,7 @@ resource "aws_security_group" "allow_web" {
 
 // IPs Granted Access
 variable "allowed_ips"{
-    type = list
+    type = list(string)
     default = ["104.53.62.2/32", "24.206.70.11/32",
                 "35.233.199.197/32", "35.230.57.233/32",
                 "34.105.33.53/32", "34.83.158.21/32",
@@ -20,7 +20,7 @@ variable "allowed_ips"{
 resource "aws_vpc_security_group_ingress_rule" "allow_web_ipv4-1" {
   description       = "HTTPS"
   security_group_id = aws_security_group.allow_web.id
-  cidr_ipv4         = var.allowed_ips
+  cidr_ipv4         = var.allowed_ips[count.index]
   from_port         = 443
   ip_protocol       = "tcp"
   to_port           = 443 
