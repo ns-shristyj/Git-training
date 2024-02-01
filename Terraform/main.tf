@@ -77,7 +77,7 @@ resource "aws_security_group" "allow_web" {
   ingress {
     from_port = "443"
     to_port = "443"
-    protocol = "HTTPS"
+    protocol = "TCP"
     cidr_blocks = ["104.53.62.2/32", "24.206.70.11/32",
                 "35.233.199.197/32", "35.230.57.233/32",
                 "34.105.33.53/32", "34.83.158.21/32",
@@ -88,7 +88,7 @@ resource "aws_security_group" "allow_web" {
   ingress {
     from_port = "8443"
     to_port = "8443"
-    protocol = "HTTPS"
+    protocol = "TCP"
     cidr_blocks = ["104.53.62.2/32", "24.206.70.11/32",
                 "35.233.199.197/32", "35.230.57.233/32",
                 "34.105.33.53/32", "34.83.158.21/32",
@@ -99,7 +99,7 @@ resource "aws_security_group" "allow_web" {
   ingress {
     from_port = "22"
     to_port = "22"
-    protocol = "SSH"
+    protocol = "TCP"
     cidr_blocks = ["104.53.62.2/32", "24.206.70.11/32",
                 "35.233.199.197/32", "35.230.57.233/32",
                 "34.105.33.53/32", "34.83.158.21/32",
