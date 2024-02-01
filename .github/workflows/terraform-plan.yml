@@ -63,25 +63,25 @@ jobs:
       env:
         AWS_ACCESS_KEY_ID: ${{secrets.AWS_ACCESS_KEY}}
         AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
-      run: terraform apply -auto-approve | 
-        echo TF_IP_ADDRESS=$(terraform output -raw server_public_ip) >> $GITHUB_ENV |
-        echo ${{ env.TF_IP_ADDRESS }}
+      run: terraform destroy -auto-approve
+        # echo TF_IP_ADDRESS=$(terraform output -raw server_public_ip) >> $GITHUB_ENV |
+        # echo ${{ env.TF_IP_ADDRESS }}
     # THIS CAN BE UNCOMMENTED WHEN AWS SERVER IS RUNNING
-    - name: Installing Pip...
-      id: pip
-      working-directory: ./Ansible
-      run: 
-          sudo apt install python3-pip |
-          sudo apt install sshpass
-    - name: Installing Ansible Commands...
-      id: ansible
-      working-directory: ./Ansible
-      run: 
-          pip install ansible
-    - name: Running Ansible Commands...
-      id: runansible
-      working-directory: ./Ansible
-      run: 
-          echo ${{ env.TF_IP_ADDRESS }} > hosts |
-          cat hosts |
-          ansible-playbook playbook.yml -u ubuntu -k       
+    # - name: Installing Pip...
+    #   id: pip
+    #   working-directory: ./Ansible
+    #   run: 
+    #       sudo apt install python3-pip |
+    #       sudo apt install sshpass
+    # - name: Installing Ansible Commands...
+    #   id: ansible
+    #   working-directory: ./Ansible
+    #   run: 
+    #       pip install ansible
+    # - name: Running Ansible Commands...
+    #   id: runansible
+    #   working-directory: ./Ansible
+    #   run: 
+    #       echo ${{ env.TF_IP_ADDRESS }} > hosts |
+    #       cat hosts |
+    #       ansible-playbook playbook.yml -u ubuntu -k       
