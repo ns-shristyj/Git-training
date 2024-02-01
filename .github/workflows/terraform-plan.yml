@@ -63,8 +63,8 @@ jobs:
       env:
         AWS_ACCESS_KEY_ID: ${{secrets.AWS_ACCESS_KEY}}
         AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
-      run: terraform apply -auto-approve | 
-        echo TF_IP_ADDRESS=$(terraform output -raw server_public_ip) >> $GITHUB_ENV
+      run: terraform apply -auto-approve 
+        # | echo TF_IP_ADDRESS=$(terraform output -raw server_public_ip) >> $GITHUB_ENV
     - name: Grabbing Public Ip...
       id: ip
       run: echo ${{ env.TF_IP_ADDRESS }}
