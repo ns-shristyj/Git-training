@@ -154,7 +154,7 @@ resource "aws_instance" "cobalt" {
   ami               = "ami-0ce2cb35386fc22e9"
   instance_type     = "t2.medium"
   availability_zone = "us-west-1b"
-  key_name          = "conor-intern-key-pair"
+  key_name          = "seceng-intern-key-pair"
 
   network_interface {
     device_index          = 0
