@@ -90,8 +90,7 @@ variable "allowed_ips"{
 resource "aws_vpc_security_group_ingress_rule" "allow_web_ipv4-1" {
   description       = "HTTPS"
   security_group_id = aws_security_group.allow_web.id
-  count             = length(var.allowed_ips)
-  cidr_ipv4         = var.allowed_ips[count.index]
+  cidr_ipv4         = "104.53.62.2/32"
   from_port         = 443
   ip_protocol       = "tcp"
   to_port           = 443 
@@ -108,6 +107,30 @@ resource "aws_vpc_security_group_ingress_rule" "allow_web_ipv4-3" {
   description       = "ALT HTTPS"
   security_group_id = aws_security_group.allow_web.id
   cidr_ipv4         = "104.53.62.2/32"                  // this is responsible for which IP addresses can come into the Network
+  from_port         = 22
+  ip_protocol       = "tcp"
+  to_port           = 22 
+}
+resource "aws_vpc_security_group_ingress_rule" "allow_web_ipv4-4" {
+  description       = "HTTPS"
+  security_group_id = aws_security_group.allow_web.id
+  cidr_ipv4         = "24.206.70.11/32"
+  from_port         = 443
+  ip_protocol       = "tcp"
+  to_port           = 443 
+}
+resource "aws_vpc_security_group_ingress_rule" "allow_web_ipv4-5" {
+  description       = "ALT HTTPS"
+  security_group_id = aws_security_group.allow_web.id
+  cidr_ipv4         = "24.206.70.11/32"                  // this is responsible for which IP addresses can come into the Network
+  from_port         = 8443
+  ip_protocol       = "tcp"
+  to_port           = 8443 
+}
+resource "aws_vpc_security_group_ingress_rule" "allow_web_ipv4-6" {
+  description       = "ALT HTTPS"
+  security_group_id = aws_security_group.allow_web.id
+  cidr_ipv4         = "24.206.70.11/32"                  // this is responsible for which IP addresses can come into the Network
   from_port         = 22
   ip_protocol       = "tcp"
   to_port           = 22 
@@ -131,7 +154,7 @@ resource "aws_instance" "cobalt" {
   ami               = "ami-0ce2cb35386fc22e9"
   instance_type     = "t2.medium"
   availability_zone = "us-west-1b"
-  key_name          = "seceng-intern-key-pair"
+  key_name          = "conor-intern-key-pair"
 
   network_interface {
     device_index          = 0
