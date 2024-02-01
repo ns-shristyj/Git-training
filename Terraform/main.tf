@@ -76,15 +76,15 @@ resource "aws_security_group" "allow_web" {
 }
 
 // IPs Granted Access
-variable "allowed_ips"{
-    type = list(string)
-    default = ["104.53.62.2/32", "24.206.70.11/32",
-                "35.233.199.197/32", "35.230.57.233/32",
-                "34.105.33.53/32", "34.83.158.21/32",
-                "35.233.206.241/32", "35.247.6.21/32",
-                "35.247.67.124/32", "35.197.82.112/32",
-                "24.206.84.11/32"]
-}
+# variable "allowed_ips"{
+#     type = list(string)
+#     default = ["104.53.62.2/32", "24.206.70.11/32",
+#                 "35.233.199.197/32", "35.230.57.233/32",
+#                 "34.105.33.53/32", "34.83.158.21/32",
+#                 "35.233.206.241/32", "35.247.6.21/32",
+#                 "35.247.67.124/32", "35.197.82.112/32",
+#                 "24.206.84.11/32"]
+# }
 
 // IPv4 - Security Group
 resource "aws_vpc_security_group_ingress_rule" "allow_web_ipv4-1" {
@@ -154,7 +154,7 @@ resource "aws_instance" "cobalt" {
   ami               = "ami-0ce2cb35386fc22e9"
   instance_type     = "t2.medium"
   availability_zone = "us-west-1b"
-  key_name          = "seceng-intern-key-pair"
+  key_name          = "conor-intern-key-pair"
 
   network_interface {
     device_index          = 0
