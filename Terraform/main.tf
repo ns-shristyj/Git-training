@@ -61,71 +61,6 @@ resource "aws_route_table_association" "a" {
   route_table_id  = "${aws_route_table.ns-cquinlan-route_table.id}"
 }
 
-// Create a Security Group
-resource "aws_security_group" "allow_web" {
-  name        = "allow_web_traffic"
-  description = "Allow TLS inbound traffic and all outbound traffic"
-  vpc_id      = aws_vpc.AWS-VPC.id
-  tags = { Name = "allow_WEB" }
-}
-
-// IPv4 - Security Group
-resource "aws_vpc_security_group_ingress_rule" "allow_web_ipv4-1" {
-  description       = "HTTPS"
-  security_group_id = aws_security_group.allow_web.id
-  cidr_ipv4         = "104.53.62.2/32"                   // this is responsible for which IP addresses can come into the Network
-  from_port         = 443
-  ip_protocol       = "tcp"
-  to_port           = 443 
-}
-resource "aws_vpc_security_group_ingress_rule" "allow_web_ipv4-2" {
-  description       = "ALT HTTPS"
-  security_group_id = aws_security_group.allow_web.id
-  cidr_ipv4         = "104.53.62.2/32"                  // this is responsible for which IP addresses can come into the Network
-  from_port         = 8443
-  ip_protocol       = "tcp"
-  to_port           = 8443 
-}
-resource "aws_vpc_security_group_ingress_rule" "allow_web_ipv4-3" {
-  description       = "ALT HTTPS"
-  security_group_id = aws_security_group.allow_web.id
-  cidr_ipv4         = "104.53.62.2/32"                  // this is responsible for which IP addresses can come into the Network
-  from_port         = 22
-  ip_protocol       = "tcp"
-  to_port           = 22 
-}
-resource "aws_vpc_security_group_ingress_rule" "allow_web_ipv4-4" {
-  description       = "HTTPS"
-  security_group_id = aws_security_group.allow_web.id
-  cidr_ipv4         = "24.206.70.11/32"                   // this is responsible for which IP addresses can come into the Network
-  from_port         = 443
-  ip_protocol       = "tcp"
-  to_port           = 443 
-}
-resource "aws_vpc_security_group_ingress_rule" "allow_web_ipv4-5" {
-  description       = "ALT HTTPS"
-  security_group_id = aws_security_group.allow_web.id
-  cidr_ipv4         = "24.206.70.11/32"                  // this is responsible for which IP addresses can come into the Network
-  from_port         = 8443
-  ip_protocol       = "tcp"
-  to_port           = 8443 
-}
-resource "aws_vpc_security_group_ingress_rule" "allow_web_ipv4-6" {
-  description       = "ALT HTTPS"
-  security_group_id = aws_security_group.allow_web.id
-  cidr_ipv4         = "24.206.70.11/32"                  // this is responsible for which IP addresses can come into the Network
-  from_port         = 22
-  ip_protocol       = "tcp"
-  to_port           = 22 
-}
-
-// Egress - Security Group
-resource "aws_vpc_security_group_egress_rule" "allow_all_traffic_ipv4" {
-  security_group_id = aws_security_group.allow_web.id
-  cidr_ipv4         = "0.0.0.0/0"
-  ip_protocol       = "-1" # semantically equivalent to all ports
-}
-
 // Create a Network Interface with an IP in the subnet
 resource "aws_network_interface" "net_face" {
   subnet_id       = aws_subnet.AWS-SUBNET-1.id
@@ -144,32 +79,15 @@ resource "aws_instance" "cobalt" {
   ami               = "ami-0ce2cb35386fc22e9"
   instance_type     = "t2.medium"
   availability_zone = "us-west-1b"
-  key_name          = "conor-intern-key-pair"
+  key_name          = "seceng-intern-key-pair"
 
   network_interface {
     device_index          = 0
     network_interface_id  = aws_network_interface.net_face.id
   }
-
-// This needs to be changed to be right. Example run of commands below.
-  # user_data = <<-EOF
-  #             #!/bin/bash
-  #             sudo apt update -y
-  #             sudo apt install cobalt_strike -y
-  #             sudo systelctl start cobalt_strike
-  #             sudo bash -c 'echo your very first web server > /var/www/html/index.html'
-  #             EOF
 }
 
 # Useful Commands-
 output "server_public_ip" {
   value = aws_eip.EIP-1.public_ip
 }
-# Use: It can print out a value from a resource, this can print out all of the details we are concerned with. Only one value per output, but can have multiple outputs.
-#
-# variable "subnet_prefix" {
-#   description = "cidr block for the subnet"
-#   default // if this isnt filled out the AWS will automatically fill one out for us
-#   type = String // or pass any arguement if not sure
-# }
-# Use: this lets us create a variable that can be referenced. Ex: var.subnet_prefix.id
