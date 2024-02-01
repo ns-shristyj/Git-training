@@ -72,52 +72,48 @@ resource "aws_security_group" "allow_web" {
   description = "Allow TLS inbound traffic and all outbound traffic"
   vpc_id      = aws_vpc.AWS-VPC.id
   tags = { Name = "allow_WEB" }
-}
 
-// IPs Granted Access
-variable "allowed_ips"{
-    type = list(string)
-    default = ["104.53.62.2/32", "35.197.82.112/32",
+// IPv4 - Ingress Security Group
+  ingress {
+    from_port = "443"
+    to_port = "443"
+    protocol = "HTTPS"
+    cidr_blocks = ["104.53.62.2/32", "24.206.70.11/32",
                 "35.233.199.197/32", "35.230.57.233/32",
                 "34.105.33.53/32", "34.83.158.21/32",
                 "35.233.206.241/32", "35.247.6.21/32",
-                "35.247.67.124/32"]
-}
-
-// IPv4 - Security Group
-resource "aws_vpc_security_group_ingress_rule" "allow_web_ipv4-1" {
-  description       = "HTTPS"
-  security_group_id = aws_security_group.allow_web.id
-  count             = length(var.allowed_ips)
-  cidr_ipv4         = var.allowed_ips[count.index]
-  from_port         = 443
-  ip_protocol       = "tcp"
-  to_port           = 443 
-}
-resource "aws_vpc_security_group_ingress_rule" "allow_web_ipv4-2" {
-  description       = "ALT HTTPS"
-  security_group_id = aws_security_group.allow_web.id
-  count             = length(var.allowed_ips)
-  cidr_ipv4         = var.allowed_ips[count.index]
-  from_port         = 8443
-  ip_protocol       = "tcp"
-  to_port           = 8443 
-}
-resource "aws_vpc_security_group_ingress_rule" "allow_web_ipv4-3" {
-  description       = "ALT HTTPS"
-  security_group_id = aws_security_group.allow_web.id
-  count             = length(var.allowed_ips)
-  cidr_ipv4         = var.allowed_ips[count.index]
-  from_port         = 22
-  ip_protocol       = "tcp"
-  to_port           = 22 
-}
-
-// Egress - Security Group
-resource "aws_vpc_security_group_egress_rule" "allow_all_traffic_ipv4" {
-  security_group_id = aws_security_group.allow_web.id
-  cidr_ipv4         = "0.0.0.0/0"
-  ip_protocol       = "-1" # semantically equivalent to all ports
+                "35.247.67.124/32", "35.197.82.112/32",
+                "24.206.84.11/32"]
+  }
+  ingress {
+    from_port = "8443"
+    to_port = "8443"
+    protocol = "HTTPS"
+    cidr_blocks = ["104.53.62.2/32", "24.206.70.11/32",
+                "35.233.199.197/32", "35.230.57.233/32",
+                "34.105.33.53/32", "34.83.158.21/32",
+                "35.233.206.241/32", "35.247.6.21/32",
+                "35.247.67.124/32", "35.197.82.112/32",
+                "24.206.84.11/32"]
+  }
+  ingress {
+    from_port = "22"
+    to_port = "22"
+    protocol = "SSH"
+    cidr_blocks = ["104.53.62.2/32", "24.206.70.11/32",
+                "35.233.199.197/32", "35.230.57.233/32",
+                "34.105.33.53/32", "34.83.158.21/32",
+                "35.233.206.241/32", "35.247.6.21/32",
+                "35.247.67.124/32", "35.197.82.112/32",
+                "24.206.84.11/32"]
+  }
+  // IPv4 - Egress Security Group
+  egress {
+    from_port = 0
+    to_port = 0
+    protocol = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
 }
 
 // Assigning a Elastic IP to the Network Interface
