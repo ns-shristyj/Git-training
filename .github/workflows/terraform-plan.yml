@@ -90,10 +90,10 @@ jobs:
       working-directory: ./Ansible
       run: 
           pip install ansible
-    # - name: Running Ansible Commands...
-    #   id: runansible
-    #   working-directory: ./Ansible
-    #   run: 
-    #       echo ${{ env.TF_IP_ADDRESS }} > hosts |
-    #       cat hosts |
-    #       ansible-playbook playbook.yml -u ubuntu -k       
+    - name: Running Ansible Commands...
+      id: runansible
+      working-directory: ./Ansible
+      run: 
+          echo ${{ env.TF_IP_ADDRESS }} > hosts |
+          cat hosts |
+          ansible-playbook playbook.yml -u ubuntu -k       
