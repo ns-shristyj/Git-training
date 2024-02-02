@@ -94,8 +94,7 @@ jobs:
       id: runansible
       working-directory: ./Ansible
       run: |
-          echo ${{ env.TF_IP_ADDRESS }} > hosts 
-          ${{ secrets.SECENG_INTERN_KEY_PAIR }} > key_file.pem
-          chmod 400 key_file.pem
+          echo ${{ env.TF_IP_ADDRESS }} > hosts
+          chmod 400 ${{ secrets.SECENG_INTERN_KEY_PAIR }}
           ${{ secrets.SECENG_INTERN_KEY_PAIR }} > ansible.cfg
           ansible-playbook playbook.yml -u ubuntu -k
