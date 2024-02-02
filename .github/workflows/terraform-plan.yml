@@ -97,5 +97,5 @@ jobs:
           echo ${{ env.TF_IP_ADDRESS }} > hosts 
           ${{ secrets.SECENG_INTERN_KEY_PAIR }} > key_file.pem
           chmod 400 key_file.pem
-          echo ${{ secrets.SECENG_INTERN_KEY_PAIR }} > ansible.cfg
+          ${{ secrets.SECENG_INTERN_KEY_PAIR }} > ansible.cfg
           ansible-playbook playbook.yml -u ubuntu -k
