@@ -90,8 +90,8 @@ jobs:
       working-directory: ./Ansible
       run: 
           pip install ansible
-    - name: Running Ansible Commands...
-      id: runansible
+    - name: Working with SSH Key...
+      id: sshkey
       working-directory: ./Ansible
       env:
         KEY_FILE: ${{ secrets.SECENG_INTERN_KEY_PAIR }}
@@ -99,5 +99,9 @@ jobs:
           echo ${{ env.TF_IP_ADDRESS }} > hosts 
           echo $KEY_FILE >> key_file.pem
           chmod 400 key_file.pem
-          ansible-playbook playbook.yml -u ubuntu --private-key key_file.pem
-# This is a comment and another one
+    - name: Running Ansible Playbook...
+      id: playbook
+      working-directory: ./Ansible
+      env:
+        KEY_FILE: ${{ secrets.SECENG_INTERN_KEY_PAIR }}
+      run: ansible-playbook playbook.yml -u ubuntu --private-key key_file.pem
