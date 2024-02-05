@@ -97,13 +97,12 @@ jobs:
         KEY_FILE: ${{ secrets.SECENG_INTERN_KEY_PAIR }}
       run: |
           echo ${{ env.TF_IP_ADDRESS }} > hosts 
-          echo $KEY_FILE >> key_file.pem
+          echo -n $KEY_FILE > key_file.pem
           chmod 600 key_file.pem
-          curl ifconfig.me
     - name: Running Ansible Playbook...
       id: playbook
       working-directory: ./Ansible
       env:
         KEY_FILE: ${{ secrets.SECENG_INTERN_KEY_PAIR }}
       run: |
-        ansible-playbook playbook.yml -u ubuntu --key-file $KEY_FILE -vvvv
+        ansible-playbook playbook.yml -u ubuntu --key-file key_file.pem -vvvv
