@@ -100,4 +100,4 @@ jobs:
           echo $KEY_FILE > key_file.pem
           chmod 400 key_file.pem
           ansible-playbook playbook.yml -u ubuntu --private-key key_file.pem
-# This is a comment
+# This is a comment and another one
