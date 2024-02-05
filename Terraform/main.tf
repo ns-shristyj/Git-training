@@ -138,4 +138,4 @@ resource "aws_instance" "cobalt" {
 # Useful Commands-
 output "server_public_ip" {
   value = aws_eip.EIP-1.public_ip
-}
+} #this is a  comment
