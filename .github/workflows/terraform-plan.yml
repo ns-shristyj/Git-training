@@ -98,10 +98,6 @@ jobs:
       run: |
           echo ${{ env.TF_IP_ADDRESS }} > hosts 
           echo $KEY_FILE > key_file.pem
-          echo $KEY_FILE > test.txt
-          echo test.pem
-          echo key_file.pem
-          echo $KEY_FILE
-          chmod 400 key_file.pem
-#          ansible-playbook playbook.yml -u ubuntu --private-key key_file.pem
+          chmod 400 $KEY_FILE
+          ansible-playbook playbook.yml -u ubuntu --private-key key_file.pem
 # This is a comment and another one
