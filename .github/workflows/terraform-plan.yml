@@ -104,4 +104,4 @@ jobs:
       working-directory: ./Ansible
       env:
         KEY_FILE: ${{ secrets.SECENG_INTERN_KEY_PAIR }}
-      run: ansible-playbook playbook.yml -u ubuntu --private-key key_file.pem
+      run: ansible-playbook playbook.yml -u ubuntu --private-key key_file.pem -vvvv
