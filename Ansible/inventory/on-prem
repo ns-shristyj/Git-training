@@ -1,5 +1,0 @@
-# Load Order 3: add static hosts and groups
-
-[atlanta]
-host1 http_port=80 maxRequestsPerChild=808
-host2 http_port=303 maxRequestsPerChild=909
