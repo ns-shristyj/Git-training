@@ -3,6 +3,7 @@
   become: true
   become_user: root
   become_method: sudo
+  ansible_config: ansible.cfg;
   vars:
     created_username: ns-quinlan
 
