@@ -94,15 +94,15 @@ jobs:
       id: sshkey
       working-directory: ./Ansible
       env:
-        KEY_FILE: ${{ secrets.SECENG_INTERN_KEY_PAIR }}
+        seceng-intern-key-pair: ${{ secrets.SECENG_INTERN_KEY_PAIR }}
       run: |
           echo ${{ env.TF_IP_ADDRESS }} > hosts 
-          echo -n $KEY_FILE > key_file.pem
-          chmod 600 key_file.pem
+          echo -n $seceng-intern-key-pair > seceng-intern-key-pair.pem
+          chmod 600 seceng-intern-key-pair.pem
     - name: Running Ansible Playbook...
       id: playbook
       working-directory: ./Ansible
       env:
         KEY_FILE: ${{ secrets.SECENG_INTERN_KEY_PAIR }}
       run: |
-        ansible-playbook playbook.yml -u ubuntu --key-file key_file.pem -vvvv
+        ansible-playbook playbook.yml -u ubuntu --key-file seceng-intern-key-pair.pem -vvvv
