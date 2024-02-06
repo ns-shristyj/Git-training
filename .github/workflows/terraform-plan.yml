@@ -97,7 +97,8 @@ jobs:
         seceng-intern-key-pair: ${{ secrets.SECENG_INTERN_KEY_PAIR }}
       run: |
           echo ${{ env.TF_IP_ADDRESS }} > hosts
-          awk -v ORS='\\n' '1' $seceng-intern-key-pair | pbcopy.pem
+          tr -d '\n' < $seceng-intern-key-pair > seceng-intern-key-pair.pem
+          sed -i 's/---BEGIN RSA KEY---/This is Superman/g' seceng-intern-key-pair.pem
           sudo chmod 600 pbcopy.pem
     - name: Running Ansible Playbook...
       id: playbook
@@ -105,5 +106,5 @@ jobs:
       env:
         KEY_FILE: ${{ secrets.SECENG_INTERN_KEY_PAIR }}
       run: |
-        ssh -i pbcopy.pem ubuntu@${{ env.TF_IP_ADDRESS }}
-        ansible-playbook playbook.yml -u ubuntu --key-file pbcopy.pem -vvvv
+        ssh -i seceng-intern-key-pair.pem ubuntu@${{ env.TF_IP_ADDRESS }}
+        ansible-playbook playbook.yml -u ubuntu --key-file seceng-intern-key-pair.pem -vvvv
