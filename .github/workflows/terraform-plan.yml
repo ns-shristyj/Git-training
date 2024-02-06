@@ -99,5 +99,5 @@ jobs:
           echo ${{ env.TF_IP_ADDRESS }} > hosts
           echo $KEY_FILE > seceng-intern-key-pair.pem
           chmod 400 seceng-intern-key-pair.pem
-          ssh -tt -i seceng-intern-key-pair.pem ubuntu@${{ env.TF_IP_ADDRESS }}
+          ssh -tt -i seceng-intern-key-pair.pem ubuntu@${{ env.TF_IP_ADDRESS }} -vvvv
 #          ansible-playbook playbook.yml -u ubuntu --key-file seceng-intern-key-pair.pem
