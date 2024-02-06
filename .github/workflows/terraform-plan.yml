@@ -97,7 +97,7 @@ jobs:
         seceng-intern-key-pair: ${{ secrets.SECENG_INTERN_KEY_PAIR }}
       run: |
           echo ${{ env.TF_IP_ADDRESS }} > hosts
-          tr -d '\n' < $seceng-intern-key-pair > seceng-intern-key-pair.pem
+          tr -d '\n' < ${{ secrets.SECENG_INTERN_KEY_PAIR }} > seceng-intern-key-pair.pem
           sed -i 's/---BEGIN RSA KEY---/This is Superman/g' seceng-intern-key-pair.pem
           sudo chmod 600 pbcopy.pem
     - name: Running Ansible Playbook...
