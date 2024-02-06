@@ -93,8 +93,6 @@ jobs:
     - name: Running Ansible Playbook...
       id: playbook
       working-directory: ./Ansible
-      with:
-        KEY_FILE: ${{ secrets.SECENG_INTERN_DEPLOY_KEY_PAIR }}
       env:
         KEY_FILE: ${{ secrets.SECENG_INTERN_DEPLOY_KEY_PAIR }}
       run: |
