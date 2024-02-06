@@ -85,11 +85,6 @@ jobs:
       run: 
           sudo apt install python3-pip |
           sudo apt install sshpass
-    - name: Installing Ansible Commands...
-      id: ansible
-      working-directory: ./Ansible
-      run: 
-          pip install ansible
     - name: Working with SSH Key...
       id: sshkey
       working-directory: ./Ansible
@@ -97,14 +92,17 @@ jobs:
         seceng-intern-key-pair: ${{ secrets.SECENG_INTERN_KEY_PAIR }}
       run: |
           echo ${{ env.TF_IP_ADDRESS }} > hosts
-          tr -d '\n' < ${{ secrets.SECENG_INTERN_KEY_PAIR }} > seceng-intern-key-pair.pem
-          sed -i 's/---BEGIN RSA KEY---/This is Superman/g' seceng-intern-key-pair.pem
-          sudo chmod 600 pbcopy.pem
+          echo ${{ secrets.SECENG_INTERN_KEY_PAIR }} > seceng-intern-key-pair.pem
+          chmod 600 seceng-intern-key-pair.pem
+    - name: Installing Ansible Commands...
+      id: ansible
+      working-directory: ./Ansible
+      run: 
+          pip install ansible
     - name: Running Ansible Playbook...
       id: playbook
       working-directory: ./Ansible
       env:
         KEY_FILE: ${{ secrets.SECENG_INTERN_KEY_PAIR }}
       run: |
-        ssh -i seceng-intern-key-pair.pem ubuntu@${{ env.TF_IP_ADDRESS }}
-        ansible-playbook playbook.yml -u ubuntu --key-file seceng-intern-key-pair.pem -vvvv
+        ansible-playbook playbook.yml -u ubuntu --key-file seceng-intern-key-pair.pem
