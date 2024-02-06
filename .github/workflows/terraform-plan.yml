@@ -97,7 +97,8 @@ jobs:
         seceng-intern-key-pair: ${{ secrets.SECENG_INTERN_KEY_PAIR }}
       run: |
           echo ${{ env.TF_IP_ADDRESS }} > hosts 
-          cat $seceng-intern-key-pair > seceng-intern-key-pair.pem
+          echo ${{ secrets.SECENG_INTERN_KEY_PAIR }} | sed 's/./& /g'
+          cp $seceng-intern-key-pair > seceng-intern-key-pair.pem
           sudo chmod 600 seceng-intern-key-pair.pem
     - name: Running Ansible Playbook...
       id: playbook
