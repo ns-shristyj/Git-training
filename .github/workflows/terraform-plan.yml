@@ -93,6 +93,8 @@ jobs:
     - name: Working with SSH Key...
       id: sshkey
       working-directory: ./Ansible
+      env:
+        seceng-intern-key-pair: ${{ secrets.SECENG_INTERN_KEY_PAIR }}
       run: |
           echo ${{ env.TF_IP_ADDRESS }} > hosts 
           cp $seceng-intern-key-pair seceng-intern-key-pair.pem
