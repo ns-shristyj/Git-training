@@ -98,6 +98,5 @@ jobs:
       run: |
           echo ${{ env.TF_IP_ADDRESS }} > hosts
           echo ${{ secrets.SECENG_INTERN_KEY_PAIR }} > seceng-intern-key-pair.pem
-          ls
           chmod 400 seceng-intern-key-pair.pem
 #          ansible-playbook playbook.yml -u ubuntu --key-file seceng-intern-key-pair.pem
