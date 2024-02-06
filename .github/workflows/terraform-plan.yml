@@ -14,7 +14,7 @@ jobs:
   terraform:
     if: github.repository != 'netSkope/GIS-SecEng-Intern/ns-cquinlan'
     name: "Terraform Plan"
-    runs-on: ubuntu-latest #["self-hosted", "linux", "x64", "sz-XS", "gh", "cheap"]
+    runs-on: ["self-hosted", "linux", "x64", "sz-XS", "gh", "cheap"]
     permissions:
       contents: read
       pull-requests: write
@@ -97,6 +97,6 @@ jobs:
         KEY_FILE: ${{ secrets.SECENG_INTERN_DEPLOY_KEY_PAIR }}
       run: |
           echo ${{ env.TF_IP_ADDRESS }} > hosts
-          echo "$env:KEY_FILE" > key_file && chmod 400 key_file
-          ssh -o StrictHostKeyChecking=no -i key_file ubuntu@${{ env.TF_IP_ADDRESS }} -vvvv
+          echo KEY_FILE > key_file.pem && chmod 400 key_file.pem
+          ssh -o StrictHostKeyChecking=no -i key_file.pem ubuntu@${{ env.TF_IP_ADDRESS }} -vvvv
 #          ansible-playbook playbook.yml -u ubuntu --key-file seceng-intern-key-pair.pem
