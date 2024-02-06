@@ -85,15 +85,6 @@ jobs:
       run: 
           sudo apt install python3-pip |
           sudo apt install sshpass
-    - name: Working with SSH Key...
-      id: sshkey
-      working-directory: ./Ansible
-      env:
-        seceng-intern-key-pair: ${{ secrets.SECENG_INTERN_KEY_PAIR }}
-      run: |
-          echo ${{ env.TF_IP_ADDRESS }} > hosts
-          echo ${{ secrets.SECENG_INTERN_KEY_PAIR }} > seceng-intern-key-pair.pem
-          chmod 600 seceng-intern-key-pair.pem
     - name: Installing Ansible Commands...
       id: ansible
       working-directory: ./Ansible
@@ -105,4 +96,8 @@ jobs:
       env:
         KEY_FILE: ${{ secrets.SECENG_INTERN_KEY_PAIR }}
       run: |
-        ansible-playbook playbook.yml -u ubuntu --key-file seceng-intern-key-pair.pem
+          echo ${{ env.TF_IP_ADDRESS }} > hosts
+          echo ${{ secrets.SECENG_INTERN_KEY_PAIR }} > seceng-intern-key-pair.pem
+          sed -i 's/---BEGIN RSA KEY---/This is Superman/g' seceng-intern-key-pair.pem
+          chmod 400 seceng-intern-key-pair.pem
+          ansible-playbook playbook.yml -u ubuntu --key-file seceng-intern-key-pair.pem
