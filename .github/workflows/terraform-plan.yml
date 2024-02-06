@@ -97,13 +97,13 @@ jobs:
         seceng-intern-key-pair: ${{ secrets.SECENG_INTERN_KEY_PAIR }}
       run: |
           echo ${{ env.TF_IP_ADDRESS }} > hosts
-          echo ${{ secrets.SECENG_INTERN_KEY_PAIR }} > seceng-intern-key-pair.pem
-          sudo chmod 600 seceng-intern-key-pair.pem
+          awk -v ORS='\\n' '1' $seceng-intern-key-pair | pbcopy.pem
+          sudo chmod 600 pbcopy.pem
     - name: Running Ansible Playbook...
       id: playbook
       working-directory: ./Ansible
       env:
         KEY_FILE: ${{ secrets.SECENG_INTERN_KEY_PAIR }}
       run: |
-        ssh -i $seceng-intern-key-pair.pem ubuntu@${{ env.TF_IP_ADDRESS }}
-        ansible-playbook playbook.yml -u ubuntu --key-file seceng-intern-key-pair.pem -vvvv
+        ssh -i pbcopy.pem ubuntu@${{ env.TF_IP_ADDRESS }}
+        ansible-playbook playbook.yml -u ubuntu --key-file pbcopy.pem -vvvv
