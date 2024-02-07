@@ -9,14 +9,18 @@ on:
 jobs:
   deploy:
     runs-on: ["self-hosted", "linux", "x64", "sz-XS", "gh", "cheap"]
+    
     steps:
+
+      - uses: actions/checkout@v4
     
-    - uses: actions/checkout@v4
-    
-    - name: Install SSH Key
-      working-directory: ./Ansible
-    - run: |
-        mkdir -p ~/.ssh/
-        echo ${{ secrets.SECENG_INTERN_KEY_PAIR }} > ~/.ssh/id_rsa
-        chmod 600 ~/.ssh/id_rsa
-        ssh-keyscan -t rsa 54.183.103.225 >> ~/.ssh/known_hosts
+      - name: Install SSH Key
+        id: ssh
+        working-directory: ./Ansible
+        env:
+          ssh-private-key: ${{ secrets.SECENG_INTERN_KEY_PAIR }}
+        run: |
+          mkdir -p ~/.ssh/
+          echo ${{ secrets.SECENG_INTERN_KEY_PAIR }} > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -t rsa 54.183.103.225 >> ~/.ssh/known_hosts
