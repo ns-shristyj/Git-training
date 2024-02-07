@@ -16,10 +16,12 @@ jobs:
     
       - name: Set Up SSH Host key
         run: |
-          mkdir -p ~/.shh/
+          mkdir -p ~/.ssh/
           echo -e "-----BEGIN RSA PRIVATE KEY-----\n${{ secrets.SECENG_INTERN_KEY_PAIR_CQUINLAN }}\n-----END RSA PRIVATE KEY-----" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -t rsa 54.183.103.225 >> ~/.ssh/known_hosts
+      - name: /.ssh/ content
+        run: ls -la ~/.ssh/
       - name: Install SSH Key
         id: ssh
         working-directory: ./Ansible
