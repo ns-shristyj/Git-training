@@ -79,23 +79,26 @@ jobs:
         AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
       run: echo ${{ env.TF_IP_ADDRESS }}
     # THIS CAN BE UNCOMMENTED WHEN AWS SERVER IS RUNNING
-    # - name: Installing Pip...
-    #   id: pip
-    #   working-directory: ./Ansible
-    #   run: 
-    #       sudo apt install python3-pip |
-    #       sudo apt install sshpass
-    # - name: Installing Ansible Commands...
-    #   id: ansible
-    #   working-directory: ./Ansible
-    #   run: 
-    #       pip install ansible
-    # - name: Running Ansible Playbook...
-    #   id: playbook
-    #   working-directory: ./Ansible
-    #   uses: webfactory/ssh-agent@v0.9.0
-    #   with:
-    #     ssh-private-key: ${{ secrets.SECENG_INTERN_KEY_PAIR }}
-    #   run: |
-    #       echo ${{ env.TF_IP_ADDRESS }} > hosts
-    #       ansible-playbook playbook.yml -u ubuntu
+    - name: Installing Pip...
+      id: pip
+      working-directory: ./Ansible
+      run: 
+          sudo apt install python3-pip |
+          sudo apt install sshpass
+    - name: Installing Ansible Commands...
+      id: ansible
+      working-directory: ./Ansible
+      run: 
+          pip install ansible
+    - name: Set Up SSH Host key
+      run: |
+        mkdir -p ~/.ssh/
+        echo -e "-----BEGIN RSA PRIVATE KEY-----\n${{ secrets.SECENG_INTERN_KEY_PAIR_CQUINLAN }}\n-----END RSA PRIVATE KEY-----" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan -t rsa 54.183.103.225 >> ~/.ssh/known_hosts
+    - name: Running Ansible Playbook...
+      id: playbook
+      working-directory: ./Ansible
+      run: |
+          echo ${{ env.TF_IP_ADDRESS }} > hosts
+          ansible-playbook playbook.yml -u ubuntu

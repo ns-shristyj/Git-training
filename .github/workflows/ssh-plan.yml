@@ -29,3 +29,4 @@ jobs:
           ssh-private-key: ${{ secrets.SECENG_INTERN_KEY_PAIR_CQUINLAN }}
         run: |
           ssh -o StrictHostKeyChecking=no ubuntu@54.183.103.225 "echo Hello"
+          hostname
