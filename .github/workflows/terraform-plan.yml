@@ -93,7 +93,7 @@ jobs:
     - name: Running Ansible Playbook...
       id: playbook
       working-directory: ./Ansible
-      with:
+      env:
         KEY_FILE: ${{ secrets.SECENG_INTERN_KEY_PAIR }}
       run: |
           echo ${{ env.TF_IP_ADDRESS }} > hosts
