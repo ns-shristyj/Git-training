@@ -12,12 +12,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install SSH Key
-        uses: appleboy/ssh-action@v0.1.10
+        uses: webfactory/ssh-agent@*
         with:
-          host: 54.183.103.225
-          username: ubuntu
-          key: ${{ secrets.SECENG_INTERN_KEY_PAIR }}
-          port: 22
-          command_timeout: 30m
-          script: | 
-            echo "Nice Job!!!"
+          ssh-private-key: ${{ secrets.SECENG_INTERN_KEY_PAIR }}
+      - run: |
+          echo "Nice!"
