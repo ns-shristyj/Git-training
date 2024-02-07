@@ -1,0 +1,1 @@
+this folder will store json data directly from security stack endpoints
