@@ -17,6 +17,6 @@ jobs:
           ssh-private-key: ${{ secrets.SECENG_INTERN_KEY_PAIR }}
       - run: |
           cd ./Ansible 
-          ssh -i seceng-intern-key-pair.pem ubuntu@54.183.103.225
+          ssh ubuntu@54.183.103.225
           ls
           touch lmao.txt
