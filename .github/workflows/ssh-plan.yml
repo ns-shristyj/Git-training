@@ -14,13 +14,16 @@ jobs:
 
       - uses: actions/checkout@v4
     
+      - name: Set Up SSH Host key
+        run: |
+          mkdir -p ~/.shh/
+          echo -e "-----BEGIN RSA PRIVATE KEY-----\n${{ secrets.SECENG_INTERN_KEY_PAIR_CQUINLAN }}\n-----END RSA PRIVATE KEY-----" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -t rsa 54.183.103.225 >> ~/.ssh/known_hosts
       - name: Install SSH Key
         id: ssh
         working-directory: ./Ansible
         env:
           ssh-private-key: ${{ secrets.SECENG_INTERN_KEY_PAIR_CQUINLAN }}
         run: |
-          echo -e "-----BEGIN RSA PRIVATE KEY-----\n${{ secrets.SECENG_INTERN_KEY_PAIR_CQUINLAN }}\n-----END RSA PRIVATE KEY-----" > key-file.pem
-          chmod 600 key-file.pem
-          ssh ubuntu@54.183.103.225 -tt -i key-file.pem
-          echo "Success!"
+          ssh -o StrictHostKeyChecking=no ubuntu@54.183.103.225 "echo Hello"
