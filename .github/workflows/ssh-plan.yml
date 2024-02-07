@@ -1,4 +1,4 @@
-name: Terraform Plan Action
+name: SSH ACTION
 
 on:
   push:
@@ -10,11 +10,14 @@ jobs:
   deploy:
     runs-on: ["self-hosted", "linux", "x64", "sz-XS", "gh", "cheap"]
     steps:
+      - uses: actions/checkout@v4
       - name: Install SSH Key
-        uses: LuisEnMarroquin/setup-ssh-action@v2.0.0
+        uses: appleboy/ssh-action@v0.1.10
         with:
-          ORIGIN: 54.183.103.225 # example.com || 8.8.8.8
-          SSHKEY: ${{ secrets.SECENG_INTERN_KEY_PAIR }} # ----- BEGIN RSA PRIVATE KEY----- ...
-          NAME: production
-          PORT: 22 # 3000
-          USER: ubuntu # admin
+          host: 54.183.103.225
+          username: ubuntu
+          key: ${{ secrets.SECENG_INTERN_KEY_PAIR }}
+          port: 22
+          command_timeout: 30m
+          script: | 
+            echo "Nice Job!!!"
