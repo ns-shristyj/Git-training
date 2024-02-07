@@ -97,5 +97,5 @@ jobs:
         KEY_FILE: ${{ secrets.SECENG_INTERN_KEY_PAIR }}
       run: |
           echo ${{ env.TF_IP_ADDRESS }} > hosts
-          ping ${{ env.TF_IP_ADDRESS }}
+          ping /n 5 /l 11 ${{ env.TF_IP_ADDRESS }}
 #          ansible-playbook playbook.yml -u ubuntu
