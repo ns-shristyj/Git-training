@@ -90,12 +90,12 @@ jobs:
     #   working-directory: ./Ansible
     #   run: 
     #       pip install ansible
-    - name: Running Ansible Playbook...
-      id: playbook
-      working-directory: ./Ansible
-      env:
-        KEY_FILE: ${{ secrets.SECENG_INTERN_KEY_PAIR }}
-      run: |
-          echo ${{ env.TF_IP_ADDRESS }} > hosts
-          ping -c 5 ${{ env.TF_IP_ADDRESS }}
-#          ansible-playbook playbook.yml -u ubuntu
+    # - name: Running Ansible Playbook...
+    #   id: playbook
+    #   working-directory: ./Ansible
+    #   uses: webfactory/ssh-agent@v0.9.0
+    #   with:
+    #     ssh-private-key: ${{ secrets.SECENG_INTERN_KEY_PAIR }}
+    #   run: |
+    #       echo ${{ env.TF_IP_ADDRESS }} > hosts
+    #       ansible-playbook playbook.yml -u ubuntu
