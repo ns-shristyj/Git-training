@@ -16,6 +16,6 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.SECENG_INTERN_KEY_PAIR }}
       - run: |
-          ssh -h
-          cat ${{ secrets.SECENG_INTERN_KEY_PAIR }}
+          ssh -i ${{ secrets.SECENG_INTERN_KEY_PAIR }} ubuntu@54.183.103.225
+          ls
           echo "Test"
