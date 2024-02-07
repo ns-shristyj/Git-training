@@ -21,11 +21,7 @@ jobs:
           ssh-private-key: ${{ secrets.SECENG_INTERN_KEY_PAIR }}
         run: |
           mkdir -p ~/.ssh/
-          echo ${{ secrets.SECENG_INTERN_KEY_PAIR }} > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          sudo apt-get install openssh-client -y
-          ssh-keyscan -t rsa 54.183.103.225 >> ~/.ssh/known_hosts
-      - name: SSH into server
-        run: |
-          ssh ubuntu@54.183.103.225
-          echo "Hello WOrld!"
+          echo -e "-----BEGIN RSA PRIVATE KEY-----\n${{ secrets.SECENG_INTERN_KEY_PAIR }}\n-----END RSA PRIVATE KEY-----" > key-file.pem
+          chmod 600 key-file.pem
+          ssh ubuntu@54.183.103.225 -i key-file.pem
+          echo "Success!"
