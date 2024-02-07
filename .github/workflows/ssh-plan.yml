@@ -16,6 +16,6 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.SECENG_INTERN_KEY_PAIR }}
       - run: |
-          ssh -i ssh-private-key ubuntu@54.183.103.225
+          ssh -i $ssh-private-key ubuntu@54.183.103.225
           echo "Success!"
           echo authorized_keys
