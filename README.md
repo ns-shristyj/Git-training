@@ -73,6 +73,9 @@ Transformed exports can be found here:
 ![](images/README_20240207005146197.png)
 > 5 oultiers without SerialNumber were LENOVO,Dell Inc., or Apple. the 6th was filtered out as it was a different Manufacturer.
 
+### Intune
+![](images/README_20240207014656425.png)
+> Contrary to Kandji, Intune is the only MDM solution 2 events that have duplicate serialNumbers. The python comparison, STACK/MDM  where MDM in this case is off by a value of 2. e.g. NetTune 481/581 when it should be 481/579. Kandji does not have this issue with duplicate serial_numbers.
 
 ### Crowdstrike 
 
