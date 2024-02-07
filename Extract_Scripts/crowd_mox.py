@@ -1,12 +1,18 @@
 import requests,re,csv,json
 from datetime import timedelta, datetime
-from falconpy import Hosts
+
 
 import pdb
 from collections import defaultdict
 
 
 import os
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument('-n', '--normalize', help="Add Normalized logs, Output to appended Inventory", action='store_true')
+
+args = parser.parse_args()
 
 automox_api_key = os.environ['automox_api_key']
 
@@ -30,13 +36,17 @@ def commit_to_inventory(data_files, stack_name):
             values = {'hostname': str(item[mi[0]]), 'last_seen': str(item[mi[1]]),
                       'serial_number': str(item[mi[2]]),'OS': str(item[mi[3]]), 'stack': str(stack_name)}
             # print(values)
-            automox_devices['Inventory'].append(values)
+            if args.normalize:
+                automox_devices['Inventory'].append(values)
+            else:
+                automox_devices['Inventory'].append(item)
+
 
 
 def Automox():
     zx = automox_api_key
     ogs = 2553
-    limit = 5
+    limit = 500 # 500 limit
     bro = True
     pg = 0
     tot = 0
@@ -48,9 +58,17 @@ def Automox():
             'Authorization': 'Bearer {}'.format(zx)
         }
         response = requests.request("GET", url, headers=headrs)
+        print(response.status_code)
         data = response.json()
-        bro = False
+        if len(data) <= 0: # limit stop
+            bro = False
+            break
+        if response.status_code != 200:
+            print('unable to get results')
+            exit(1)
+            break
         commit_to_inventory(data, 'Automox')
+        pg += 1
 
 
 
@@ -62,7 +80,10 @@ def write_to_json(output_dict, export_path):
     json_data = []
     for key, value in output_dict.items():
         for sublist in value:
-            json_data.append({key: sublist})
+            if args.normalize:
+                json_data.append({key: sublist})
+            else:
+                json_data.append(sublist)
 
 
     # Serialize the list of dictionaries to line-delimited JSON
@@ -77,7 +98,9 @@ def write_to_json(output_dict, export_path):
     with open(output_json, 'a') as json_file:
         json_file.write(ldjson)
 
-
-output_json = BASE_DIR + '/out_data/full_endpoint_asset_inventory.json'
+if args.normalize:
+    output_json = BASE_DIR + '/out_data/full_endpoint_asset_inventory.json'
+else:
+    output_json = BASE_DIR + '/out_data/automox.json'
 
 write_to_json(automox_devices, output_json)
