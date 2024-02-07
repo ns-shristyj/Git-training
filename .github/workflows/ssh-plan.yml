@@ -12,9 +12,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install SSH Key
-        working-directory: ./Ansible
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SECENG_INTERN_KEY_PAIR }}
       - run: |
-          cp 
+          cd ./Ansible 
           ssh -i seceng-intern-key-pair.pem ubuntu@54.183.103.225
           ls
           touch lmao.txt
