@@ -8,12 +8,12 @@ on:
 
 jobs:
     steps:
-      - name: Install SSH Key
-        uses: shimataro/ssh-key-action@v2
-        with:
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          known_hosts: 
-      - name: Adding Known Hosts
-        run: ssh-keyscan -H 54.183.103.225 >> ~/.ssh/known_hosts
-      - name: Deploy with rsync
-        run: rsync -avz ./dist/ ubuntu@54.183.103.225:/home/ubuntu/54.183.103.225/dist/
+    - uses: shimataro/ssh-key-action@v2
+    - name: Install SSH Key
+      with:
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        known_hosts: 
+    - name: Adding Known Hosts
+      run: ssh-keyscan -H 54.183.103.225 >> ~/.ssh/known_hosts
+    - name: Deploy with rsync
+      run: rsync -avz ./dist/ ubuntu@54.183.103.225:/home/ubuntu/54.183.103.225/dist/
