@@ -22,5 +22,5 @@ jobs:
         run: |
           echo -e "-----BEGIN RSA PRIVATE KEY-----\n${{ secrets.SECENG_INTERN_KEY_PAIR }}\n-----END RSA PRIVATE KEY-----" > key-file.pem
           chmod 600 key-file.pem
-          ssh ubuntu@54.183.103.225 -i key-file.pem
+          ssh ubuntu@54.183.103.225 -tt -i key-file.pem
           echo "Success!"
