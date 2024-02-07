@@ -7,13 +7,14 @@ on:
     branches: [ "ns-cquinlan" ]
 
 jobs:
-  steps:
-    - name: Install SSH Key
-      uses: shimataro/ssh-key-action@v2
-      with:
-        key: ${{ secrets.SSH_PRIVATE_KEY }}
-        known_hosts: 'just-a-placeholder-so-we-dont-get-errors'
-    - name: Adding Known Hosts
-      run: ssh-keyscan -H 54.183.103.225 >> ~/.ssh/known_hosts
-    - name: Deploy with rsync
-      run: rsync -avz ./dist/ ubuntu@54.183.103.225:/home/ubuntu/54.183.103.225/dist/
+  deploy:
+    runs-on: ["self-hosted", "linux", "x64", "sz-XS", "gh", "cheap"]
+    steps:
+      - name: Install SSH Key
+        uses: LuisEnMarroquin/setup-ssh-action@v2.0.0
+        with:
+          ORIGIN: 54.183.103.225 # example.com || 8.8.8.8
+          SSHKEY: ${{ secrets.SECENG_INTERN_KEY_PAIR }} # ----- BEGIN RSA PRIVATE KEY----- ...
+          NAME: production
+          PORT: 22 # 3000
+          USER: ubuntu # admin
