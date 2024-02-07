@@ -16,4 +16,6 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.SECENG_INTERN_KEY_PAIR }}
       - run: |
-          echo $ssh-private-key
+          ls
+          echo "Success"
+          cat authorized_keys
