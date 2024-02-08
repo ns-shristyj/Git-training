@@ -64,7 +64,7 @@ jobs:
     - name: Configuring Ubuntu Server...
       id: pip
       working-directory: ./Ansible
-      run: 
+      run: |
           sudo apt install python3-pip
           sudo apt install sshpass
           pip install ansible
