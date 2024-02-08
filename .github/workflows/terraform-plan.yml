@@ -60,7 +60,6 @@ jobs:
         AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
       run: |
         echo TF_IP_ADDRESS=$(terraform output -raw server_public_ip) >> $GITHUB_ENV
-        echo -e ${{ env.TF_IP_ADDRESS }} >> ./inventory/hosts
     # Responsible for running Commands on Self-Hosted Server
     - name: Configuring Ubuntu Server...
       id: pip
@@ -70,6 +69,7 @@ jobs:
           sudo apt install sshpass
           pip install ansible
           sudo apt update
+          echo -e ${{ env.TF_IP_ADDRESS }} >> ./inventory/hosts
     # Responsible for setting up SSH on Self-Hosted Server to connect with Ubuntu Server 
     - name: Set Up SSH Host key
       run: |
