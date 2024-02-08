@@ -11,10 +11,10 @@
       apt:
         name: nginx
         state: latest
-    - name: Install pip
-      apt:
-        update_cache: yes
-        name: python3-pip
+    # - name: Install pip
+    #   apt:
+    #     update_cache: yes
+    #     name: python3-pip
     - name: Setup passwordless sudo
       lineinfile:
         path: /etc/sudoers
@@ -52,11 +52,12 @@
       community.general.ufw:
         state: enabled
         default: deny
-    - name: Copy Cobalt Strike
-      copy:
-        src: cobaltstrike-dist.tgz
-        dest: /tmp/cobaltstrike-dist.tgz
-    - name: Install Cobalt Strike
-      apt:
-        deb: /tmp/cobaltstrike-dist.tgz
-      become: true
+
+    # - name: Copy Cobalt Strike
+    #   copy:
+    #     src: cobaltstrike-dist.tgz
+    #     dest: /tmp/cobaltstrike-dist.tgz
+    # - name: Install Cobalt Strike
+    #   apt:
+    #     deb: /tmp/cobaltstrike-dist.tgz
+    #   become: true

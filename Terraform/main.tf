@@ -1,4 +1,10 @@
 // For more about Terraform using EC2: https://registry.terraform.io/providers/hashicorp/aws/latest/docs
+// This Terraform is responsible for starting a AWS Ec2 Instance
+// Responsible for handling Credentials, S3 Backend, VPC, Internet Gateway, Custom Route Table
+// Subnet, Associating that Subnet with a Route Table, a Network Interface with a IP in the subnet,
+// Creating Security Groups [Mainly dealing with IPv4, Incoming and Outgoing Connections],
+// Assigning a Elastic IP with a Network Interface and creating a Instance. 
+
 terraform {
   required_providers {
     aws = {
@@ -73,7 +79,8 @@ resource "aws_security_group" "allow_web" {
   vpc_id      = aws_vpc.AWS-VPC.id
   tags = { Name = "allow_WEB" }
 
-// IPv4 - Ingress Security Group
+  // IPv4 - Ingress Security Group dealing with Port 443
+  // The IP's are allowing GitHub Runner's and, Netskope Client
   ingress {
     from_port = "443"
     to_port = "443"
@@ -85,6 +92,8 @@ resource "aws_security_group" "allow_web" {
                 "35.247.67.124/32", "35.197.82.112/32",
                 "24.206.84.11/32"]
   }
+  // IPv4 - Ingress Security Group dealing with Port 8443
+  // The IP's are allowing GitHub Runner's and, Netskope Client
   ingress {
     from_port = "8443"
     to_port = "8443"
@@ -96,6 +105,9 @@ resource "aws_security_group" "allow_web" {
                 "35.247.67.124/32", "35.197.82.112/32",
                 "24.206.84.11/32"]
   }
+  // IPv4 - Ingress Security Group dealing with Port 22
+  // The IP's are allowing GitHub Runner's and, Netskope Client  
+  // This is important for allowing SSH between the Client and Server
   ingress {
     from_port = "22"
     to_port = "22"
@@ -108,6 +120,7 @@ resource "aws_security_group" "allow_web" {
                 "24.206.84.11/32", "0.0.0.0/0"]
   }
   // IPv4 - Egress Security Group
+  // This allows all IP's to leave.
   egress {
     from_port = 0
     to_port = 0
@@ -135,7 +148,9 @@ resource "aws_instance" "cobalt" {
   }
 }
 
-# Useful Commands-
+# Useful for outputting the server's public IP
+# Running a command similar to this will allow for different value's
+# to be stored in GitHub Actions
 output "server_public_ip" {
   value = aws_eip.EIP-1.public_ip
-} #this is a  comment
+}
