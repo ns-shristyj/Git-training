@@ -1,4 +1,5 @@
 ---
+# this specifies which servers to run this on
 - hosts: all
 # means to become sudo
   become: true
@@ -8,7 +9,11 @@
     created_username: ns-quinlan
 
   tasks:
-    # another way of saying sudo apt 
+    - name: Update apt
+      apt:
+        update_cache: yes
+        upgrade: 'yes'
+    # another way of saying sudo apt install nginx
     - name: Install nginx
       apt:
         name: nginx

@@ -1,3 +1,6 @@
+# ignore all private keys
 *.pem
+# ignore all Linux packages
 *.tgz
+# ignore all text files
 *.txt

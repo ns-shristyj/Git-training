@@ -69,7 +69,6 @@ jobs:
           sudo apt install sshpass
           pip install ansible
           sudo apt update
-          echo -e ${{ env.TF_IP_ADDRESS }} >> ./inventory/hosts
     # Responsible for setting up SSH on Self-Hosted Server to connect with Ubuntu Server 
     - name: Set Up SSH Host key
       run: |
@@ -82,4 +81,5 @@ jobs:
       id: playbook
       working-directory: ./Ansible/playbooks
       run: |
+          echo -e ${{ env.TF_IP_ADDRESS }} >> hosts
           ansible-playbook playbook.yml -u ubuntu
