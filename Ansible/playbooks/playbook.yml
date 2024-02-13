@@ -74,6 +74,6 @@
       expect:
         command: ./update
         responses:
-          "Please enter your license key:": {{license_key}}
+          "Please enter your license key:": "{{license_key}}"
     - name: Run Cobalt Strike Team Server
       command: cd /tmp/cobaltstrike/ && sudo ./teamserver {{ip_address}} password
