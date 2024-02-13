@@ -67,5 +67,3 @@
       command: >
         /tmp/cobaltstrike-dist.tgz 
         --license-key={{license_key}}
-      args:
-        executable: /bin/bash
