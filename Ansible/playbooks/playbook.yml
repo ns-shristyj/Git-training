@@ -78,6 +78,7 @@
     - name: Update Cobalt Strike
       expect:
         command: ./update
+        chdir:  "/tmp/cobaltstrike/"
         responses:
           "Please enter your license key:": "{{license_key}}"
     - name: Run Cobalt Strike Team Server
