@@ -63,9 +63,9 @@
       copy:
         src: /Users/cquinlan/Documents/GIS-SecEng-Intern/Ansible/cobaltstrike-dist.tgz
         dest: /tmp/cobaltstrike-dist.tgz
-    # - name: Install Cobalt Strike
-    #   command: >
-    #     /tmp/cobaltstrike-dist.tgz 
-    #     --license-key={{license_key}}
-    #   args:
-    #     executable: /bin/bash
+    - name: Install Cobalt Strike
+      command: >
+        /tmp/cobaltstrike-dist.tgz 
+        --license-key={{license_key}}
+      args:
+        executable: /bin/bash
