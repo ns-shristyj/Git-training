@@ -14,6 +14,10 @@
       apt:
         update_cache: yes
         upgrade: 'yes'
+    - name: Install OpenJDK 11 with APT
+      command: sudo apt-get -y install openjdk-11-jdk
+    - name: Make OpenJDK 11 the default
+      command: sudo update-java-alternatives -s java-1.11.0-openjdk-amd64
     # another way of saying sudo apt install nginx
     - name: Install nginx
       apt:
@@ -66,5 +70,7 @@
         dest: /tmp/cobaltstrike-dist.tgz
     - name: Extract Cobalt Strike
       command: sudo tar -xvzf /tmp/cobaltstrike-dist.tgz -C /tmp/
-    # - name: Run Cobalt Strike
-    #   command: /tmp/cobaltstrike/update --license-key={{license_key}} s
+    - name: Update Cobalt Strike
+      command: cd /tmp/cobaltstrike/ && ./update --license_key={{license_key}}
+    - name: Run Cobalt Strike Team Server
+      command: cd /tmp/cobaltstrike/ && sudo ./teamserver {{ip_address}} password
