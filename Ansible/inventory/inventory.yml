@@ -1,7 +1,0 @@
-all:
-  vars:
-    ansible_user: ubuntu
-  hosts:
-    ta-lxlt:
-      ansible_host: 54.183.103.225
-      ansible_ssh_private_key_file: ~/.ssh/id_rsa
