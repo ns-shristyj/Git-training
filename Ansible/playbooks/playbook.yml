@@ -64,10 +64,14 @@
       copy:
         src: ./files/cobaltstrike-dist.tgz
         dest: /tmp/cobaltstrike-dist.tgz
+    - name: Ensure Destination Directory Exists
+      ansible.builtin.file:
+        path: /tmp/cobaltstrike/
+        state: directory
     - name: Extract Cobalt Strike
       ansible.builtin.unarchive:
         src: /tmp/cobaltstrike-dist.tgz
-        dest: /tmp/cobaltstrike
+        dest: /tmp/cobaltstrike/
     - name: Run Cobalt Strike
       command: >
         /tmp/cobaltstrike/update 
