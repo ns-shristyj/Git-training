@@ -69,9 +69,7 @@
         path: /tmp/cobaltstrike/
         state: directory
     - name: Extract Cobalt Strike
-      unarchive:
-        src: /tmp/cobaltstrike-dist.tgz
-        dest: /tmp/cobaltstrike/
+      command: tar zxvf /tmp/cobaltstrike-dist.tgz
     - name: Run Cobalt Strike
       command: >
         /tmp/cobaltstrike/update 
