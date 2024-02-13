@@ -71,4 +71,4 @@
     - name: Extract Cobalt Strike
       command: tar -zxvf /tmp/cobaltstrike-dist.tgz
     # - name: Run Cobalt Strike
-    #   command: /tmp/cobaltstrike/update --license-key={{license_key}}
+    #   command: /tmp/cobaltstrike/update --license-key={{license_key}} s
