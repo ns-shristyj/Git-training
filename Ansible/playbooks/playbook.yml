@@ -63,7 +63,11 @@
       copy:
         src: cobaltstrike-dist.tgz
         dest: /tmp/cobaltstrike-dist.tgz
-    - name: Install Cobalt Strike
+    - name: Extract Cobalt Strike
+      ansible.builtin.unarchive:
+        src: /tmp/cobaltstrike-dist.tgz
+        dest: /tmp/cobaltstrike
+    - name: Run Cobalt Strike
       command: >
-        /tmp/cobaltstrike-dist.tgz 
+        /tmp/cobaltstrike/update 
         --license-key={{license_key}}
