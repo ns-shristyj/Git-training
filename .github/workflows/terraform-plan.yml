@@ -83,4 +83,4 @@ jobs:
       working-directory: ./Ansible
       run: |
           echo -e ${{ env.TF_IP_ADDRESS }} >> ./inventory/hosts
-          ansible-playbook ./playbooks/playbook.yml -u ubuntu -i ./inventory/hosts -e "license_key={{secrets.COBALTSTRIKE}}" 
+          ansible-playbook ./playbooks/playbook.yml -u ubuntu -i ./inventory/hosts -e "license_key=${{secrets.COBALTSTRIKE}}" 
