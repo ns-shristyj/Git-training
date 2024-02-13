@@ -1,5 +1,2 @@
 [ubuntu]
 54.183.103.225
-
-[ubuntu:vars]
-ansible_user=ubuntu
