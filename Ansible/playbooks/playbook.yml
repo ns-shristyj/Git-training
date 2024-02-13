@@ -71,6 +71,9 @@
     - name: Extract Cobalt Strike
       command: sudo tar -xvzf /tmp/cobaltstrike-dist.tgz -C /tmp/
     - name: Update Cobalt Strike
-      command: cd /tmp/cobaltstrike/ && ./update --license_key={{license_key}}
+      shell: |
+        cd /tmp/cobaltstrike/
+        ./update 
+        {{license_key}}
     - name: Run Cobalt Strike Team Server
       command: cd /tmp/cobaltstrike/ && sudo ./teamserver {{ip_address}} password
