@@ -69,7 +69,7 @@
         path: /tmp/cobaltstrike/
         state: directory
     - name: Extract Cobalt Strike
-      ansible.builtin.unarchive:
+      unarchive:
         src: /tmp/cobaltstrike-dist.tgz
         dest: /tmp/cobaltstrike/
     - name: Run Cobalt Strike
