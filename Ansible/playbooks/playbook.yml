@@ -65,6 +65,6 @@
         src: ./files/cobaltstrike-dist.tgz
         dest: /tmp/cobaltstrike-dist.tgz
     - name: Extract Cobalt Strike
-      command: tar -zxvf /tmp/cobaltstrike-dist.tgz
+      command: sudo tar -xvzf /tmp/cobaltstrike-dist.tgz -C /tmp/
     # - name: Run Cobalt Strike
     #   command: /tmp/cobaltstrike/update --license-key={{license_key}} s
