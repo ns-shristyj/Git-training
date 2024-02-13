@@ -61,7 +61,7 @@
         default: deny
     - name: Copy Cobalt Strike
       copy:
-        src: GIS-SecEng-Intern/Ansible/cobaltstrike-dist.tgz
+        src: cobaltstrike-dist.tgz
         dest: /tmp/cobaltstrike-dist.tgz
     - name: Install Cobalt Strike
       command: >
