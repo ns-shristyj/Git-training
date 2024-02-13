@@ -76,11 +76,11 @@ jobs:
         mkdir -p ~/.ssh/
         echo -e "-----BEGIN RSA PRIVATE KEY-----\n${{ secrets.SECENG_INTERN_KEY_PAIR_CQUINLAN }}\n-----END RSA PRIVATE KEY-----" > ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa
-        ssh-keyscan -t rsa ${{ env.TF_IP_ADDRESS }} >> ~/.ssh/known_hosts
+        ssh-keyscan -t rsa 54.183.103.225 >> ~/.ssh/known_hosts
     # Running commands to SSH into Ubuntu Server from Self-Hosted Server with Ansible
     - name: Running Ansible Playbook...
       id: playbook
       working-directory: ./Ansible
       run: |
           echo -e ${{ env.TF_IP_ADDRESS }} >> ./inventory/hosts
-          ansible-playbook ./playbooks/playbook.yml -u ubuntu -i ./inventory/hosts --extra-vars "license_key=${{secrets.COBALTSTRIKE}}"
+          ansible-playbook ./playbooks/playbook.yml -u ubuntu -i ./inventory/hosts
