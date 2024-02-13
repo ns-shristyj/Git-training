@@ -70,16 +70,17 @@
         dest: /tmp/cobaltstrike-dist.tgz
     - name: Extract Cobalt Strike
       command: sudo tar -xvzf /tmp/cobaltstrike-dist.tgz -C /tmp/
-    - debug:
-        var: ls_output.stdout_lines
     - name: Update Cobalt Strike
       expect:
         command: ./update
         chdir: "/tmp/cobaltstrike/"
         responses:
           "Please enter your license key:": "{{license_key}}"
+      register: update_result
       ignore_errors: yes
       timeout: 600
+    - debug:
+        var: update_result.stdout_lines
     - name: Run Cobalt Strike Team Server
       expect:
         command: sudo ./teamserver {{ip_address}} password
