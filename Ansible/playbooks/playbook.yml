@@ -70,6 +70,11 @@
         dest: /tmp/cobaltstrike-dist.tgz
     - name: Extract Cobalt Strike
       command: sudo tar -xvzf /tmp/cobaltstrike-dist.tgz -C /tmp/
+    - name: Debug - List Directory contents
+      command: ls -la /tmp/cobaltstrike/
+      register: ls_output
+    - debug:
+        var: ls_output.stdout_lines
     - name: Update Cobalt Strike
       expect:
         command: ./update
