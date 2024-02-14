@@ -144,10 +144,10 @@ resource "aws_security_group" "allow_web" {
 }
 
 // Assigning a Elastic IP to the Network Interface
-resource "aws_eip" "EIP-1" {
-  network_interface         = "${aws_network_interface.net_face.id}"
-  associate_with_private_ip = "10.0.1.50"
-}
+# resource "aws_eip" "EIP-1" {
+#   network_interface         = "${aws_network_interface.net_face.id}"
+#   associate_with_private_ip = "10.0.1.50"
+# }
 
 // Create Ubuntu Server and install Cobalt Strike
 resource "aws_instance" "cobalt" {
