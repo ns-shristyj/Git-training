@@ -72,12 +72,12 @@
       command: sudo tar -xvzf /tmp/cobaltstrike-dist.tgz -C /tmp/
     - name: Update Cobalt Strike
       expect:
-        command: ./update
+        command: timeout 900 ./update
         chdir: "/tmp/cobaltstrike/"
         responses:
           "Please enter your license key:": "{{license_key}}"
+        timeout: 200
       ignore_errors: yes
-      timeout: 69
     - name: Run Cobalt Strike Team Server
       expect:
         command: sudo ./teamserver {{ip_address}} password
