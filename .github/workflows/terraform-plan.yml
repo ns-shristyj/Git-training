@@ -28,6 +28,14 @@ jobs:
       with:
         terraform_wrapper: false
     # Responsible for downloading AWS Ec2 Packages
+    - name: Destry
+      id: dest
+      working-directory: ./Terraform
+      env:
+        AWS_ACCESS_KEY_ID: ${{secrets.AWS_ACCESS_KEY}}
+        AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
+      run: terraform destroy 
+    # Responsible for downloading AWS Ec2 Packages
     - name: Downloading necessary Terraform AWS Ec2 Packages...
       id: init
       working-directory: ./Terraform
