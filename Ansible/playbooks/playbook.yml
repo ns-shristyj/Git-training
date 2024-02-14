@@ -79,6 +79,7 @@
           "Please enter your license key:": "{{license_key}}"
         timeout: 200
     - name: Starting Cobalt Strike Team Server
+      ignore_errors: yes
       command: 
         cmd: sudo ./teamserver {{ip_address}} password
         chdir: "/tmp/cobaltstrike/"
