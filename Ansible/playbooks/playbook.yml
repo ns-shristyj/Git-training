@@ -72,13 +72,13 @@
       command: sudo tar -xvzf /tmp/cobaltstrike-dist.tgz -C /tmp/
     - name: Update Cobalt Strike
       expect:
-        command: ./update --debug -vvv
+        command: ./update
         chdir: "/tmp/cobaltstrike/"
         responses:
           "Please enter your license key:": "{{license_key}}"
       register: update_result
       ignore_errors: yes
-      timeout: 1200
+      timeout: 2400
     - debug:
         var: update_result.stdout_lines
     - name: Run Cobalt Strike Team Server
