@@ -158,7 +158,7 @@ resource "aws_instance" "cobalt" {
 
 
   network_interface {
-    device_index          = 0
+    device_index          = 1
     network_interface_id  = aws_network_interface.net_face.id
   }
 }
