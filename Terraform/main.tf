@@ -69,9 +69,18 @@ resource "aws_route_table_association" "a" {
 // Create a Network Interface with an IP in the subnet
 resource "aws_network_interface" "net_face" {
   subnet_id       = aws_subnet.AWS-SUBNET-1.id
-  #private_ips     = ["10.0.1.50"]
+  private_ips     = ["10.0.1.50"]
   security_groups = [aws_security_group.allow_web.id]
 }
+
+// Assigning a Elastic IP to the Network Interface
+resource "aws_eip" "EIP-1" {
+  vpc = true
+  network_interface         = "${aws_network_interface.net_face.id}"
+  associate_with_private_ip = "10.0.1.50"
+  depends_on = [aws_internet_gateway.gw.id, aws_instance.cobalt]
+}
+
 // Create a Security Group
 resource "aws_security_group" "allow_web" {
   name        = "allow_web_traffic"
@@ -143,12 +152,6 @@ resource "aws_security_group" "allow_web" {
   }
 }
 
-// Assigning a Elastic IP to the Network Interface
-resource "aws_eip" "EIP-1" {
-  network_interface         = "${aws_network_interface.net_face.id}"
-  #associate_with_private_ip = "10.0.1.50"
-}
-
 // Create Ubuntu Server and install Cobalt Strike
 resource "aws_instance" "cobalt" {
   ami               = "ami-0ce2cb35386fc22e9"
@@ -161,6 +164,12 @@ resource "aws_instance" "cobalt" {
     device_index          = 0
     network_interface_id  = aws_network_interface.net_face.id
   }
+}
+
+// Enable VPC Endpoint
+resource "aws_vpc_endpoint" "s3" {
+  vpc_id =  aws_vpc.AWS-VPC.id
+  service_name = "com.amazonecs.us-west-1b.s3"
 }
 
 # Useful for outputting the server's public IP
