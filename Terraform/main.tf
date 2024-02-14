@@ -22,17 +22,14 @@ terraform {
 }
 
 // Create S3 Bucket
-resource "aws_s3_bucket" "ns-bucket" {
-  bucket = "seceng-terraform-state-storage"
-}
 resource "aws_s3_bucket_ownership_controls" "ownership" {
-  bucket = aws_s3_bucket.ns-bucket.id
+  bucket = "seceng-terraform-state-storage"
   rule {
     object_ownership = "BucketOwnerPreferred"
   }
 }
 resource "aws_s3_bucket_public_access_block" "public-access" {
-  bucket = aws_s3_bucket.ns-bucket.id
+  bucket = "seceng-terraform-state-storage"
 
   block_public_acls       = false
   block_public_policy     = false
@@ -44,7 +41,7 @@ resource "aws_s3_bucket_acl" "acl" {
     aws_s3_bucket_ownership_controls.ownership,
     aws_s3_bucket_public_access_block.public-access,
   ]
-  bucket = aws_s3_bucket.ns-bucket.id
+  bucket = "seceng-terraform-state-storage"
   acl    = "public-read"
 }
 
