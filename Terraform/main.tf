@@ -69,7 +69,7 @@ resource "aws_route_table_association" "a" {
 // Create a Network Interface with an IP in the subnet
 resource "aws_network_interface" "net_face" {
   subnet_id       = aws_subnet.AWS-SUBNET-1.id
-  private_ips     = ["10.0.1.50"]
+  private_ips     = [aws_eip.EIP-1.public_ip]
   security_groups = [aws_security_group.allow_web.id]
 }
 // Create a Security Group
