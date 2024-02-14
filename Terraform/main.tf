@@ -155,7 +155,8 @@ resource "aws_instance" "cobalt" {
   instance_type     = "t2.medium"
   availability_zone = "us-west-1b"
   key_name          = "seceng-intern-key-pair"
-  
+  associate_public_ip_address = aws_eip.EIP-1.public_ip
+
 
   network_interface {
     device_index          = 0
