@@ -67,11 +67,11 @@ resource "aws_route_table_association" "a" {
 }
 
 // Create a Network Interface with an IP in the subnet
-resource "aws_network_interface" "net_face" {
-  subnet_id       = aws_subnet.AWS-SUBNET-1.id
-  private_ips     = [aws_eip.EIP-1.public_ip]
-  security_groups = [aws_security_group.allow_web.id]
-}
+# resource "aws_network_interface" "net_face" {
+#   subnet_id       = aws_subnet.AWS-SUBNET-1.id
+#   private_ips     = [aws_eip.EIP-1.public_ip]
+#   security_groups = [aws_security_group.allow_web.id]
+# }
 // Create a Security Group
 resource "aws_security_group" "allow_web" {
   name        = "allow_web_traffic"
@@ -156,10 +156,11 @@ resource "aws_instance" "cobalt" {
   availability_zone = "us-west-1b"
   key_name          = "seceng-intern-key-pair"
 
-  network_interface {
-    device_index          = 0
-    network_interface_id  = aws_network_interface.net_face.id
-  }
+  # network_interface {
+  #   device_index          = 0
+  #   network_interface_id  = aws_network_interface.net_face.id
+  #   delete_on_termination = false
+  # }
 }
 
 # Useful for outputting the server's public IP
