@@ -21,30 +21,6 @@ terraform {
   }
 }
 
-// Create S3 Bucket
-resource "aws_s3_bucket_ownership_controls" "ownership" {
-  bucket = "seceng-terraform-state-storage"
-  rule {
-    object_ownership = "BucketOwnerPreferred"
-  }
-}
-resource "aws_s3_bucket_public_access_block" "public-access" {
-  bucket = "seceng-terraform-state-storage"
-
-  block_public_acls       = false
-  block_public_policy     = false
-  ignore_public_acls      = false
-  restrict_public_buckets = false
-}
-resource "aws_s3_bucket_acl" "acl" {
-  depends_on = [
-    aws_s3_bucket_ownership_controls.ownership,
-    aws_s3_bucket_public_access_block.public-access,
-  ]
-  bucket = "seceng-terraform-state-storage"
-  acl    = "public-read"
-}
-
 // Configure the AWS Provider with Credentials
 provider "aws" {
     region = "us-west-1"
@@ -186,12 +162,6 @@ resource "aws_instance" "cobalt" {
     device_index          = 0
     network_interface_id  = aws_network_interface.net_face.id
   }
-}
-
-// Enable VPC Endpoint
-resource "aws_vpc_endpoint" "s3" {
-  vpc_id =  aws_vpc.AWS-VPC.id
-  service_name = "com.amazonecs.us-west-1b.s3"
 }
 
 # Useful for outputting the server's public IP
