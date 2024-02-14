@@ -82,4 +82,7 @@
       command: 
         cmd: sudo ./teamserver {{ip_address}} password
         chdir: "/tmp/cobaltstrike/"
-
+    - name: run
+      shell: "( tail > /dev/null 2>&1 &)"
+      async: 10
+      poll: 0
