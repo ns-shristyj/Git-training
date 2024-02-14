@@ -69,7 +69,7 @@ resource "aws_route_table_association" "a" {
 // Create a Network Interface with an IP in the subnet
 resource "aws_network_interface" "net_face" {
   subnet_id       = aws_subnet.AWS-SUBNET-1.id
-  private_ips     = ["10.0.1.50"]
+  #private_ips     = ["10.0.1.50"]
   security_groups = [aws_security_group.allow_web.id]
 }
 // Create a Security Group
@@ -117,7 +117,7 @@ resource "aws_security_group" "allow_web" {
                 "34.105.33.53/32", "34.83.158.21/32",
                 "35.233.206.241/32", "35.247.6.21/32",
                 "35.247.67.124/32", "35.197.82.112/32",
-                "24.206.84.11/32", "0.0.0.0/0"]
+                "24.206.84.11/32"] # " 0.0.0.0/0"
   }
   // IPv4 - Ingress Security Group dealing with Port 50050
   // The IP's are allowing GitHub Runner's and, Netskope Client  
@@ -131,7 +131,7 @@ resource "aws_security_group" "allow_web" {
                 "34.105.33.53/32", "34.83.158.21/32",
                 "35.233.206.241/32", "35.247.6.21/32",
                 "35.247.67.124/32", "35.197.82.112/32",
-                "24.206.84.11/32", "0.0.0.0/0"]
+                "24.206.84.11/32"] # " 0.0.0.0/0"
   }
   // IPv4 - Egress Security Group
   // This allows all IP's to leave.
@@ -146,7 +146,7 @@ resource "aws_security_group" "allow_web" {
 // Assigning a Elastic IP to the Network Interface
 resource "aws_eip" "EIP-1" {
   network_interface         = "${aws_network_interface.net_face.id}"
-  associate_with_private_ip = "10.0.1.50"
+  #associate_with_private_ip = "10.0.1.50"
 }
 
 // Create Ubuntu Server and install Cobalt Strike
@@ -155,7 +155,6 @@ resource "aws_instance" "cobalt" {
   instance_type     = "t2.medium"
   availability_zone = "us-west-1b"
   key_name          = "seceng-intern-key-pair"
-  associate_public_ip_address = true
 
 
   network_interface {
