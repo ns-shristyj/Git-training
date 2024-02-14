@@ -69,7 +69,7 @@ resource "aws_route_table_association" "a" {
 // Create a Network Interface with an IP in the subnet
 resource "aws_network_interface" "net_face" {
   subnet_id       = aws_subnet.AWS-SUBNET-1.id
-  private_ips     = [aws_eip.EIP-1.public_ip]
+  private_ips     = ["10.0.1.50"]
   security_groups = [aws_security_group.allow_web.id]
 }
 // Create a Security Group
@@ -155,12 +155,11 @@ resource "aws_instance" "cobalt" {
   instance_type     = "t2.medium"
   availability_zone = "us-west-1b"
   key_name          = "seceng-intern-key-pair"
-  associate_public_ip_address = aws_eip.EIP-1.public_ip
+  
 
   network_interface {
     device_index          = 0
     network_interface_id  = aws_network_interface.net_face.id
-    delete_on_termination = false
   }
 }
 
