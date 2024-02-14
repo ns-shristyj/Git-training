@@ -79,7 +79,6 @@
         timeout: 200
       ignore_errors: yes
     - name: Run Cobalt Strike Team Server
-      expect:
-        command: sudo ./teamserver {{ip_address}} password
-        chdir: "/tmp/cobaltstrike/"
+      command: sudo ./teamserver {{ip_address}} password
+      chdir: "/tmp/cobaltstrike/"
 
