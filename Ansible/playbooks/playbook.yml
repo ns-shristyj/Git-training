@@ -76,11 +76,8 @@
         chdir: "/tmp/cobaltstrike/"
         responses:
           "Please enter your license key:": "{{license_key}}"
-      register: update_result
       ignore_errors: yes
-      timeout: 2400
-    - debug:
-        var: update_result.stdout_lines
+      timeout: 69
     - name: Run Cobalt Strike Team Server
       expect:
         command: sudo ./teamserver {{ip_address}} password
