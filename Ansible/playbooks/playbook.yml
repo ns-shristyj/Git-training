@@ -86,7 +86,7 @@
           export JAVA_OPTS="$JAVA_OPTS -Dhttps.protocols=TLSv1.2 -Djdk.tls.client.protocols=TLSv1.2 -Djava.security.egd=file:/dev/./urandom"
         create: yes
     - name: Reload /home/ubuntu/my_environment
-      shell: source /home/ubuntu/my_environment
+      shell: . /home/ubuntu/my_environment
 
     - name: Starting Cobalt Strike Team Server
       ignore_errors: yes
