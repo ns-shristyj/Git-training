@@ -81,7 +81,7 @@
     - name: Starting Cobalt Strike Team Server
       ignore_errors: yes
       command: 
-        cmd: sudo ./teamserver {{ip_address}} password
+        cmd: sudo ./teamserver {{ip_address}} password &
         chdir: "/tmp/cobaltstrike/"
     - name: Confirming the Server is Live
       command:
