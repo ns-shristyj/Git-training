@@ -79,14 +79,14 @@
           "Please enter your license key:": "{{license_key}}"
         timeout: 200
   
-    - name: Set HTTPS Protocols System Property
-      ignore_errors: yes
-      shell: |
-        'JAVA_OPTS="-Dhttps.protocols=TLSv1.2 \
-        -Djdk.tls.client.protocols=TLSv1.2 \
-        -Djava.security.egd=file:/dev/./urandom"'
-      args:
-        chdir: "/etc/environment"
+    - name: Create and set JAVA_OPTS in custom file
+      blockinfile:
+        path: /home/ubuntu/my_environment
+        block: |
+          export JAVA_OPTS="$JAVA_OPTS -Dhttps.protocols=TLSv1.2 -Djdk.tls.client.protocols=TLSv1.2 -Djava.security.egd=file:/dev/./urandom"
+        create: yes
+    - name: Reload /home/ubuntu/my_environment
+      shell: source /home/ubuntu/my_environment
 
     - name: Starting Cobalt Strike Team Server
       ignore_errors: yes
