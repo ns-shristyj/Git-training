@@ -73,12 +73,6 @@ resource "aws_network_interface" "net_face" {
   security_groups = [aws_security_group.allow_web.id]
 }
 
-// Assigning a Elastic IP to the Network Interface
-resource "aws_eip" "EIP-1" {
-  network_interface         = "${aws_network_interface.net_face.id}"
-  associate_with_private_ip = "10.0.1.50"
-}
-
 // Create a Security Group
 resource "aws_security_group" "allow_web" {
   name        = "allow_web_traffic"
@@ -149,6 +143,11 @@ resource "aws_security_group" "allow_web" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
+// Assigning a Elastic IP to the Network Interface
+resource "aws_eip" "EIP-1" {
+  network_interface         = "${aws_network_interface.net_face.id}"
+  associate_with_private_ip = "10.0.1.50"
+}
 
 // Create Ubuntu Server and install Cobalt Strike
 resource "aws_instance" "cobalt" {
@@ -156,7 +155,6 @@ resource "aws_instance" "cobalt" {
   instance_type     = "t2.medium"
   availability_zone = "us-west-1b"
   key_name          = "seceng-intern-key-pair"
-
 
   network_interface {
     device_index          = 0
@@ -166,7 +164,7 @@ resource "aws_instance" "cobalt" {
 
 # Useful for outputting the server's public IP
 # Running a command similar to this will allow for different value's
-# to be stored in GitHub Actions.
+# to be stored in GitHub Actions
 output "server_public_ip" {
   value = aws_eip.EIP-1.public_ip
 }
