@@ -166,7 +166,7 @@ resource "aws_instance" "cobalt" {
 
 # Useful for outputting the server's public IP
 # Running a command similar to this will allow for different value's
-# to be stored in GitHub Actions
+# to be stored in GitHub Actions.
 output "server_public_ip" {
   value = aws_eip.EIP-1.public_ip
 }
