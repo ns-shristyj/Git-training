@@ -80,6 +80,6 @@
         timeout: 200
     - name: Starting Cobalt Strike Team Server
       ignore_errors: yes
-      command: 
-        cmd: sudo ./teamserver 10.0.1.50 password &
+      shell: sudo ./teamserver 10.0.1.50 password ? /dev/null 2>&1 &
+      args:
         chdir: "/tmp/cobaltstrike/"
