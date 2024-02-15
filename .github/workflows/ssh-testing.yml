@@ -37,6 +37,6 @@ jobs:
       id: playbook
       working-directory: ./Ansible
       run: |
-          ssh -i ~/.ssh/id_rsa ubuntu@54.151.54.243
+          ssh -tt -i ~/.ssh/id_rsa ubuntu@54.151.54.243
           echo "Hello World!"
           ls
