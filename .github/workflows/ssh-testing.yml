@@ -30,13 +30,13 @@ jobs:
         mkdir -p ~/.ssh/
         echo -e "-----BEGIN RSA PRIVATE KEY-----\n${{ secrets.SECENG_INTERN_KEY_PAIR_CQUINLAN }}\n-----END RSA PRIVATE KEY-----" > ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa
-        ssh-keyscan -vvv -t rsa 54.183.103.225 >> ~/.ssh/known_hosts
-        ssh-keygen -vvv -R 54.183.103.225
+        ssh-keyscan -vvv -t rsa 54.151.54.243 >> ~/.ssh/known_hosts
+        ssh-keygen -vvv -R 54.151.d54.243
     # Running commands to SSH into Ubuntu Server from Self-Hosted Server with Ansible
     - name: Running Ansible Playbook...
       id: playbook
       working-directory: ./Ansible
       run: |
-          ssh -i ~/.ssh/id_rsa ubuntu@54.183.103.225
+          ssh -i ~/.ssh/id_rsa ubuntu@54.151.54.243
           echo "Hello World!"
           ls
