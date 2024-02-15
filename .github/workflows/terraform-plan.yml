@@ -50,7 +50,7 @@ jobs:
       env:
         AWS_ACCESS_KEY_ID: ${{secrets.AWS_ACCESS_KEY}}
         AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
-      run: terraform destroy 
+      run: terraform destroy -auto-approve
 #       # Storing the IP generated for Ec2 Instance
 #     - name: Storing Public Ip...
 #       id: store
