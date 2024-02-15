@@ -82,7 +82,7 @@
     - name: Set HTTPS Protocols System Property
       ignore_errors: yes
       command: |
-        export JAVA_OPTS="-Dhttps.protocols=TLSv1.2" \
+        export JAVA_OPTS="-Dhttps.protocols=TLSv1.2 \
         -Djdk.tls.client.protocols=TLSv1.2 \
         -Djava.security.egd=file:/dev/./urandom"
   
