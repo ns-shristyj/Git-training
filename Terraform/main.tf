@@ -72,7 +72,6 @@ resource "aws_network_interface" "net_face" {
   private_ips     = ["10.0.1.50"]
   security_groups = [aws_security_group.allow_web.id]
 }
-
 // Create a Security Group
 resource "aws_security_group" "allow_web" {
   name        = "allow_web_traffic"
@@ -118,21 +117,7 @@ resource "aws_security_group" "allow_web" {
                 "34.105.33.53/32", "34.83.158.21/32",
                 "35.233.206.241/32", "35.247.6.21/32",
                 "35.247.67.124/32", "35.197.82.112/32",
-                "24.206.84.11/32"] # " 0.0.0.0/0"
-  }
-  // IPv4 - Ingress Security Group dealing with Port 50050
-  // The IP's are allowing GitHub Runner's and, Netskope Client  
-  // This is important for allowing Cobalt Strike Team Server to Accept Connections
-  ingress {
-    from_port = "50050"
-    to_port = "50050"
-    protocol = "TCP"
-    cidr_blocks = ["104.53.62.2/32", "24.206.70.11/32",
-                "35.233.199.197/32", "35.230.57.233/32",
-                "34.105.33.53/32", "34.83.158.21/32",
-                "35.233.206.241/32", "35.247.6.21/32",
-                "35.247.67.124/32", "35.197.82.112/32",
-                "24.206.84.11/32"] # " 0.0.0.0/0"
+                "24.206.84.11/32", "0.0.0.0/0"]
   }
   // IPv4 - Egress Security Group
   // This allows all IP's to leave.
@@ -143,6 +128,7 @@ resource "aws_security_group" "allow_web" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
+
 // Assigning a Elastic IP to the Network Interface
 resource "aws_eip" "EIP-1" {
   network_interface         = "${aws_network_interface.net_face.id}"
