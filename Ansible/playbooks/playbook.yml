@@ -89,6 +89,6 @@
       shell: . /home/ubuntu/my_environment
 
     - name: Starting Cobalt Strike Team Server
-      shell: nohup sudo ./teamserver 10.0.1.50 password > /dev/null 2>&1 &
+      shell: nohup sudo ./teamserver 10.0.1.50 password &
       args:
         chdir: "/tmp/cobaltstrike/"
