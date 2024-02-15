@@ -83,5 +83,3 @@
       command: 
         cmd: sudo ./teamserver 10.0.1.50 password &
         chdir: "/tmp/cobaltstrike/"
-    - name: Confirming the Server is Live
-      command: ps aux | grep teamserver

@@ -105,6 +105,19 @@ resource "aws_security_group" "allow_web" {
                 "35.247.67.124/32", "35.197.82.112/32",
                 "24.206.84.11/32"]
   }
+  // IPv4 - Ingress Security Group dealing with Port 50500
+  // The IP's are allowing GitHub Runner's, Cobalt Strike Server and, Netskope Client
+  ingress {
+    from_port = "50500"
+    to_port = "50500"
+    protocol = "TCP"
+    cidr_blocks = ["104.53.62.2/32", "24.206.70.11/32",
+                "35.233.199.197/32", "35.230.57.233/32",
+                "34.105.33.53/32", "34.83.158.21/32",
+                "35.233.206.241/32", "35.247.6.21/32",
+                "35.247.67.124/32", "35.197.82.112/32",
+                "24.206.84.11/32"]
+  }
   // IPv4 - Ingress Security Group dealing with Port 22
   // The IP's are allowing GitHub Runner's and, Netskope Client  
   // This is important for allowing SSH between the Client and Server
@@ -117,7 +130,7 @@ resource "aws_security_group" "allow_web" {
                 "34.105.33.53/32", "34.83.158.21/32",
                 "35.233.206.241/32", "35.247.6.21/32",
                 "35.247.67.124/32", "35.197.82.112/32",
-                "24.206.84.11/32", "0.0.0.0/0"]
+                "24.206.84.11/32"]
   }
   // IPv4 - Egress Security Group
   // This allows all IP's to leave.
