@@ -78,6 +78,12 @@
         responses:
           "Please enter your license key:": "{{license_key}}"
         timeout: 200
+    - name: Set HTTPS Protocols System Property
+      ignore_errors: yes
+      command: |
+        export JAVA_OPTS="-Dhttps.protocols=TLSv1.2" \
+        -Djdk.tls.client.protocols=TLSv1.2 \
+        -Djava.security.egd=file:/dev/./urandom"
     - name: Starting Cobalt Strike Team Server
       ignore_errors: yes
       shell: nohup sudo ./teamserver 10.0.1.50 password ? /dev/null 2>&1 &
