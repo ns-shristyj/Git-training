@@ -89,7 +89,6 @@
       shell: . /home/ubuntu/my_environment
 
     - name: Starting Cobalt Strike Team Server
-      ignore_errors: yes
       shell: nohup sudo ./teamserver 10.0.1.50 password > /dev/null 2>&1 &
       args:
         chdir: "/tmp/cobaltstrike/"
