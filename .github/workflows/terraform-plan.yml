@@ -76,8 +76,8 @@ jobs:
         mkdir -p ~/.ssh/
         echo -e "-----BEGIN RSA PRIVATE KEY-----\n${{ secrets.SECENG_INTERN_KEY_PAIR_CQUINLAN }}\n-----END RSA PRIVATE KEY-----" > ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa
-        ssh-keygen -R 54.183.103.225
         ssh-keyscan -t rsa 54.183.103.225 >> ~/.ssh/known_hosts
+        ssh-keygen -R 54.183.103.225
     # Running commands to SSH into Ubuntu Server from Self-Hosted Server with Ansible
     - name: Running Ansible Playbook...
       id: playbook
