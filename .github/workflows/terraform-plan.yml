@@ -2,7 +2,7 @@
 # https://developer.hashicorp.com/terraform/tutorials/automation/github-actions
 # https://www.pluralsight.com/resources/blog/cloud/how-to-use-github-actions-to-automate-terraform
 
-name: Terraform Plan Action
+name: Cobalt Strike Team Server with Terraform Ec2 Instance
 
 on:
   push:
