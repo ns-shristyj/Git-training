@@ -53,17 +53,8 @@
           - curl
           - vim
           - git
-          - ufw
         state: latest
         update_cache: true
-    - name: UFW - Allow SSH connections
-      community.general.ufw:
-        rule: allow
-        name: OpenSSH
-    - name: UFW - Enable and deny by default
-      community.general.ufw:
-        state: enabled
-        default: deny
     - name: Copy Cobalt Strike
       copy:
         src: ./files/cobaltstrike-dist.tgz

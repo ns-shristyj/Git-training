@@ -108,8 +108,8 @@ resource "aws_security_group" "allow_web" {
   // IPv4 - Ingress Security Group dealing with Port 50500
   // The IP's are allowing GitHub Runner's, Cobalt Strike Server and, Netskope Client
   ingress {
-    from_port = "50500"
-    to_port = "50500"
+    from_port = "50050"
+    to_port = "50050"
     protocol = "TCP"
     cidr_blocks = ["104.53.62.2/32", "24.206.70.11/32",
                 "35.233.199.197/32", "35.230.57.233/32",
