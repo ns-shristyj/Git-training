@@ -71,7 +71,6 @@
     - name: Extract Cobalt Strike
       command: sudo tar -xvzf /tmp/cobaltstrike-dist.tgz -C /tmp/
     - name: Update Cobalt Strike
-      ignore_errors: yes
       expect:
         command: timeout 900 ./update
         chdir: "/tmp/cobaltstrike/"
