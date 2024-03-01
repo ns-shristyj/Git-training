@@ -1,0 +1,39 @@
+# For more informatio on how to setup GitHub Actions with Terraform, documentation is here:
+# https://developer.hashicorp.com/terraform/tutorials/automation/github-actions
+# https://www.pluralsight.com/resources/blog/cloud/how-to-use-github-actions-to-automate-terraform
+
+# 1. First, the GitHub Actions Runner needs to be set up so that these commands can be ran.
+# 2. Allow the Checkout action to be ran on the GitHub Runner, this will allow for smooth clean ups.
+# 3. Create Jobs.
+#     - Start a virtual environment using Python3
+#     - Running a pip install GUnicorn
+#     - Uncomment one of the jobs below that will be responsible for setting up SSH on the Runner.
+#     - One of these jobs will be running a Ansible Playbook on a Ubuntu Server through SSH. You
+#       won't have to create a playbook (unless you want to) but that will mainly be done on my end.
+
+# We will be using our own ubuntu server, not GitHub's. To do that, specify with the runs-on command:
+# runs-on: ["self-hosted", "linux", "x64", "sz-XS", "gh", "cheap"]
+
+# We have several variables that are encrypted that can be and will be called in this project. 
+# Although, I'm unsure if you will need AWS Keys, but just in case I will list them here:
+# AWS Public Access Key: ${{secrets.AWS_ACCESS_KEY}}
+# AWS Secret Access Key: ${{secrets.AWS_SECRET_ACCESS_KEY}}
+
+# One of the most important variables that we have encrypted with GitHub Secrets is called a SSH Key.
+# This key is what allows a user to be able to connect from one remote device to another, this is
+# especially important when it comes to security. A lot of this has been done already, but it's important
+# to know what it's called:
+# The Ubuntu SSH Key: ${{secrets.SECENG_INTERN_KEY_PAIR}}
+#   - After the Job "Set Up SSH Host Key" is ran, the key will then be called: "~/.ssh/id_rsa" 
+
+# Below is code I'm leaving from my previous project with setting up this Runner to work with SSH.
+# The GitHub Runner will act as a way to connect the Flask Application to the remote AWS Ubuntu Server
+# so that it can become public facing. 
+    # Responsible for setting up SSH on Self-Hosted Server to connect with Ubuntu Server 
+    # - name: Set Up SSH Host key
+    #   run: |
+    #     mkdir -p ~/.ssh/
+    #     echo -e "-----BEGIN RSA PRIVATE KEY-----\n${{secrets.SECENG_INTERN_KEY_PAIR}}\n-----END RSA PRIVATE KEY-----" > ~/.ssh/id_rsa
+    #     chmod 600 ~/.ssh/id_rsa
+    #     ssh-keyscan -t rsa ${{ env.TF_IP_ADDRESS }} >> ~/.ssh/known_hosts
+    #     chmod 644 ~/.ssh/known_hosts
