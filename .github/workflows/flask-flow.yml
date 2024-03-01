@@ -6,12 +6,12 @@ name: Flask Web Server
 
 on:
   push:
-    branches: [ "ns-cquinlan" ]
+    branches: [ "FLASK_webserver" ]
   pull_request:
-    branches: [ "ns-cquinlan" ]
+    branches: [ "FLASK_webserver" ]
 
 jobs:
-  terraform:
+  flaskapp:
     if: github.repository != 'netSkope/GIS-SecEng-Intern/FLASK_webserver'
     name: "Flask Prod Web Server"
     runs-on: ["self-hosted", "linux", "x64", "sz-XS", "gh", "cheap"]
