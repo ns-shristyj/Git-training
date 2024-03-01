@@ -14,39 +14,6 @@
       apt:
         update_cache: yes
         upgrade: 'yes'  
-    # another way of saying sudo apt install nginx
-    - name: Installing Debian Keyring
-      command: sudo apt install -y debian-keyring debian-archive-keyring apt-transport-https
-    - name: Installing Caddy
-      command: sudo apt install caddy
-    - name: Install nginx
-      apt:
-        name: nginx
-        state: latest
-    - name: Install pip
-      apt:
-        update_cache: yes
-        name: python3-pip
-    - name: Setup passwordless sudo
-      lineinfile:
-        path: /etc/sudoers
-        state: present
-        regexp: '^%sudo'
-        line: '%sudo ALL=(ALL) NOPASSWD: ALL'
-        validate: '/usr/sbin/visudo -cf %s'
-    - name: Create a new regular user with sudo privileges
-      user:
-        name: "{{created_username}}"
-        state: present
-        groups: sudo 
-        append: true
-        create_home: true
-    - name: Disable password auth for root
-      lineinfile:
-        path: /etc/ssh/sshd_config
-        state: present
-        regexp: '^#?PermitRootLogin'
-        line: 'PermitRootLogin prohibit-password'
     - name: Update apt and install required system packages
       apt:
         pkg:
@@ -55,3 +22,21 @@
           - git
         state: latest
         update_cache: true
+    - name: Install nginx
+      apt:
+        name: nginx
+        state: latest
+    # another way of saying sudo apt install nginx
+    - name: Installing Dependencies
+      shell: |
+        sudo apt install python3-pip python3-dev build-essential libssl-dev libffi-dev python3-setuptools
+        sudo apt install python3-venv
+        sudo apt install nginx
+        pip install wheel
+        sudo apt update 
+    - name: Python Virtual Environment
+      shell: |
+        python3 -m venv .venv
+        source .venv/bin/activate
+        pip install gunicorn Flask
+        deactivate
