@@ -23,6 +23,14 @@ jobs:
     # The checkout step uses GitHub's actions/checkout@v3 action.
     - uses: actions/checkout@v4
     - uses: actions/setup-python@v5
+    # Responsible for running Commands on Runner
+    - name: Configuring Runner...
+      id: runner
+      run: |
+          sudo apt install python3-pip
+          sudo apt install sshpass
+          pip install ansible
+          sudo apt update
     # Responsible for setting up SSH on Self-Hosted Server to connect with Ubuntu Server 
     - name: Set Up SSH Host key
       run: |
