@@ -30,11 +30,12 @@
       shell: |
         sudo apt install python3-pip python3-dev build-essential libssl-dev libffi-dev python3-setuptools -y
         sudo apt install python3-venv -y
-        pip install wheel
+        python3 -m pip install --upgrade pip
+        pip install wheel --root-user-action=ignore
         sudo apt update 
     - name: Python Virtual Environment
       shell: |
         python3 -m venv .venv
         source .venv/bin/activate
-        pip install gunicorn Flask
+        pip install gunicorn Flask --root-user-action=ignore
         deactivate
