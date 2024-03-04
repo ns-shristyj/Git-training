@@ -26,12 +26,10 @@
       apt:
         name: nginx
         state: latest
-    # another way of saying sudo apt install nginx
     - name: Installing Dependencies
       shell: |
         sudo apt install python3-pip python3-dev build-essential libssl-dev libffi-dev python3-setuptools
         sudo apt install python3-venv
-        sudo apt install nginx
         pip install wheel
         sudo apt update 
     - name: Python Virtual Environment
