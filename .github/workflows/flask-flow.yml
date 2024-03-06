@@ -26,11 +26,19 @@ jobs:
     - uses: hashicorp/setup-terraform@v3
       with:
         terraform_wrapper: false
-     # Responsible for downloading AWS Ec2 Packages
-    - name: Destroying necessary Terraform AWS Ec2 Packages...
+   # Responsible for downloading AWS Ec2 Packages
+    - name: Downloading necessary Terraform AWS Ec2 Packages...
       id: init
       working-directory: ./Terraform
       env:
         AWS_ACCESS_KEY_ID: ${{secrets.AWS_ACCESS_KEY}}
         AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
-      run: terraform destroy 
+      run: terraform init 
+    # Responsible for generating (or using auto) plan for Ec2 Instance
+    - name: Planning AWS Ec2 Server...
+      id: plan
+      working-directory: ./Terraform
+      env:
+        AWS_ACCESS_KEY_ID: ${{secrets.AWS_ACCESS_KEY}}
+        AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
+      run: terraform destroy
