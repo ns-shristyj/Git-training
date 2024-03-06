@@ -38,27 +38,29 @@
         #     ssh-keyscan -t rsa ${{ env.TF_IP_ADDRESS }} >> ~/.ssh/known_hosts
         #     chmod 644 ~/.ssh/known_hosts
 
-# # FIRST GitHub Action
-# name: learn-github-actions
-# run-name: ${{ github.actor }} is learning GitHub Actions
-# on: [push]
-# jobs:
-#   check-bats-version:
-#     runs-on: ["self-hosted", "linux", "x64", "sz-XS", "gh", "cheap"]
-#     steps:
-#       - uses: actions/checkout@v4
-#       - uses: actions/setup-node@v4
-#         with:
-#           node-version: '14'
-#       - run: npm install -g bats
-#       - run: bats -v
+# FIRST GitHub Action
+name: learn-github-actions
+run-name: ${{ github.actor }} is learning GitHub Actions
+on: [push]
+jobs:
+  check-bats-version:
+    runs-on: ["self-hosted", "linux", "x64", "sz-XS", "gh", "cheap"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '14'
+      - run: echo "Hello World!!"
+      - run: npm install -g bats
+      - run: bats -v
 
 #  hello world GHAction
-name: hello-world 
-on: push
-jobs: 
-    my-jobs: 
-        runs-on: ["self-hosted", "linux", "x64", "sz-XS", "gh", "cheap"]
-        steps: 
-            - name: my-step
-              run: echo "Hello World!!"
+# name: hello-world 
+# on: push
+# jobs: 
+    # my-jobs: 
+        # runs-on: ["self-hosted", "linux", "x64", "sz-XS", "gh", "cheap"]
+        # steps: 
+            # - name: my-step
+            #   run: echo "Hello World!!"
+
