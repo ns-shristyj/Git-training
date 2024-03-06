@@ -42,3 +42,28 @@
         pip install wheel
         pip install gunicorn Flask --root-user-action=ignore
         deactivate
+    - name: Configuring GUnicorn
+      shell: |
+        sudo cp /home/ubuntu/GIS-SecEng-Intern/Ansible/files/myproject.service /etc/systemd/system/
+    - name: Starting GUnicorn
+      expect:
+        command: sudo systemctl start myproject
+        responses:
+          "Please enter your password:" "ubuntu"
+        timeout: 200
+    - name: Enable GUnicorn
+      shell: |
+        sudo systemctl enable myproject
+        sudo systemctl status myproject
+    - name: Configuring Nginx to Proxy Requests
+      shell: |
+        sudo cp /home/ubuntu/GIS-SecEng-Intern/Ansible/files/myproject /etc/nginx/sites-available/
+        sudo ln -s /etc/nginx/sites-available/myproject /etc/nginx/sites-enabled
+        sudo nginx -t
+        sudo systemctl restart nginx
+        sudo ufw delete allow 5000
+        sudo ufw allow 'Nginx Full'
+        sudo chmod 755 /home/ubuntu
+    - name: Securing the Application
+      shell: |
+        sudo apt install python3-certbot-nginx
