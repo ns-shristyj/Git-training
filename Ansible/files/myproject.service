@@ -1,0 +1,13 @@
+[Unit]
+Description=Gunicorn instance to serve myproject
+After=network.target
+
+[Service]
+User=sammy
+Group=www-data
+WorkingDirectory=/home/ubuntu/GIS-SecEng-Intern/flask_app
+Environment="PATH=/home/ubuntu/GIS-SecEng-Intern/flask_app/myproject/ven/bin"
+ExecStart=/home/ubuntu/GIS-SecEng-Intern/flask_app/venv/bin/gunicorn --workers 3 --bind unix:myproject.sock -m 007 myproject:app
+
+[Install]
+WantedBy=multi-user.target
