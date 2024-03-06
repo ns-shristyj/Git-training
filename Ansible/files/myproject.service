@@ -6,8 +6,8 @@ After=network.target
 User=ubuntu
 Group=www-data
 WorkingDirectory=/home/ubuntu/GIS-SecEng-Intern/flask_app
-Environment="PATH=/home/ubuntu/GIS-SecEng-Intern/flask_app/myproject/venv/bin"
-ExecStart=/home/ubuntu/GIS-SecEng-Intern/flask_app/venv/bin/gunicorn --workers 3 --bind unix:myproject.sock -m 007 myproject:app
+Environment="PATH=/home/ubuntu/venv/bin"
+ExecStart=/home/ubuntu/venv/bin/gunicorn --workers 3 --bind unix:myproject.sock -m 007 myproject:app
 
 [Install]
 WantedBy=multi-user.target

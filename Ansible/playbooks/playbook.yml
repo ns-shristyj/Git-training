@@ -26,9 +26,16 @@
       apt:
         name: nginx
         state: latest
+    - name: Configuring Ubuntu user
+      expect:
+        command: sudo passwd ubuntu
+        responses:
+          "New password:": "ubuntu"
+          "Retype new password:": "ubuntu"
+        timeout: 200
     - name: Installing Dependencies
       shell: |
-        sudo apt install python3-pip python3-dev build-essential libssl-dev libffi-dev python3-setuptools -y
+        sudo apt install python3-pip python3-dev build-esse ntial libssl-dev libffi-dev python3-setuptools -y
         sudo apt install python3-venv -y
         python3 -m pip install --upgrade pip
         pip install wheel --root-user-action=ignore
@@ -37,19 +44,18 @@
     - name: Python Virtual Environment
       shell: |
         python3 -m venv /home/ubuntu/venv/
-        source /home/ubuntu/venv/bin/activate
-        python3 -m pip install --upgrade pip
-        pip install wheel
-        pip install gunicorn Flask --root-user-action=ignore
-        deactivate
+        sudo /home/ubuntu/venv/bin/pip3 install --upgrade pip
+        sudo /home/ubuntu/venv/bin/pip3 install wheel gunicorn Flask
     - name: Configuring GUnicorn
       shell: |
         sudo cp /home/ubuntu/GIS-SecEng-Intern/Ansible/files/myproject.service /etc/systemd/system/
+        sudo systemctl start myproject
+
     - name: Starting GUnicorn
       expect:
-        command: sudo systemctl start myproject
+        command: systemctl daemon-reload
         responses:
-          "Please enter your password:": "ubuntu"
+          "Password:": "ubuntu"
         timeout: 200
     - name: Enable GUnicorn
       shell: |
