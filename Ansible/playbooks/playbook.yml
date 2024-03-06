@@ -43,6 +43,7 @@
       args:
         chdir: /home/ubuntu/
         creates: /GIS-SecEng-Intern/
+      ignore_errors: true
     - name: Python Virtual Environment
       shell: |
         python3 -m venv /home/ubuntu/venv/
