@@ -35,7 +35,7 @@
         timeout: 200
     - name: Installing Dependencies
       shell: |
-        sudo apt install python3-pip python3-dev build-esse ntial libssl-dev libffi-dev python3-setuptools -y
+        sudo apt install python3-pip python3-dev build-essential libssl-dev libffi-dev python3-setuptools -y
         sudo apt install python3-venv -y
         python3 -m pip install --upgrade pip
         pip install wheel --root-user-action=ignore
