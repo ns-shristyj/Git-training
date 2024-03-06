@@ -35,11 +35,11 @@
         timeout: 200
     - name: Installing Dependencies
       shell: |
-        sudo apt install python3-pip python3-dev build-essential libssl-dev libffi-dev python3-setuptools -y
-        sudo apt install python3-venv -y
+        sudo apt-get install python3-pip python3-dev build-essential libssl-dev libffi-dev python3-setuptools -y
+        sudo apt-get install python3-venv -y
         python3 -m pip install --upgrade pip
         pip install wheel --root-user-action=ignore
-        sudo apt update 
+        sudo apt-get update 
         git clone https://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@github.com/netSkope/GIS-SecEng-Intern.git --single-branch --branch FLASK_webserver
     - name: Python Virtual Environment
       shell: |
