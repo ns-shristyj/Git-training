@@ -2,7 +2,7 @@
 # https://developer.hashicorp.com/terraform/tutorials/automation/github-actions
 # https://www.pluralsight.com/resources/blog/cloud/how-to-use-github-actions-to-automate-terraform
 
-# 1. First, the GitHub Actions Runner needs to be set up so that these commands can be ran.
+# 1. First, the GitHub Actoins Runner needs to be set up so that these commands can be ran.
 # 2. Allow the Checkout action to be ran on the GitHub Runner, this will allow for smooth clean ups.
 # 3. Create Jobs.
     #     - Start a virtual environment using Python3
@@ -38,17 +38,27 @@
         #     ssh-keyscan -t rsa ${{ env.TF_IP_ADDRESS }} >> ~/.ssh/known_hosts
         #     chmod 644 ~/.ssh/known_hosts
 
-# FIRST GitHub Action
-name: learn-github-actions
-run-name: ${{ github.actor }} is learning GitHub Actions
-on: [push]
-jobs:
-  check-bats-version:
-    runs-on: ["self-hosted", "linux", "x64", "sz-XS", "gh", "cheap"]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '14'
-      - run: npm install -g bats
-      - run: bats -v
+# # FIRST GitHub Action
+# name: learn-github-actions
+# run-name: ${{ github.actor }} is learning GitHub Actions
+# on: [push]
+# jobs:
+#   check-bats-version:
+#     runs-on: ["self-hosted", "linux", "x64", "sz-XS", "gh", "cheap"]
+#     steps:
+#       - uses: actions/checkout@v4
+#       - uses: actions/setup-node@v4
+#         with:
+#           node-version: '14'
+#       - run: npm install -g bats
+#       - run: bats -v
+
+#  hello world GHAction
+name: hello-world 
+on: push
+jobs: 
+    my-jobs: 
+        runs-on: ["self-hosted", "linux", "x64", "sz-XS", "gh", "cheap"]
+        steps: 
+            - name: my-step
+              run: echo "Hello World!!"
