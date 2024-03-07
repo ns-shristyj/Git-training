@@ -75,6 +75,14 @@
         sudo ufw allow 'Nginx Full'
         sudo chmod 755 /home/ubuntu
     - name: Creating OpenSSL Key
+      openssl_privatekey:
+        path: /etc/ssl/private/nginx-selfsigned.key
+        size: 2048
+      openssl_certificate:
+        provider: selfsigned
+        path: /etc/ssl/certs/nginx-selfsigned.crt
+        privatekey_path: /etc/ssl/private/nginx-selfsigned.key
+    - name: Creating OpenSSL Key
       expect:
         command: sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/ssl/private/nginx-selfsigned.key -out /etc/ssl/certs/nginx-selfsigned.crt
         responses:
