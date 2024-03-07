@@ -37,7 +37,7 @@
       shell: |
         sudo apt-get install python3-pip python3-dev build-essential libssl-dev libffi-dev python3-setuptools -y
         sudo apt-get install python3-venv -y
-        sudo apt-get update 
+        sudo apt-get update
     - name: Cloning GitHub Repository
       command: git clone https://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@github.com/netSkope/GIS-SecEng-Intern.git --single-branch --branch FLASK_webserver
       args:
@@ -46,14 +46,14 @@
       ignore_errors: true
     - name: Python Virtual Environment
       shell: |
-        python3 -m venv /home/ubuntu/venv/
-        sudo /home/ubuntu/venv/bin/pip3 install --upgrade pip
-        sudo /home/ubuntu/venv/bin/pip3 install wheel gunicorn Flask
+        sudo python3 -m venv /home/ubuntu/GIS-SecEng-Intern/venv
+        sudo /home/ubuntu/GIS-SecEng-Intern/venv/bin/pip3 install --upgrade pip
+        sudo /home/ubuntu/GIS-SecEng-Intern/venv/bin/pip3 install wheel gunicorn Flask
     - name: Configuring GUnicorn
       shell: |
         sudo cp /home/ubuntu/GIS-SecEng-Intern/Ansible/files/myproject.service /etc/systemd/system/
+        sudo chown ubuntu:ubuntu /home/ubuntu/GIS-SecEng-Intern/
         sudo systemctl start myproject
-
     - name: Starting GUnicorn
       expect:
         command: systemctl daemon-reload
