@@ -39,7 +39,7 @@
         sudo apt-get install python3-venv -y
         sudo apt-get update
     - name: Cloning GitHub Repository
-      command: git clone https://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@github.com/netSkope/GIS-SecEng-Intern.git --single-branch --branch FLASK_webserver
+      command: sudo rm -r /home/ubuntu/GIS-SecEng-Intern && git clone https://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@github.com/netSkope/GIS-SecEng-Intern.git --single-branch --branch FLASK_webserver
       args:
         chdir: /home/ubuntu/
         creates: /GIS-SecEng-Intern/
