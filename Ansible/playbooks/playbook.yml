@@ -53,6 +53,7 @@
       shell: |
         sudo cp /home/ubuntu/GIS-SecEng-Intern/Ansible/files/myproject.service /etc/systemd/system/
         sudo chown ubuntu:ubuntu /home/ubuntu/GIS-SecEng-Intern/
+        sudo systemctl stop myproject && sudo systemctl disable myproject
         sudo systemctl start myproject
     - name: Starting GUnicorn
       expect:
