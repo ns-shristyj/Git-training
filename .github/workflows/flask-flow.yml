@@ -80,11 +80,8 @@ jobs:
           node-version: '14'
       - name: pip-install-GUnicorn
         run: pip install gunicorn
-      - name: running Commands on Runner
-        run: | 
-          install python3-pip
-          install ssh
-          install ansible
-          sudo apt-get update
-
+      - name: running-Commands-on-Runner
+        run: |
+          sudo apt update
+          sudo apt install python3-pip
           
