@@ -73,6 +73,3 @@
         sudo ufw delete allow 5000
         sudo ufw allow 'Nginx Full'
         sudo chmod 755 /home/ubuntu
-    - name: Securing the Application
-      shell: |
-        sudo apt install python3-certbot-nginx
