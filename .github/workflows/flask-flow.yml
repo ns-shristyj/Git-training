@@ -4,7 +4,7 @@
 
 # 1. First, the GitHub Actoins Runner needs to be set up so that these commands can be ran.
 # 2. Allow the Checkout action to be ran on the GitHub Runner, this will allow for smooth clean ups.
-# 3. Create Jobs.
+# 3. Create Jobs.   
     #     - Start a virtual environment using Python3
     #     - Running a pip install GUnicorn
     #     - Responsible for running Commands on Runner --> this will be responsible for installing python-pip, ssh, ansible, and updating the runner with apt
