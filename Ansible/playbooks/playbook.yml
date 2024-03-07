@@ -74,14 +74,35 @@
         sudo ufw delete allow 5000
         sudo ufw allow 'Nginx Full'
         sudo chmod 755 /home/ubuntu
-    - name: Creating OpenSSL Key
-      openssl_privatekey:
-        path: /etc/ssl/private/nginx-selfsigned.key
-        size: 2048
-      openssl_certificate:
-        provider: selfsigned
-        path: /etc/ssl/certs/nginx-selfsigned.crt
-        privatekey_path: /etc/ssl/private/nginx-selfsigned.key
+    # Generate Certificate Authority (CA) self-signed certificate
+    - name: Generate Certificate Authority (CA) self-signed certificate
+      block:
+        - name: Generate Root CA private key
+          openssl_privatekey:
+            path: /etc/ssl/private/nginx-selfsigned.key
+
+        - name: Generate Root CA CSR
+          openssl_csr:
+            path: "/etc/ssl/csrs/nginx-selfsigned.csr"
+            privatekey_path: "/etc/ssl/private/nginx-selfsigned.key"
+            common_name: 13.52.105.27
+            organization_name: Netskope
+            basic_constraints:
+              - CA:TRUE
+            basic_constraints_critical: yes
+            key_usage:
+              - keyCertSign
+              - digitalSignature
+              - cRLSign
+            key_usage_critical: yes
+
+        - name: Generate Root CA certificate
+          openssl_certificate:
+            path: "/etc/ssl/certs/nginx-selfsigned.crt"
+            privatekey_path: "/etc/ssl/private/nginx-selfsigned.key"
+            csr_path: "/etc/ssl/csrs/nginx-selfsigned.csr"
+            provider: selfsigned
+    # /Generate Certificate Authority (CA) self-signed certificate
     - name: Creating OpenSSL Key
       expect:
         command: sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/ssl/private/nginx-selfsigned.key -out /etc/ssl/certs/nginx-selfsigned.crt
