@@ -83,9 +83,9 @@ jobs:
       - name: run Commands on Runner
         run: |
           sudo apt update
-          sudo apt install python3-pip
-          sudo apt install openssh-client
-          sudo apt install ansible
+          sudo apt install -y python3-pip
+          sudo apt install -y openssh-client
+          sudo apt install -y ansible
           sudo apt update
       - name: Set Up SSH Host key
         run: |
