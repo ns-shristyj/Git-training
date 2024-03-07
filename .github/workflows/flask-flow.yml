@@ -82,9 +82,9 @@ jobs:
         run: pip install gunicorn
       - name: running Commands on Runner
         run: | 
-          apt install python3-pip
-          apt install ssh
-          apt install ansible
+          install python3-pip
+          install ssh
+          install ansible
           sudo apt-get update
 
           
