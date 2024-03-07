@@ -78,13 +78,22 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '14'
-      - name: pip-install-GUnicorn
+      - name: install GUnicorn
         run: pip install gunicorn
-      - name: running-Commands-on-Runner
+      - name: run Commands on Runner
         run: |
           sudo apt update
           sudo apt install python3-pip
-          pip install ansible
+          sudo apt install openssh-client
+          sudo apt install ansible
+          sudo apt update
+      - name: Set Up SSH Host key
+        run: |
+          mkdir -p ~/.ssh/
+          echo -e "-----BEGIN RSA PRIVATE KEY-----\n${{secrets.SECENG_INTERN_KEY_PAIR}}\n-----END RSA PRIVATE KEY-----" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -t rsa 13.52.105.27 >> ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
 
 
           
