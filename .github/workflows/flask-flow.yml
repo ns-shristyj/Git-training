@@ -95,7 +95,7 @@ jobs:
           ssh-keyscan -t rsa 13.52.105.27 >> ~/.ssh/known_hosts
           chmod 644 ~/.ssh/known_hosts
       - name: sshing to another device
-        run: ssh ubuntu@my.external.13.52.105.27
+        run: ssh 13.52.105.27
 
 
 # take in IP address, user (ubuntu), inventory file, playbook to run, and specify where the playbook is located 
