@@ -74,3 +74,13 @@
         sudo ufw delete allow 5000
         sudo ufw allow 'Nginx Full'
         sudo chmod 755 /home/ubuntu
+    - name: Securing the Application
+      shell: |
+        sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/ssl/private/nginx-selfsigned.key -out /etc/ssl/certs/nginx-selfsigned.crt
+        sudo cp /home/ubuntu/GIS-SecEng-Intern/Ansible/files/self-signed.conf /etc/nginx/snippets/
+        sudo cp /home/ubuntu/GIS-SecEng-Intern/Ansible/files/ssl-params.conf /etc/nginx/snippets/
+        sudo openssl dhparam -out /etc/ssl/certs/dhparam.pem 2048
+        sudo ln -s /etc/nginx/sites-available/myproject /etc/nginx/sites-enabled
+        sudo ufw app list
+        sudo systemctl restart nginx
+

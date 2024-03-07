@@ -1,9 +1,20 @@
 server {
-    listen 80;
+    listen 443 ssl;
+    listen [::]:443 ssl;
     server_name 13.52.105.27;
+    include snippets/self-signed.conf;
+    include snippets/ssl-params.conf;
 
     location / {
         include proxy_params;
         proxy_pass http://unix:/home/ubuntu/GIS-SecEng-Intern/flask_app/myproject.sock;
     }
+}
+server {
+    listen 80;
+    listen [::]:80;
+
+    server_name 13.52.105.27;
+
+    return 302 https://13.52.105.27$request_uri;
 }
