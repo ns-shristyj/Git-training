@@ -1,5 +1,6 @@
 import requests,re,csv,json
 from datetime import timedelta, datetime
+from json_to_csv import make_csv
 
 
 import pdb
@@ -94,6 +95,8 @@ def write_to_json(output_dict, export_path):
 
     with open(output_json, 'a') as json_file:
         json_file.write(ldjson)
+        json_file.write('\n')
+        json_file.close()
 
 if args.normalize:
     output_json = BASE_DIR + '/out_data/full_endpoint_asset_inventory.json'
@@ -101,3 +104,6 @@ else:
     output_json = BASE_DIR + '/out_data/kandji.json'
 
 write_to_json(kandji_devices, output_json)
+
+
+make_csv(kandji_devices, 'kandji')
