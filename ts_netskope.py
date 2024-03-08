@@ -24,9 +24,9 @@ def get_unique(df):
       
 
         try:
-            if (item['host_info']['device_make'].lower() == 'Dell Inc.'.lower() \
-                or item['host_info']['device_make'].lower() == 'LENOVO'.lower() \
-                    or item['host_info']['device_make'].lower() == 'Apple'.lower()):
+            if (item['host_info']['device_make'].lower().strip() == 'Dell Inc.'.lower().strip() \
+                or item['host_info']['device_make'].lower().strip() == 'LENOVO'.lower().strip() \
+                    or item['host_info']['device_make'].lower().strip() == 'Apple'.lower().strip()):
                 
             
                 # print(item['system_manufacturer'])

@@ -2,7 +2,7 @@ import requests,os
 import load_environ
 
 
-BIGQUERY = os.environ['BIGQUERY']
+BIGQUERY = os.environ['GOOGLE_API_KEY']
 
 method = 'GET'.upper()
 

@@ -28,6 +28,10 @@ samples = [0,-1, 15, 24,25,26,27]
 
 for sa in range(len(key_nums)):
     print('key numbers  :', len(key_nums[sa].keys()))
+
+    if len(key_nums[sa].keys()) < 44:
+        pdb.set_trace()
+
     # keys = []
     # for k,v in key_nums[sa].items():
     #     # pdb.set_trace()

@@ -3,7 +3,7 @@ import load_environ
 from google.cloud import bigquery
 
 
-BIGQUERY = os.environ['BIGQUERY']
+BIGQUERY = os.environ['GOOGLE_API_KEY']
 
 method = 'DELETE'.upper()
 

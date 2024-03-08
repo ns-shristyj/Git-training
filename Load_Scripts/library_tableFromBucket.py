@@ -3,21 +3,20 @@ from google.cloud import storage
 import os
 
 # Replace with your own values
-projectId = ''
-datasetId = ''
-tableId = ''
-bucket_name = ''
-file_path = 'endpoint_asset_inventory_hostname.json'
+projectId = 'ns-ciso-asa-automation'
+datasetId = 'dataset'
+tableId = 'automation_table'
+bucket_name = 'nightwagon'
+file_path = 'intune.json'
 
 
 # Google Cloud Storage authentication
-GOOGLE_APPLICATION_CREDENTIALS = os.environ['GOOGLE_APPLICATION_CREDENTIALS']
+GOOGLE_APPLICATION_CREDENTIALS = os.environ['GOOGLE_API_KEY']
 
 
-storage_client = storage.Client(project=projectId)
 
 # Initialize BigQuery and Storage clients
-bq_client = bigquery.Client(project=projectId)
+bq_client = bigquery.Client(project=projectId, client_options={'api_key': GOOGLE_APPLICATION_CREDENTIALS})
 storage_client = storage.Client(project=projectId)
 
 # GCS path

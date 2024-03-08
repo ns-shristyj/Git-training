@@ -37,9 +37,10 @@ for line in rd:
     
 
     new_dict = json_data
+    new_dict['Stack'] = stack
     
 
-    augmented_data[str(stack)].append(new_dict)
+    augmented_data[str('Inventory')].append(new_dict)
 
 
 
@@ -58,6 +59,8 @@ def write_to_json(output_dict, export_path):
 
     with open(output_json, 'a') as json_file:
         json_file.write(ldjson)
+        json_file.write('\n')
+        json_file.close()
 
 
 output_json = BASE_DIR + '/volv_output/' + args.output

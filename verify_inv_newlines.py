@@ -1,8 +1,14 @@
 
 # This script is to check full_endpoint_asset_inventory for newline errors.
+import argparse
+parser = argparse.ArgumentParser()
+parser.add_argument('-i', '--input', help='file to check for newline issues', action='store', required=True)
+args = parser.parse_args()
 
 
-with open('Extract_Scripts/out_data/full_endpoint_asset_inventory.json', 'r') as f:
+
+
+with open(str(args.input), 'r') as f:
     inventory = f.readlines()
 
 for line in inventory:

@@ -67,6 +67,8 @@ def write_to_json(output_dict, export_path):
 
     with open(output_json, 'a') as json_file:
         json_file.write(ldjson)
+        json_file.write('\n')
+        json_file.close()
 
 
 output_json = BASE_DIR + '/ts_output/netkandji.json'

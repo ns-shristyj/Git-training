@@ -16,27 +16,21 @@ def create_serial():
 def get_unique(df):
 
     filtered_inventory = defaultdict(list)
-    # print(len(df['kandji']))
-    # pdb.set_trace()  # breakpoint got 2979 devices 
-
-    # start with ce and mac
+  
     c = 0
     for item in df['kandji']:
-        # c +=1  # debug 
-        # print(c) # debug
-        # pdb.set_trace()
-        if item['platform'].lower() == 'mac' and not item['user']['email'].startswith('ce-'):
-            # pdb.set_trace()
-            filtered_inventory['Kandji'].append(item)
-           
+       
+        try:
 
-    # print('inventory count  :', len(filtered_inventory['Kandji']))
-  
+            if item['platform'].lower() == 'mac' and not item['user']['email'].startswith('ce-'):
+                # pdb.set_trace()
+                filtered_inventory['Kandji'].append(item)
+        except TypeError:
+            #collect devices missing later
+            pass
+             
 
     return filtered_inventory
-
-
-
 
 
 
@@ -52,7 +46,7 @@ def main():
             kandji_devices['kandji'].append(json_data)
 
     inventory = get_unique(kandji_devices)
-
+    
 
     return inventory
 

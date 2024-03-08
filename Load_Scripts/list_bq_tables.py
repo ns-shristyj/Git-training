@@ -1,13 +1,13 @@
 import requests,os
-import load_environ
+# import load_environ
 
 
-BIGQUERY = os.environ['BIGQUERY']
+BIGQUERY = os.environ['GOOGLE_API_KEY']
 
 method = 'GET'.upper()
 
-projectId = ''
-datasetId = ''
+projectId = 'ns-ciso-asa-automation'
+datasetId = 'dataset'
 
 host = 'https://bigquery.googleapis.com'
 uri = f'/bigquery/v2/projects/{projectId}/datasets/{datasetId}/tables'

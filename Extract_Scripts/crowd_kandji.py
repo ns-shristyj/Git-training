@@ -41,7 +41,7 @@ def commit_to_inventory(data_files, stack_name):
 
 def getDevices():
     devices=[]
-    limit=300 # limit 300
+    limit=200 # limit 300
     parameters = {"limit": limit}
     tot = 0
     bro = True

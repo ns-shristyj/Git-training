@@ -61,7 +61,7 @@ def commit_to_inventory(data_files, stack_name):
                 crowdstrike_devices['Inventory'].append(item)
 
 def Crowdstrike_Devices():
-    hosts = Hosts(client_id=crowdstrike_client_id, client_secret=crowdstrike_client_secret, pythonic=True)
+    hosts = Hosts(client_id=crowdstrike_client_id, client_secret=crowdstrike_client_secret, pythonic=True) 
     limit = 5000 #limit 5000
     sort = "hostname"
     windows_criteria = "platform_name:'Windows'"

@@ -12,6 +12,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 kandji_crowd = defaultdict(list)
 outliers = defaultdict(list)
+hermits = defaultdict(list)
 
 kandji_devices = tk()
 crowd_devices = tc()
@@ -30,6 +31,7 @@ for kitem in kandji_devices['Kandji']:
             # pdb.set_trace()
             if kitem not in kandji_crowd['CrowdKandji']: kandji_crowd['CrowdKandji'].append(kitem) # attempts to remove duplicates
             # kandji_crowd['CrowdKandji'].append(kitem) # attempts to remove duplicates
+
         else:
             # if citem not in outliers['Outliers']: outliers['Outliers'].append(citem)
             pass
@@ -63,8 +65,11 @@ def write_to_json(output_dict, export_path):
 
     with open(output_json, 'a') as json_file:
         json_file.write(ldjson)
+        json_file.write('\n')
+        json_file.close()
 
 
 output_json = BASE_DIR + '/ts_output/crowdkandji.json'
 
 write_to_json(kandji_crowd, output_json)
+
