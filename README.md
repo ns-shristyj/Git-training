@@ -7,9 +7,8 @@ v 0.1
 > Automox, Crowdstrike, Neskope, Intune, Kandji
 
 ```
-python ts_party.py -r    # main function -- performs full API export and performs transforms.
-# or 
-python Extract_Scripts/crowd_control.py  # API export script
+python main.py    # main function -- performs full API export and performs transforms.
+
 ```
 
 * output path:  'Extract_Scripts/out_data'
