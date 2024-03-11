@@ -39,11 +39,7 @@
         sudo apt-get install python3-venv -y
         sudo apt-get update
     - name: Cloning GitHub Repository
-      command: sudo rm -r /home/ubuntu/GIS-SecEng-Intern && git clone https://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@github.com/netSkope/GIS-SecEng-Intern.git --single-branch --branch FLASK_webserver
-      args:
-        chdir: /home/ubuntu/
-        creates: /GIS-SecEng-Intern/
-      ignore_errors: true
+      shell: sudo rm -r /home/ubuntu/GIS-SecEng-Intern && git clone https://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@github.com/netSkope/GIS-SecEng-Intern.git --single-branch --branch FLASK_webserver
     - name: Python Virtual Environment
       shell: |
         sudo python3 -m venv /home/ubuntu/GIS-SecEng-Intern/flask_app/venv
@@ -111,3 +107,16 @@
         sudo ln -s /etc/nginx/sites-available/myproject /etc/nginx/sites-enabled
         sudo ufw app list
         sudo systemctl restart nginx
+    - name: Implementing Fail2Ban
+      shell: |
+        tar xvfj fail2ban-master.tar.bz2
+        cd fail2ban-master
+        sudo python setup.py install
+    # To enable fail2ban as an automatic service, simply copy the script for your distro from the files directory to /etc/init.d. 
+    # Example (on a Debian-based system):
+    - name: Fail2Ban Configuration
+      shell: |
+        fail2ban-client version
+        cp files/debian-initd /etc/init.d/fail2ban
+        update-rc.d fail2ban defaults
+        service fail2ban start
