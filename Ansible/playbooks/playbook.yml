@@ -50,7 +50,6 @@
         sudo cp /home/ubuntu/GIS-SecEng-Intern/Ansible/files/myproject.service /etc/systemd/system/
         sudo chown ubuntu:ubuntu /home/ubuntu/GIS-SecEng-Intern/
         sudo systemctl stop myproject && sudo systemctl disable myproject
-        sudo systemctl start myproject
     - name: Starting GUnicorn
       expect:
         command: systemctl daemon-reload
@@ -59,8 +58,8 @@
         timeout: 200
     - name: Enable GUnicorn
       shell: |
-        sudo systemctl enable myproject
-        sudo systemctl status myproject
+        sudo systemctl start myproject
+        sudo systemctl enable myproject && sudo systemctl status myproject
     - name: Configuring Nginx to Proxy Requests
       shell: |
         sudo cp /home/ubuntu/GIS-SecEng-Intern/Ansible/files/myproject /etc/nginx/sites-available/
@@ -109,14 +108,15 @@
         sudo systemctl restart nginx
     - name: Implementing Fail2Ban
       shell: |
-        tar xvfj fail2ban-master.tar.bz2
-        cd fail2ban-master
-        sudo python setup.py install
+        sudo rm -r /home/ubuntu/fail2ban && git clone https://github.com/fail2ban/fail2ban.git
+        cd fail2ban
+        sudo python3 setup.py install 
     # To enable fail2ban as an automatic service, simply copy the script for your distro from the files directory to /etc/init.d. 
     # Example (on a Debian-based system):
     - name: Fail2Ban Configuration
-      shell: |
-        fail2ban-client version
-        cp files/debian-initd /etc/init.d/fail2ban
-        update-rc.d fail2ban defaults
-        service fail2ban start
+      expect:
+        command: sudo cp files/debian-initd /etc/init.d/fail2ban && update-rc.d fail2ban defaults && service fail2ban start
+        responses:
+          "Password:": "ubuntu"
+          "Password:": "ubuntu"
+        timeout: 200
