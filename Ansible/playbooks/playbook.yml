@@ -58,6 +58,7 @@
         timeout: 200
     - name: Enable GUnicorn
       shell: |
+        sudo systemctl stop myproject
         sudo systemctl start myproject
         sudo systemctl enable myproject && sudo systemctl status myproject
     - name: Configuring Nginx to Proxy Requests
@@ -82,6 +83,7 @@
             privatekey_path: "/etc/ssl/private/nginx-selfsigned.key"
             common_name: 13.52.105.27
             organization_name: Netskope
+            organizational_unit_name: Security Engineering
             basic_constraints:
               - CA:TRUE
             basic_constraints_critical: yes
