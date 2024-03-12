@@ -81,4 +81,4 @@ jobs:
       working-directory: ./Ansible
       run: |
           echo -e ${{ env.TF_IP_ADDRESS }} >> ./inventory/hosts
-          ansible-playbook -v ./playbooks/playbook.yml -u ubuntu -i ./inventory/hosts -e "ip_address=${{env.TF_IP_ADDRESS}}" 
+          ansible-playbook -vvv ./playbooks/playbook.yml -u ubuntu -i ./inventory/hosts -e "ip_address=${{env.TF_IP_ADDRESS}}" 
