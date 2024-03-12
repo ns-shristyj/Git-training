@@ -49,9 +49,8 @@
       shell: |
         sudo cp /home/ubuntu/GIS-SecEng-Intern/Ansible/files/myproject.service /etc/systemd/system/
         sudo chown ubuntu:ubuntu /home/ubuntu/GIS-SecEng-Intern/flask_app/
-        pkill myproject
     - name: Restarting Systemd Service
-      shell: sudo systemctl daemon-reload
+      shell: sudo systemctl daemon-reload && sudo systemctl restart myproject
     - name: Enable GUnicorn
       shell: |
         sudo systemctl start myproject
