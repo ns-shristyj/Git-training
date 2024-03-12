@@ -106,4 +106,3 @@ jobs:
  
 # take in IP address, user (ubuntu), inventory file, playbook to run, and specify where the playbook is located
 
-# call the api and print out error issues
