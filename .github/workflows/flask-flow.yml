@@ -104,5 +104,4 @@ jobs:
             echo "\n13.52.105.27" >> ./Ansible/inventory/hosts
             ansible-playbook -i ./Ansible/inventory/hosts -u ubuntu -e ip_address=13.52.105.27 ./Ansible/playbooks/playbook.yml 
  
-# take in IP address, user (ubuntu), inventory file, playbook to run, and specify where the playbook is located
 
