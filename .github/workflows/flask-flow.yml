@@ -84,7 +84,7 @@ jobs:
           sudo apt install -y python3-pip
           sudo apt install -y openssh-client
           sudo apt install -y ansible
-          sudo pip install --user ansible
+          pip install --user ansible
           sudo apt update
 
       - name: Set Up SSH Host key
@@ -103,7 +103,7 @@ jobs:
       - name: SSHing and Running a Playbook
         run: |
             echo "\n13.52.105.27" >> ./Ansible/inventory/hosts
-        ##ansible-playbook -i /Users/mnekkar/GIS-SecEng-Intern/Ansible/inventory/hosts playbook.yml
+        #ansible-playbook -i /Users/mnekkar/GIS-SecEng-Intern/Ansible/inventory/hosts playbook.yml
  
 # take in IP address, user (ubuntu), inventory file, playbook to run, and specify where the playbook is located
 
