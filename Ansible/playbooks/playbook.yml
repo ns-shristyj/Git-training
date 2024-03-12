@@ -48,19 +48,17 @@
     - name: Configuring GUnicorn
       shell: |
         sudo cp /home/ubuntu/GIS-SecEng-Intern/Ansible/files/myproject.service /etc/systemd/system/
-        sudo chown ubuntu:ubuntu /home/ubuntu/GIS-SecEng-Intern/
-        sudo systemctl stop myproject && sudo systemctl disable myproject
-    - name: Starting GUnicorn
-      expect:
-        command: systemctl daemon-reload
-        responses:
-          "Password:": "ubuntu"
-        timeout: 200
+        sudo chown ubuntu:ubuntu /home/ubuntu/GIS-SecEng-Intern/flask_app/
+        pkill myproject
+    - name: Restarting Systemd Service
+      sudo: true
+      ansible.builtin.systemd_service:
+        daemon_reload: true
     - name: Enable GUnicorn
       shell: |
-        sudo systemctl stop myproject
         sudo systemctl start myproject
-        sudo systemctl enable myproject && sudo systemctl status myproject
+        sudo systemctl enable myproject
+        sudo systemctl status myproject
     - name: Configuring Nginx to Proxy Requests
       shell: |
         sudo cp /home/ubuntu/GIS-SecEng-Intern/Ansible/files/myproject /etc/nginx/sites-available/
