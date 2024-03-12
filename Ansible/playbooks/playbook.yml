@@ -115,10 +115,10 @@
         sudo python3 setup.py install 
     # To enable fail2ban as an automatic service, simply copy the script for your distro from the files directory to /etc/init.d. 
     # Example (on a Debian-based system):
-    - name: Fail2Ban Configuration
-      expect:
-        command: sudo cp files/debian-initd /etc/init.d/fail2ban && update-rc.d fail2ban defaults && service fail2ban start
-        responses:
-          "Password:": "ubuntu"
-          "Password:": "ubuntu"
-        timeout: 200
+    # - name: Fail2Ban Configuration
+    #   expect:
+    #     command: sudo cp files/debian-initd /etc/init.d/fail2ban && update-rc.d fail2ban defaults && service fail2ban start
+    #     responses:
+    #       "Password:": "ubuntu"
+    #       "Password:": "ubuntu"
+    #     timeout: 200
