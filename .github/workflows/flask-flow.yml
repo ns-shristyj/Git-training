@@ -102,6 +102,6 @@ jobs:
       - name: SSHing and Running a Playbook
         run: |
             echo "\n13.52.105.27" >> ./Ansible/inventory/hosts
-            ansible-playbook -i ./Ansible/inventory/hosts -u ubuntu -e ip_address=13.52.105.27 ./Ansible/playbooks/playbook.yml 
+            ansible-playbook -i ./Ansible/inventory/hosts -u ubuntu ./Ansible/playbooks/playbook.yml 
  
 
