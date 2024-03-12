@@ -108,12 +108,25 @@
         sudo rm -r /home/ubuntu/fail2ban && git clone https://github.com/fail2ban/fail2ban.git
         cd fail2ban
         sudo python3 setup.py install 
+    - name: Updating Fail2Ban Conf Files
+      shell: |
+        sudo cp /home/ubuntu/GIS-SecEng-Intern/Ansible/fail2ban/fail2ban.conf && /etc/fail2ban/
+        sudo cp /home/ubuntu/GIS-SecEng-Intern/Ansible/fail2ban/paths-arch.conf && /etc/fail2ban/
+        sudo cp /home/ubuntu/GIS-SecEng-Intern/Ansible/fail2ban/paths-common.conf && /etc/fail2ban/
+        sudo cp /home/ubuntu/GIS-SecEng-Intern/Ansible/fail2ban/paths-debian.conf && /etc/fail2ban/
+        sudo cp /home/ubuntu/GIS-SecEng-Intern/Ansible/fail2ban/paths-fedora.conf && /etc/fail2ban/
+        sudo cp /home/ubuntu/GIS-SecEng-Intern/Ansible/fail2ban/paths-freebsd.conf && /etc/fail2ban/
+        sudo cp /home/ubuntu/GIS-SecEng-Intern/Ansible/fail2ban/paths-openuse.conf && /etc/fail2ban/
+        sudo cp /home/ubuntu/GIS-SecEng-Intern/Ansible/fail2ban/paths-osx.confs && /etc/fail2ban/
     # To enable fail2ban as an automatic service, simply copy the script for your distro from the files directory to /etc/init.d. 
     # Example (on a Debian-based system):
-    # - name: Fail2Ban Configuration
-    #   expect:
-    #     command: sudo cp files/debian-initd /etc/init.d/fail2ban && update-rc.d fail2ban defaults && service fail2ban start
-    #     responses:
-    #       "Password:": "ubuntu"
-    #       "Password:": "ubuntu"
-    #     timeout: 200
+    - name: Fail2Ban Configuration
+      expect:
+        command: |
+          cd fail2ban
+          sudo cp files/debian-initd /etc/init.d/fail2ban
+          update-rc.d fail2ban defaults
+          sudo service fail2ban start
+        responses:
+          "Password:": "ubuntu"
+        timeout: 200
