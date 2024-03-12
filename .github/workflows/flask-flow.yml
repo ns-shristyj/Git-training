@@ -84,6 +84,7 @@ jobs:
           sudo apt install -y python3-pip
           sudo apt install -y openssh-client
           sudo apt install -y ansible
+          sudo pip install --user ansible
           sudo apt update
 
       - name: Set Up SSH Host key
@@ -95,12 +96,15 @@ jobs:
           chmod 644 ~/.ssh/known_hosts
 
       - name: SSHing to Another Device
-        run: ssh ubuntu@13.52.105.27
+        run: |
+            ssh ubuntu@13.52.105.27
+        #echo $PATH
       
       - name: SSHing and Running a Playbook
-        run: ansible-playbook -i vyos.example.net, -u ansible -k -e ansible_network_os=vyos.vyos.vyos playbook.yml
+        run: |
+            echo "\n13.52.105.27" >> ./Ansible/inventory/hosts
+        ##ansible-playbook -i /Users/mnekkar/GIS-SecEng-Intern/Ansible/inventory/hosts playbook.yml
  
-
-# take in IP address, user (ubuntu), inventory file, playbook to run, and specify where the playbook is located 
+# take in IP address, user (ubuntu), inventory file, playbook to run, and specify where the playbook is located
 
 # call the api and print out error issues
