@@ -98,8 +98,8 @@ jobs:
         run: ssh ubuntu@13.52.105.27
       
       - name: SSHing and Running a Playbook
-        run: echo "I will get to you later :)"
-
+        run: ansible-playbook -i vyos.example.net, -u ansible -k -e ansible_network_os=vyos.vyos.vyos firstx_playbook.yml
+ 
 
 # take in IP address, user (ubuntu), inventory file, playbook to run, and specify where the playbook is located 
 
