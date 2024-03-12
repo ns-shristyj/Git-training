@@ -123,9 +123,8 @@
     # To enable fail2ban as an automatic service, simply copy the script for your distro from the files directory to /etc/init.d. 
     # Example (on a Debian-based system):
     - name: Fail2Ban Configuration
-      expect:
-        shell: |
-          cd fail2ban
-          sudo cp files/debian-initd /etc/init.d/fail2ban
-          sudo update-rc.d fail2ban defaults
-          sudo service fail2ban start
+      shell: |
+        cd fail2ban
+        sudo cp files/debian-initd /etc/init.d/fail2ban
+        sudo update-rc.d fail2ban defaults
+        sudo service fail2ban start
