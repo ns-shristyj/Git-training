@@ -118,6 +118,8 @@
         sudo cp /home/ubuntu/GIS-SecEng-Intern/Ansible/fail2ban/paths-freebsd.conf /etc/fail2ban/
         sudo cp /home/ubuntu/GIS-SecEng-Intern/Ansible/fail2ban/paths-openuse.conf /etc/fail2ban/
         sudo cp /home/ubuntu/GIS-SecEng-Intern/Ansible/fail2ban/paths-osx.confs /etc/fail2ban/
+    register: cp
+    failed_when: “cp.rc not in [ 0, 1 ]”
     # To enable fail2ban as an automatic service, simply copy the script for your distro from the files directory to /etc/init.d. 
     # Example (on a Debian-based system):
     - name: Fail2Ban Configuration
