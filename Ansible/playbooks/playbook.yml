@@ -124,11 +124,8 @@
     # Example (on a Debian-based system):
     - name: Fail2Ban Configuration
       expect:
-        command: |
+        shell: |
           cd fail2ban
           sudo cp files/debian-initd /etc/init.d/fail2ban
-          update-rc.d fail2ban defaults
+          sudo update-rc.d fail2ban defaults
           sudo service fail2ban start
-        responses:
-          "Password:": "ubuntu"
-        timeout: 200
