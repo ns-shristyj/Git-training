@@ -78,7 +78,7 @@ jobs:
       - name: install GUnicorn
         run: pip install gunicorn
 
-      - name: run Commands on Runner
+      - name: Running Commands on Runner...
         run: |
           sudo apt update
           sudo apt install -y python3-pip
@@ -86,7 +86,7 @@ jobs:
           sudo apt install -y ansible
           sudo apt update
 
-      - name: Set Up SSH Host key
+      - name: Setting Up SSH Host key...
         run: |
           mkdir -p ~/.ssh/
           echo -e "-----BEGIN RSA PRIVATE KEY-----\n${{secrets.SECENG_INTERN_KEY_PAIR}}\n-----END RSA PRIVATE KEY-----" > ~/.ssh/id_rsa
@@ -94,12 +94,12 @@ jobs:
           ssh-keyscan -t rsa 13.52.105.27 >> ~/.ssh/known_hosts
           chmod 644 ~/.ssh/known_hosts
 
-      - name: SSHing to Another Device
+      - name: SSHing to Another Device...
         run: |
             ssh ubuntu@13.52.105.27
         #echo $PATH
       
-      - name: SSHing and Running a Playbook
+      - name: Running a Playbook Command...
         run: |
-            echo "\n13.52.105.27" >> ./Ansible/inventory/hosts
+            echo -en "\n13.52.105.27" >> ./Ansible/inventory/hosts
             ansible-playbook -i ./Ansible/inventory/hosts -u ubuntu -e 13.52.105.27 ./Ansible/playbooks/playbook.yml 
