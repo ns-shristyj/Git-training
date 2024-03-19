@@ -79,7 +79,7 @@ def get_intune_devices(access_token):
 
     response = requests.get(nextlink, headers=headers)
     re2 = response.json()
-    pdb.set_trace()
+    # pdb.set_trace()
     return re, re2
 
 
