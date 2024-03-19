@@ -70,11 +70,17 @@ def get_access_token(client_id, client_secret, scope):
 def get_intune_devices(access_token):
     headers = {
         'Authorization': f'Bearer {access_token}',
-        'Content-Type': 'application/json'
+        'Accept': 'application/json',
     }
     response = requests.get(intune_api_url, headers=headers)
-    # pdb.set_trace()
-    return response.json()
+    re = response.json()
+  
+    nextlink = re['@odata.nextLink']
+
+    response = requests.get(nextlink, headers=headers)
+    re2 = response.json()
+    pdb.set_trace()
+    return re, re2
 
 
 
@@ -82,12 +88,13 @@ def intune_devices():
     access_token = get_access_token(intune_client_id,intune_client_secret,scope)
     
     if access_token:
-        devices = get_intune_devices(access_token)
+        devices_list = get_intune_devices(access_token)
+        for devices in devices_list:
         
-        if 'value' in devices:
-            commit_to_inventory(devices, 'Intune')
-        else:
-            print('Error fetching devices:', devices)
+            if 'value' in devices:
+                commit_to_inventory(devices, 'Intune')
+            else:
+                print('Error fetching devices:', devices)
     else:
         print('Error getting access token')
 

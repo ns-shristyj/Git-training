@@ -49,7 +49,7 @@ def getDevices():
     
     
     while bro:
-        url = "https://netskope.clients.us-1.kandji.io/api/v1/devices/"
+        url = "https://netskope.api.kandji.io/api/v1/devices/"
         
         
         if tot > 0:
@@ -93,7 +93,7 @@ def write_to_json(output_dict, export_path):
 
     # export 
 
-    with open(output_json, 'a') as json_file:
+    with open(output_json, 'a', encoding='utf-8') as json_file:
         json_file.write(ldjson)
         json_file.write('\n')
         json_file.close()

@@ -12,30 +12,32 @@ def write_to_debug(manu):
 def get_unique(df):
     filtered_inventory = defaultdict(list)
     outlier = defaultdict(list)
-    # print(len(df['crowdstrike']))
+  
+    # print(len(df['automox']))
     
 
     c = 0
-    for item in df['crowdstrike']:
+    for item in df['automox']:
         # c +=1  # debug 
         # print(c) # debug
         # pdb.set_trace()
+      
 
         try:
-            if (item['system_manufacturer'].lower() == 'Dell Inc.'.lower() \
-                or item['system_manufacturer'].lower() == 'LENOVO'.lower() \
-                    or item['system_manufacturer'].lower() == 'Apple Inc.'.lower()):
+            # if (item['detail']['VENDOR'].lower() == 'Dell Inc.'.lower() \
+            #     or item['detail']['VENDOR'].lower() == 'LENOVO'.lower() \
+            #         or item['detail']['VENDOR'].lower() == 'Apple'.lower()):
                 
             
                 # print(item['system_manufacturer'])
-                filtered_inventory['Crowdstrike'].append(item)
+                filtered_inventory['Automox'].append(item)
 
         except KeyError:
             outlier['outliers'].append(item)
 
 
     
-    # print('inventory count  :', len(filtered_inventory['Crowdstrike']))
+    # print('inventory count  :', len(filtered_inventory['Automox']))
     # print('outlier count  :', len(outlier['outliers']))
 
     return filtered_inventory
@@ -44,16 +46,16 @@ def get_unique(df):
 
 def main():
 
-    input_file = 'Extract_Scripts/out_data/crowd.json'
+    input_file = 'Extract_Scripts/out_data/automox.json'
 
-    crowdstrike_devices = defaultdict(list)
+    automox_devices = defaultdict(list)
 
     with open(input_file, 'r') as f:
         for line in f:
             json_data = json.loads(line)
-            crowdstrike_devices['crowdstrike'].append(json_data)
+            automox_devices['automox'].append(json_data)
 
-    inventory = get_unique(crowdstrike_devices)
+    inventory = get_unique(automox_devices)
 
     return inventory
 
