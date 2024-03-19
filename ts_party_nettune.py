@@ -96,4 +96,5 @@ def main(rt):
         return intune_netskope
 
 if __name__ == '__main__':
-    main()
+    rt = False
+    main(rt)
