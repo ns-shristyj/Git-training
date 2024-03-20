@@ -42,24 +42,32 @@
       shell: sudo rm -r /home/ubuntu/GIS-SecEng-Intern && git clone https://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@github.com/netSkope/GIS-SecEng-Intern.git --single-branch --branch FLASK_webserver
     - name: Python Virtual Environment
       shell: |
-        sudo python3 -m venv /home/ubuntu/GIS-SecEng-Intern/flask_app/venv
-        sudo /home/ubuntu/GIS-SecEng-Intern/flask_app/venv/bin/pip3 install --upgrade pip
-        sudo /home/ubuntu/GIS-SecEng-Intern/flask_app/venv/bin/pip3 install wheel gunicorn Flask
+        sudo python3 -m venv /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/venv
+        sudo /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/venv/bin/pip3 install --upgrade pip
+        sudo /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/venv/bin/pip3 install wheel gunicorn Flask
+        sudo /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/venv/bin/pip3 install jsonpath_ng
+        sudo /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/venv/bin/python3 init.py
+    - name: Configuring Flask Application
+      shell: |
+        cd /home/ubuntu/GIS-SecEng-Intern/project-emu-dvelop/
+        make
+        cd ..
+        cd ..
     - name: Configuring GUnicorn
       shell: |
-        sudo cp /home/ubuntu/GIS-SecEng-Intern/Ansible/files/myproject.service /etc/systemd/system/
-        sudo chown ubuntu:ubuntu /home/ubuntu/GIS-SecEng-Intern/flask_app/
+        sudo cp /home/ubuntu/GIS-SecEng-Intern/Ansible/files/app.service /etc/systemd/system/
+        sudo chown ubuntu:ubuntu /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/
     - name: Restarting Systemd Service
-      shell: sudo systemctl daemon-reload && sudo systemctl restart myproject
+      shell: sudo systemctl daemon-reload && sudo systemctl restart app
     - name: Enable GUnicorn
       shell: |
-        sudo systemctl start myproject
-        sudo systemctl enable myproject
-        sudo systemctl status myproject
+        sudo systemctl start app
+        sudo systemctl enable app
+        sudo systemctl status app
     - name: Configuring Nginx to Proxy Requests
       shell: |
-        sudo cp /home/ubuntu/GIS-SecEng-Intern/Ansible/files/myproject /etc/nginx/sites-available/
-        sudo ln -s /etc/nginx/sites-available/myproject /etc/nginx/sites-enabled
+        sudo cp /home/ubuntu/GIS-SecEng-Intern/Ansible/files/app /etc/nginx/sites-available/
+        sudo ln -s /etc/nginx/sites-available/app /etc/nginx/sites-enabled
         sudo nginx -t
         sudo systemctl restart nginx
         sudo ufw delete allow 5000
@@ -101,7 +109,7 @@
         sudo cp /home/ubuntu/GIS-SecEng-Intern/Ansible/files/ssl-params.conf /etc/nginx/snippets/
         sudo cp /home/ubuntu/GIS-SecEng-Intern/Ansible/files/nginx.conf /etc/nginx/nginx.conf
         sudo openssl dhparam -out /etc/ssl/certs/dhparam.pem 2048
-        sudo ln -s /etc/nginx/sites-available/myproject /etc/nginx/sites-enabled
+        sudo ln -s /etc/nginx/sites-available/app /etc/nginx/sites-enabled
         sudo ufw app list
         sudo systemctl restart nginx
     - name: Implementing Fail2Ban
