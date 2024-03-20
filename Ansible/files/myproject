@@ -61,8 +61,8 @@ server {
  
 }
 server {
-    listen 80 ssl;
-    listen [::]:80 ssl;
+    listen 80;
+    listen [::]:80;
 
     server_name 13.52.105.27;
 
