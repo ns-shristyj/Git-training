@@ -37,16 +37,21 @@
       shell: |
         sudo apt-get install python3-pip python3-dev build-essential libssl-dev libffi-dev python3-setuptools -y
         sudo apt-get install python3-venv -y
+        sudo apt-get install unzip
         sudo apt-get update
     - name: Cloning GitHub Repository
       shell: sudo rm -r /home/ubuntu/GIS-SecEng-Intern && git clone https://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@github.com/netSkope/GIS-SecEng-Intern.git --single-branch --branch FLASK_webserver
+    - name: Setting up Project EMU
+      shell: |
+        unzip project-emu-develop.zip -d /home/ubuntu/GIS-SecEng-Intern/
+
     - name: Python Virtual Environment
       shell: |
         sudo python3 -m venv /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/venv
         sudo /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/venv/bin/pip3 install --upgrade pip
         sudo /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/venv/bin/pip3 install wheel gunicorn Flask
-        sudo /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/venv/bin/pip3 install jsonpath_ng
-        sudo /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/venv/bin/python3 init.py
+        sudo /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/venv/bin/pip3 install -r /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/requirements.txt
+        sudo /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/venv/bin/python /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/init.py
     - name: Configuring Flask Application
       shell: |
         cd /home/ubuntu/GIS-SecEng-Intern/project-emu-dvelop/
