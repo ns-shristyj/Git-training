@@ -99,6 +99,7 @@
       shell: |
         sudo cp /home/ubuntu/GIS-SecEng-Intern/Ansible/files/self-signed.conf /etc/nginx/snippets/
         sudo cp /home/ubuntu/GIS-SecEng-Intern/Ansible/files/ssl-params.conf /etc/nginx/snippets/
+        sudo cp /home/ubuntu/GIS-SecEng-Intern/Ansible/files/nginx.conf /etc/nginx/nginx.conf
         sudo openssl dhparam -out /etc/ssl/certs/dhparam.pem 2048
         sudo ln -s /etc/nginx/sites-available/myproject /etc/nginx/sites-enabled
         sudo ufw app list
