@@ -46,7 +46,7 @@ server {
         include proxy_params;
         limit_req zone=req_zone burst=10 nodelay;
         limit_req zone=req_zone_wl burst=20 nodelay;
-        limit_conn addr 10;
+        limit_conn 13.52.105.27 10;
         limit_req_log_level warn;
         limit_req_status 444;
         proxy_pass http://unix:/home/ubuntu/GIS-SecEng-Intern/flask_app/myproject.sock;
@@ -78,7 +78,7 @@ server {
         include proxy_params;
         limit_req zone=req_zone burst=10 nodelay;
         limit_req zone=req_zone_wl burst=20 nodelay;
-        limit_conn addr 10;
+        limit_conn 13.52.105.27 10;
         limit_req_log_level warn;
         limit_req_status 444;
         proxy_pass http://unix:/home/ubuntu/GIS-SecEng-Intern/flask_app/myproject.sock;
@@ -92,7 +92,7 @@ server {
         include proxy_params;
         limit_req zone=req_zone burst=10 nodelay;
         limit_req zone=req_zone_wl burst=20 nodelay;
-        limit_conn addr 10;
+        limit_conn 13.52.105.27 10;
         limit_req_log_level warn;
         limit_req_status 444;
         proxy_pass http://unix:/home/ubuntu/GIS-SecEng-Intern/flask_app/myproject.sock;
