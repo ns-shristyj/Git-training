@@ -41,10 +41,6 @@
         sudo apt-get update
     - name: Cloning GitHub Repository
       shell: sudo rm -r /home/ubuntu/GIS-SecEng-Intern && git clone https://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@github.com/netSkope/GIS-SecEng-Intern.git --single-branch --branch FLASK_webserver
-    - name: Setting up Project EMU
-      shell: |
-        unzip project-emu-develop.zip -d /home/ubuntu/GIS-SecEng-Intern/
-
     - name: Python Virtual Environment
       shell: |
         sudo python3 -m venv /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/venv
@@ -55,7 +51,7 @@
     - name: Configuring Flask Application
       shell: |
         cd /home/ubuntu/GIS-SecEng-Intern/project-emu-dvelop/
-        make
+        sudo make
         cd ..
         cd ..
     - name: Configuring GUnicorn

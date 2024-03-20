@@ -516,8 +516,8 @@ def update_component(component_id):
                     
                 else:
                     raise Exception(f"Invalid content type.")
-                changes = {"prev_name": f"{component.name}", "prev_desc": f"{component.description}", "prev_ver": f"{component.version}", "prev_vcs": f"{component.vcs}", "prev_lic": f"{component.license}", "prev_purl": f"{component.package_url}","prev_hash": f"{component.hash}", "prev_haty": f"{component.hash_type}",
-                           "new_name": f"{body.get("name", default="N/A")}", "new_desc": f"{body.get("description", default="N/A")}", "new_ver": f"{body.get("version", default="N/A")}", "new_vcs": f"{body.get("vcs", default="N/A")}", "new_lic": f"{body.get("license", default="N/A")}", "new_purl": f"{body.get("package_url", default="N/A")}","new_hash": f"{body.get("hash", default="N/A")}", "new_haty": f"{body.get("hash_type", default="N/A")}"}
+                #changes = {"prev_name": f"{component.name}", "prev_desc": f"{component.description}", "prev_ver": f"{component.version}", "prev_vcs": f"{component.vcs}", "prev_lic": f"{component.license}", "prev_purl": f"{component.package_url}","prev_hash": f"{component.hash}", "prev_haty": f"{component.hash_type}","new_name": f"{body.get("name", default="N/A")}", "new_desc": f"{body.get("description", default="N/A")}", "new_ver": f"{body.get("version", default="N/A")}", "new_vcs": f"{body.get("vcs", default="N/A")}", "new_lic": f"{body.get("license", default="N/A")}", "new_purl": f"{body.get("package_url", default="N/A")}","new_hash": f"{body.get("hash", default="N/A")}", "new_haty": f"{body.get("hash_type", default="N/A")}"}
+                changes = {}
                 db.session.execute((update(Component).where(Component.id.in_([component_id])).values(name=str(new_name), description=str(new_desc), version=str(new_ver), vcs=str(new_vcs), license=str(new_lic), package_url=str(new_purl), hash=str(new_hash), hash_type=str(new_haty))))
                 db.session.commit()
                 component_name = str(new_name)
