@@ -23,11 +23,20 @@ server {
     client_body_timeout 5s;
     client_header_timeout 5s;
 
+    add_header X-Frame-Options "SAMEORIGIN";
+    add_header Strict-Transport-Security "max-age=31536000; includeSubdomains; preload";
+    add_header Content-Security-Policy "default-src 'self' http: https: data: blob: 'unsafe-inline'" always;
+    add_header X-XSS-Protection "1; mode=block";
+
     location / {
 
         if ($http_user_agent ~* foo|bar) {
             return 403;
         }
+        if ($request_method !~ ^(GET|HEAD|POST)$ ) {
+            return 444; }
+
+        limit_except GET HEAD POST { deny all; }
 
         include proxy_params;
         limit_req zone=req_zone burst=10 nodelay;
