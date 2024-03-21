@@ -35,9 +35,14 @@
         timeout: 200
     - name: Installing Dependencies
       shell: |
+        sudo apt install python3.12
         sudo apt-get install python3-pip python3-dev build-essential libssl-dev libffi-dev python3-setuptools -y
+        sudo apt install build-essential zlib1g-dev libncurses5-dev libgdbm-dev libnss3-dev libssl-dev libreadline-dev libffi-dev wget -y
         sudo apt-get install python3-venv -y
-        sudo apt-get install unzip
+        wget https://www.python.org/ftp/python/3.12.1/Python-3.12.1.tgz
+        tar -xf Python-3.12.1.tgz
+        Python-3.12.1/configure --enable-optimizations
+        sudo make install
         sudo apt-get update
     - name: Cloning GitHub Repository
       shell: sudo rm -r /home/ubuntu/GIS-SecEng-Intern && git clone https://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@github.com/netSkope/GIS-SecEng-Intern.git --single-branch --branch FLASK_webserver
@@ -47,7 +52,7 @@
         sudo /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/venv/bin/pip3 install --upgrade pip
         sudo /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/venv/bin/pip3 install wheel gunicorn Flask
         sudo /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/venv/bin/pip3 install -r /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/requirements.txt
-        sudo /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/venv/bin/python /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/init.py
+        sudo /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/venv/bin/python3 /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/init.py
     - name: Configuring Flask Application
       shell: |
         cd /home/ubuntu/GIS-SecEng-Intern/project-emu-dvelop/
