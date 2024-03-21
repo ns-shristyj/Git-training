@@ -38,7 +38,7 @@ app.config['JWT_TOKEN_LOCATION'] = ['cookies']
 app.config["JWT_BLACKLIST_ENABLED"] = True
 app.config["JWT_BLACKLIST_TOKEN_CHECKS"] = ["access", "refresh"]
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(minutes=30)
-app.config['JWT_COOKIE_SECURE'] = True  # Set to False if not using https
+app.config['JWT_COOKIE_SECURE'] = False  # Set to False if not using https
 app.config['JWT_COOKIE_CSRF_PROTECT'] = False  # CSRF protection
 app.config['PLATFORM'] = platform.system()
 
@@ -516,22 +516,8 @@ def update_component(component_id):
                     
                 else:
                     raise Exception(f"Invalid content type.")
-                changes = {"prev_name": f"{component.name}",
-                           "prev_desc": f"{component.description}", 
-                           "prev_ver": f"{component.version}", 
-                           "prev_vcs": f"{component.vcs}", 
-                           "prev_lic": f"{component.license}", 
-                           "prev_purl": f"{component.package_url}",
-                           "prev_hash": f"{component.hash}", 
-                           "prev_haty": f"{component.hash_type}",
-                           "new_name": f"{body.get('name', 'N/A')}", 
-                           "new_desc": f"{body.get('description', 'N/A')}", 
-                           "new_ver": f"{body.get('version', 'N/A')}", 
-                           "new_vcs": f"{body.get('vcs', 'N/A')}", 
-                           "new_lic": f"{body.get('license', 'N/A')}", 
-                           "new_purl": f"{body.get('package_url', 'N/A')}",
-                           "new_hash": f"{body.get('hash', 'N/A')}", 
-                           "new_haty": f"{body.get('hash_type', 'N/A')}"}
+                changes = {"prev_name": f"{component.name}", "prev_desc": f"{component.description}", "prev_ver": f"{component.version}", "prev_vcs": f"{component.vcs}", "prev_lic": f"{component.license}", "prev_purl": f"{component.package_url}","prev_hash": f"{component.hash}", "prev_haty": f"{component.hash_type}",
+                           "new_name": f"{body.get('name', default='N/A')}", "new_desc": f"{body.get('description', default='N/A')}", "new_ver": f"{body.get('version', default='N/A')}", "new_vcs": f"{body.get('vcs', default='N/A')}", "new_lic": f"{body.get('license', default='N/A')}", "new_purl": f"{body.get('package_url', default='N/A')}","new_hash": f"{body.get('hash', default='N/A')}", "new_haty": f"{body.get('hash_type', default='N/A')}"}
                 db.session.execute((update(Component).where(Component.id.in_([component_id])).values(name=str(new_name), description=str(new_desc), version=str(new_ver), vcs=str(new_vcs), license=str(new_lic), package_url=str(new_purl), hash=str(new_hash), hash_type=str(new_haty))))
                 db.session.commit()
                 component_name = str(new_name)
@@ -614,16 +600,8 @@ def update_vulnerability(vulnerability_id):
                     
                 else:
                     raise Exception(f"Invalid content type.")
-                changes = {"prev_name": f"{vulnerability.name}",
-                            "prev_sev": f"{vulnerability.severity}",
-                            "prev_cwe": f"{vulnerability.cwe}",
-                            "prev_cvs": f"{vulnerability.cvss_score}",
-                            "prev_cvt": f"{vulnerability.cvss_type}",
-                            "new_name": f"{body.get('name', 'N/A')}",
-                            "new_sev": f"{body.get('severity', 'N/A')}",
-                            "new_cwe": f"{body.get('cwe', 'N/A')}",
-                            "new_cvs": f"{body.get('cvs', 'N/A')}",
-                            "new_cvt": f"{body.get('cvss_type', 'N/A')}"}
+                changes = {"prev_name": f"{vulnerability.name}", "prev_sev": f"{vulnerability.severity}", "prev_cwe": f"{vulnerability.cwe}", "prev_cvs": f"{vulnerability.cvss_score}", "prev_cvt": f"{vulnerability.cvss_type}",
+                           "new_name": f"{body.get('name', default='N/A')}", "new_sev": f"{body.get('severity', default='N/A')}", "new_cwe": f"{body.get('cwe', default='N/A')}", "new_cvs": f"{body.get('cvs', default='N/A')}", "new_cvt": f"{body.get('cvss_type', default='N/A')}"}
                 db.session.execute((update(Vulnerability).where(Vulnerability.id.in_([vulnerability_id])).values(name=str(new_name), severity=str(new_sev), cwe=str(new_cwe), cvss_score=str(new_cvs), cvss_type=str(new_cvt))))
                 db.session.commit()
                 vulnerability_name = str(new_name)
@@ -1002,11 +980,11 @@ def upload_sbom():
     if config_check['status'] == "Success":
         config = config_check['config']
         print(config)
-        tempFolder = f'{os.path.abspath(config['TEMP_PATH'])}'
+        tempFolder = f"{os.path.abspath(config['TEMP_PATH'])}"
         print(tempFolder)
-        dataFolder = f'{os.path.abspath(config['DATA_PATH'])}'
+        dataFolder = f"{os.path.abspath(config['DATA_PATH'])}"
         print(dataFolder)
-        allowedExt = f'{config['ALLOWED_EXT']}'
+        allowedExt = f"{config['ALLOWED_EXT']}"
 
         if 'sbomFile' not in request.files:
             if request.content_type == "application/x-www-form-urlencoded":
@@ -1798,4 +1776,4 @@ if __name__ == '__main__':
     scheduler.add_job(func=syncThirdPartyTrustVendors, trigger="interval", minutes=45)
     scheduler.start()
 
-    app.run(debug=False, port=5000, use_reloader=True)
+    app.run(debug=False, host='0.0.0.0', port=5000, use_reloader=True)

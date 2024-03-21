@@ -38,106 +38,117 @@
         sudo apt-get install python3-pip python3-dev build-essential libssl-dev libffi-dev python3-setuptools -y
         sudo apt install build-essential zlib1g-dev libncurses5-dev libgdbm-dev libnss3-dev libssl-dev libreadline-dev libffi-dev wget -y
         sudo apt-get install python3-venv -y
+        sudo apt-get install unzip
         sudo apt-get update
     - name: Cloning GitHub Repository
       shell: |
         sudo rm -r /home/ubuntu/GIS-SecEng-Intern && git clone https://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@github.com/netSkope/GIS-SecEng-Intern.git --single-branch --branch FLASK_webserver
-        sudo mkdir /home/ubuntu/logs
-        sudo touch /home/ubuntu/logs/app.log
-    - name: Python Virtual Environment
+    - name: Configuring Project Emu Directory
       shell: |
-        sudo python3 -m venv /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/venv
-        sudo /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/venv/bin/pip3 install --upgrade pip
-        sudo /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/venv/bin/pip3 install wheel gunicorn Flask
-        sudo /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/venv/bin/pip3 install -r /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/requirements.txt
-        sudo /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/venv/bin/python3 /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/init.py
-    - name: Configuring Flask Application
-      shell: |
-        cd /home/ubuntu/GIS-SecEng-Intern/project-emu-dvelop/
-        sudo make
-        cd ..
-        cd ..
-    - name: Configuring GUnicorn
-      shell: |
-        sudo cp /home/ubuntu/GIS-SecEng-Intern/Ansible/files/app.service /etc/systemd/system/
-        sudo chown ubuntu:ubuntu /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/
-    - name: Restarting Systemd Service
-      shell: sudo systemctl daemon-reload && sudo systemctl restart app
-    - name: Enable GUnicorn
-      shell: |
-        sudo systemctl start app
-        sudo systemctl enable app
-        sudo systemctl status app
-    - name: Configuring Nginx to Proxy Requests
-      shell: |
-        sudo cp /home/ubuntu/GIS-SecEng-Intern/Ansible/files/app /etc/nginx/sites-available/
-        sudo ln -s /etc/nginx/sites-available/app /etc/nginx/sites-enabled
-        sudo nginx -t
-        sudo systemctl restart nginx
-        sudo ufw delete allow 5000
-        sudo ufw allow 'Nginx Full'
-        sudo chmod 755 /home/ubuntu
-    # Generate Certificate Authority (CA) self-signed certificate
-    - name: Generate Certificate Authority (CA) self-signed certificate
-      block:
-        - name: Generate Root CA private key
-          openssl_privatekey:
-            path: /etc/ssl/private/nginx-selfsigned.key
+        unzip -o /home/ubuntu/GIS-SecEng-Intern/project-emu-develop.zip -d /home/ubuntu/GIS-SecEng-Intern/
+        sudo chmod -R u+rwx /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/
+        sudo chown -R ubuntu:ubuntu /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/
+        mv /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/.env.example /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/.env
+        mv /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/.env.example /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/.env
+        cp /home/ubuntu/GIS-SecEng-Intern/Ansible/files/.env /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/.env
+        cd /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/
+        make
+    # - name: Python Virtual Environment
+    #   shell: |
+    #     sudo python3 -m venv /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/venv
+    #     chmod -R u+rwx /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/venv
+    #     sudo chown -R ubuntu:ubuntu /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/venv
+    #     sudo /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/venv/bin/pip3 install --upgrade pip
+    #     sudo /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/venv/bin/pip3 install wheel gunicorn Flask
+    #     sudo /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/venv/bin/pip3 install -r /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/requirements.txt
+    #     sudo /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/venv/bin/python3 /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/init.py
+    # - name: Configuring Flask Application
+    #   shell: |
+    #     cd /home/ubuntu/GIS-SecEng-Intern/project-emu-dvelop/
+    #     sudo make
+    #     cd ..
+    #     cd ..
+    # - name: Configuring GUnicorn
+    #   shell: |
+    #     sudo cp /home/ubuntu/GIS-SecEng-Intern/Ansible/files/app.service /etc/systemd/system/
+    #     sudo chown ubuntu:ubuntu /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/
+    # - name: Restarting Systemd Service
+    #   shell: sudo systemctl daemon-reload && sudo systemctl restart app
+    # - name: Enable GUnicorn
+    #   shell: |
+    #     sudo systemctl start app
+    #     sudo systemctl enable app
+    #     sudo systemctl status app
+    # - name: Configuring Nginx to Proxy Requests
+    #   shell: |
+    #     sudo cp /home/ubuntu/GIS-SecEng-Intern/Ansible/files/app /etc/nginx/sites-available/
+    #     sudo ln -s /etc/nginx/sites-available/app /etc/nginx/sites-enabled
+    #     sudo nginx -t
+    #     sudo systemctl restart nginx
+    #     sudo ufw delete allow 5000
+    #     sudo ufw allow 'Nginx Full'
+    #     sudo chmod 755 /home/ubuntu
+    # # Generate Certificate Authority (CA) self-signed certificate
+    # - name: Generate Certificate Authority (CA) self-signed certificate
+    #   block:
+    #     - name: Generate Root CA private key
+    #       openssl_privatekey:
+    #         path: /etc/ssl/private/nginx-selfsigned.key
 
-        - name: Generate Root CA CSR
-          openssl_csr:
-            path: "/etc/ssl/certs/nginx-selfsigned.csr"
-            privatekey_path: "/etc/ssl/private/nginx-selfsigned.key"
-            common_name: 13.52.105.27
-            organization_name: Netskope
-            organizational_unit_name: Security Engineering
-            basic_constraints:
-              - CA:TRUE
-            basic_constraints_critical: yes
-            key_usage:
-              - keyCertSign
-              - digitalSignature
-              - cRLSign
-            key_usage_critical: yes
+    #     - name: Generate Root CA CSR
+    #       openssl_csr:
+    #         path: "/etc/ssl/certs/nginx-selfsigned.csr"
+    #         privatekey_path: "/etc/ssl/private/nginx-selfsigned.key"
+    #         common_name: 13.52.105.27
+    #         organization_name: Netskope
+    #         organizational_unit_name: Security Engineering
+    #         basic_constraints:
+    #           - CA:TRUE
+    #         basic_constraints_critical: yes
+    #         key_usage:
+    #           - keyCertSign
+    #           - digitalSignature
+    #           - cRLSign
+    #         key_usage_critical: yes
 
-        - name: Generate Root CA certificate
-          openssl_certificate:
-            path: "/etc/ssl/certs/nginx-selfsigned.crt"
-            privatekey_path: "/etc/ssl/private/nginx-selfsigned.key"
-            csr_path: "/etc/ssl/certs/nginx-selfsigned.csr"
-            provider: selfsigned
-    # /Generate Certificate Authority (CA) self-signed certificate
-    - name: Securing the Application
-      shell: |
-        sudo cp /home/ubuntu/GIS-SecEng-Intern/Ansible/files/self-signed.conf /etc/nginx/snippets/
-        sudo cp /home/ubuntu/GIS-SecEng-Intern/Ansible/files/ssl-params.conf /etc/nginx/snippets/
-        sudo cp /home/ubuntu/GIS-SecEng-Intern/Ansible/files/nginx.conf /etc/nginx/nginx.conf
-        sudo openssl dhparam -out /etc/ssl/certs/dhparam.pem 2048
-        sudo ln -s /etc/nginx/sites-available/app /etc/nginx/sites-enabled
-        sudo ufw app list
-        sudo systemctl restart nginx
-    - name: Implementing Fail2Ban
-      shell: |
-        sudo rm -r /home/ubuntu/fail2ban && git clone https://github.com/fail2ban/fail2ban.git
-        cd fail2ban
-        sudo python3 setup.py install 
-    - name: Updating Fail2Ban Conf Files
-      shell: |
-        sudo cp /home/ubuntu/GIS-SecEng-Intern/Ansible/fail2ban/fail2ban.conf /etc/fail2ban/
-        sudo cp /home/ubuntu/GIS-SecEng-Intern/Ansible/fail2ban/paths-arch.conf /etc/fail2ban/
-        sudo cp /home/ubuntu/GIS-SecEng-Intern/Ansible/fail2ban/paths-common.conf /etc/fail2ban/
-        sudo cp /home/ubuntu/GIS-SecEng-Intern/Ansible/fail2ban/paths-debain.conf /etc/fail2ban/
-        sudo cp /home/ubuntu/GIS-SecEng-Intern/Ansible/fail2ban/paths-fedora.conf /etc/fail2ban/
-        sudo cp /home/ubuntu/GIS-SecEng-Intern/Ansible/fail2ban/paths-freebsd.conf /etc/fail2ban/
-        sudo cp /home/ubuntu/GIS-SecEng-Intern/Ansible/fail2ban/paths-openuse.conf /etc/fail2ban/
-        sudo cp /home/ubuntu/GIS-SecEng-Intern/Ansible/fail2ban/paths-osx.confs /etc/fail2ban/
-      register: cp
-      failed_when: cp.rc not in [ 0, 1 ]
-    # To enable fail2ban as an automatic service, simply copy the script for your distro from the files directory to /etc/init.d. 
-    # Example (on a Debian-based system):
-    - name: Fail2Ban Configuration
-      shell: |
-        cd fail2ban
-        sudo cp files/debian-initd /etc/init.d/fail2ban
-        sudo update-rc.d fail2ban defaults
-        sudo service fail2ban start
+    #     - name: Generate Root CA certificate
+    #       openssl_certificate:
+    #         path: "/etc/ssl/certs/nginx-selfsigned.crt"
+    #         privatekey_path: "/etc/ssl/private/nginx-selfsigned.key"
+    #         csr_path: "/etc/ssl/certs/nginx-selfsigned.csr"
+    #         provider: selfsigned
+    # # /Generate Certificate Authority (CA) self-signed certificate
+    # - name: Securing the Application
+    #   shell: |
+    #     sudo cp /home/ubuntu/GIS-SecEng-Intern/Ansible/files/self-signed.conf /etc/nginx/snippets/
+    #     sudo cp /home/ubuntu/GIS-SecEng-Intern/Ansible/files/ssl-params.conf /etc/nginx/snippets/
+    #     sudo cp /home/ubuntu/GIS-SecEng-Intern/Ansible/files/nginx.conf /etc/nginx/nginx.conf
+    #     sudo openssl dhparam -out /etc/ssl/certs/dhparam.pem 2048
+    #     sudo ln -s /etc/nginx/sites-available/app /etc/nginx/sites-enabled
+    #     sudo ufw app list
+    #     sudo systemctl restart nginx
+    # - name: Implementing Fail2Ban
+    #   shell: |
+    #     sudo rm -r /home/ubuntu/fail2ban && git clone https://github.com/fail2ban/fail2ban.git
+    #     cd fail2ban
+    #     sudo python3 setup.py install 
+    # - name: Updating Fail2Ban Conf Files
+    #   shell: |
+    #     sudo cp /home/ubuntu/GIS-SecEng-Intern/Ansible/fail2ban/fail2ban.conf /etc/fail2ban/
+    #     sudo cp /home/ubuntu/GIS-SecEng-Intern/Ansible/fail2ban/paths-arch.conf /etc/fail2ban/
+    #     sudo cp /home/ubuntu/GIS-SecEng-Intern/Ansible/fail2ban/paths-common.conf /etc/fail2ban/
+    #     sudo cp /home/ubuntu/GIS-SecEng-Intern/Ansible/fail2ban/paths-debain.conf /etc/fail2ban/
+    #     sudo cp /home/ubuntu/GIS-SecEng-Intern/Ansible/fail2ban/paths-fedora.conf /etc/fail2ban/
+    #     sudo cp /home/ubuntu/GIS-SecEng-Intern/Ansible/fail2ban/paths-freebsd.conf /etc/fail2ban/
+    #     sudo cp /home/ubuntu/GIS-SecEng-Intern/Ansible/fail2ban/paths-openuse.conf /etc/fail2ban/
+    #     sudo cp /home/ubuntu/GIS-SecEng-Intern/Ansible/fail2ban/paths-osx.confs /etc/fail2ban/
+    #   register: cp
+    #   failed_when: cp.rc not in [ 0, 1 ]
+    # # To enable fail2ban as an automatic service, simply copy the script for your distro from the files directory to /etc/init.d. 
+    # # Example (on a Debian-based system):
+    # - name: Fail2Ban Configuration
+    #   shell: |
+    #     cd fail2ban
+    #     sudo cp files/debian-initd /etc/init.d/fail2ban
+    #     sudo update-rc.d fail2ban defaults
+    #     sudo service fail2ban start

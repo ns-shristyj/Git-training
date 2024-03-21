@@ -18,11 +18,9 @@ To set up Project Emu on your local machine, follow these steps:
 
 1. Clone the repository to your local machine.
 2. Navigate to the project directory.
-3. Copy the `.env.example` file to `.env` and fill out all of the values.
-4. Ensure `Make` is installed on your local machine.
+3. Copy the `.env.example` file to `.env` and populate the values.
+4. Ensure `Make`, `pip3`, `python3`, and `virtualenv` (PIP) are installed on your local machine.
 5. Run `make` to initialize the virtual environment and database.
-
-
 
 ---
 
