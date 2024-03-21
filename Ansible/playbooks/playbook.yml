@@ -43,16 +43,16 @@
     - name: Cloning GitHub Repository
       shell: |
         sudo rm -r /home/ubuntu/GIS-SecEng-Intern && git clone https://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@github.com/netSkope/GIS-SecEng-Intern.git --single-branch --branch FLASK_webserver
+    # mv /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/.env.example /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/.env
     - name: Configuring Project Emu Directory
       shell: |
         unzip -o /home/ubuntu/GIS-SecEng-Intern/project-emu-develop.zip -d /home/ubuntu/GIS-SecEng-Intern/
         sudo chmod -R u+rwx /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/
         sudo chown -R ubuntu:ubuntu /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/
-        mv /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/.env.example /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/.env
-        mv /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/.env.example /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/.env
+        touch /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/.env
         cp /home/ubuntu/GIS-SecEng-Intern/Ansible/files/.env /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/.env
         cd /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/
-        make
+        make run
     # - name: Python Virtual Environment
     #   shell: |
     #     sudo python3 -m venv /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/venv
