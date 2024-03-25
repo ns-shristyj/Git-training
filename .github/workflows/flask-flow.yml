@@ -81,4 +81,5 @@ jobs:
       working-directory: ./Ansible
       run: |
           echo -e ${{ env.TF_IP_ADDRESS }} >> ./inventory/hosts
-          ansible-playbook ./playbooks/playbook.yml -u ubuntu -i ./inventory/hosts -e "ip_address=${{env.TF_IP_ADDRESS}}" 
+          ansible-playbook ./playbooks/playbook.yml -u ubuntu -i ./inventory/hosts -e "ip_address=${{env.TF_IP_ADDRESS}}"
+      # ansible-playbook Ansible/playbooks/playbook.yml -u ubuntu -i Ansible/inventory/hosts -e "ip_address=13.52.105.27" --key-file seceng-intern-key-pair.pem
