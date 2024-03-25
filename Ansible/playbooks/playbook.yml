@@ -49,7 +49,7 @@
         sudo unzip -o /home/ubuntu/GIS-SecEng-Intern/project-emu-develop.zip -d /home/ubuntu/GIS-SecEng-Intern/
         sudo chmod -R u+rwx /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/
         sudo chown -R ubuntu:ubuntu /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/
-        mv /home/ubuntu/GIS-SecEng-Intern/Ansible/files/.env.example /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/.env
+        mv /home/ubuntu/GIS-SecEng-Intern/Ansible/files/.env /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/.env
         cd /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/
         make
         cd
@@ -61,8 +61,9 @@
         sudo /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/venv/bin/pip3 install --upgrade pip
         sudo /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/venv/bin/pip3 install wheel gunicorn Flask
         sudo /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/venv/bin/pip3 install -r /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/requirements.txt
-      # cd /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/
-      # sudo /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/venv/bin/python3 /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/init.py
+        cd /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/
+        sudo rm database.db
+        sudo /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/venv/bin/python3 /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/init.py
     - name: Configuring Flask Application
       shell: |
         sudo chown -R ubuntu:ubuntu /home/ubuntu/GIS-SecEng-Intern/project-emu-develop/
