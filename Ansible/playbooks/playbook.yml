@@ -41,9 +41,20 @@
         sudo apt-get install unzip
         sudo apt-get update
     - name: Cloning GitHub Repository
-      shell: |
-        sudo mkdir /home/ubuntu/GIS-SecEng-Intern
-        sudo rm -r /home/ubuntu/GIS-SecEng-Intern && git clone https://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@github.com/netSkope/GIS-SecEng-Intern.git --single-branch --branch FLASK_webserver
+      git:
+        repo: https://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@github.com/netSkope/GIS-SecEng-Intern.git
+        dest: /home/ubuntu/temp-repo/
+        single_branch: FLASK_webserver
+    - name: Update the website files
+      synchronize:
+        src: /home/ubuntu/temp-repo/
+        dest: /home/ubuntu/GIS-SecEng-Intern/
+        delete: yes
+        exclude: /project-emu-develop/data
+    - name: Clean up
+      file:
+        path: /home/ubuntu/temp-repo/
+        state: absent
     - name: Configuring Project Emu Directory
       shell: |
         sudo unzip -o /home/ubuntu/GIS-SecEng-Intern/project-emu-develop.zip -d /home/ubuntu/GIS-SecEng-Intern/
