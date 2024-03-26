@@ -26,6 +26,10 @@
       apt:
         name: nginx
         state: latest
+    - name: Install rsync
+      apt:
+        name: rsync
+        state: latest
     - name: Configuring Ubuntu user
       expect:
         command: sudo passwd ubuntu
@@ -42,15 +46,11 @@
         sudo apt-get update
     - name: Cloning GitHub Repository
       git:
-        repo: https://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@github.com/netSkope/GIS-SecEng-Intern.git
-        dest: /home/ubuntu/temp-repo/
-        single_branch: FLASK_webserver
+       repo: https://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@github.com/netSkope/GIS-SecEng-Intern.git
+       dest: /home/ubuntu/temp-repo/
+       version: FLASK_webserver 
     - name: Update the website files
-      synchronize:
-        src: /home/ubuntu/temp-repo/
-        dest: /home/ubuntu/GIS-SecEng-Intern/
-        delete: yes
-        exclude: /project-emu-develop/data
+      command: rsync -av --delete --exclude="/project-emu-develop/data" /home/ubuntu/temp-repo/ /home/ubuntu/GIS-SecEng-Intern/
     - name: Clean up
       file:
         path: /home/ubuntu/temp-repo/
