@@ -72,7 +72,7 @@ name: running-different-jobs
 on: [push]
 jobs:
   check-bats-version:
-    runs-on: ["self-hosted", "linux", "x64", "sz-XS", "gh", "cheap"]
+    runs-on: ["self-hosted", "linux", "x64", "rg-default", "sz-XS", "gh", "cheap"]
     steps:
       - uses: actions/checkout@v4
       - name: install GUnicorn
