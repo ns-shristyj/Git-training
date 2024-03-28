@@ -1,7 +1,6 @@
 import os
 import shlex
 import subprocess
-import requests
 
 # Open the list of website links that will be tested
 address_list= []
