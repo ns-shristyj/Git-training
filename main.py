@@ -14,7 +14,7 @@ with open('addresslist.txt') as file:
 print(address_list)
 file.close()
 
-command = "echo | openssl s_client -connect " + address_list[0] + ":443 -tls1_2 -brief | grep Ciphersuite"
+command = "echo | openssl s_client -connect " + address_list[0] + ":443 -tls1_2 -brief"
 
 for i in address_list:
     output = subprocess.run(
@@ -23,8 +23,7 @@ for i in address_list:
                             stdout=subprocess.PIPE,
                             stderr=subprocess.PIPE)
     ssl_list = str(output).split("\\n")
-    cipher_list.append(ssl_list[3])
-    #print(ssl_list[3])
+    cipher_list.append(ssl_list[2])
 
 for i in range(len(address_list)):
     print("The web address:", address_list[i], "and its", cipher_list[i])
