@@ -37,7 +37,9 @@ server {
             return 403;
         }
         if ($request_method !~ ^(GET|HEAD|POST)$ ) {
-            return 444; }
+            return 405; 
+        }
+
 
         limit_except GET HEAD POST { deny all; }
 
