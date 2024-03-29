@@ -20,6 +20,9 @@ server {
     include snippets/self-signed.conf;
     include snippets/ssl-params.conf;
 
+    access_log /var/log/nginx/13.52.105.27.access.log;
+    error_log /var/log/nginx/13.52.105.27.error.log;
+
     client_body_timeout 5s;
     client_header_timeout 5s;
 
@@ -69,46 +72,8 @@ server {
 }
 server {
     listen 80;
-    listen [::]:80;
 
     server_name 13.52.105.27;
 
-    client_body_timeout 5s;
-    client_header_timeout 5s;
-
-    location / {
-
-        if ($http_user_agent ~* foo|bar) {
-            return 403;
-        }
-
-        include proxy_params;
-        limit_req zone=req_zone burst=10 nodelay;
-        limit_req zone=req_zone_wl burst=20 nodelay;
-        limit_req_log_level warn;
-        limit_req_status 444;
-        proxy_pass http://unix:/home/ubuntu/GIS-SecEng-Intern/project-emu-develop/myproject.sock;
-    }
-    location ~ sbom.netskope.io/api/internal/user/* {
-
-        if ($http_user_agent ~* foo|bar) {
-            return 403;
-        }
-
-        include proxy_params;
-        limit_req zone=req_zone burst=10 nodelay;
-        limit_req zone=req_zone_wl burst=20 nodelay;
-        limit_req_log_level warn;
-        limit_req_status 444;
-        proxy_pass http://unix:/home/ubuntu/GIS-SecEng-Intern/project-emu-develop/myproject.sock;
-    }
-    location /foo.php {
-        deny all;
-    }
-    location ~* \.(jpg|jpeg|png|gif|ico)$ {
-        expires 30d;
-        add_header Cache-Control "public, no-transform";
-    }
-
-    return 302 https://13.52.105.27$request_uri;
+    return 301 https://13.52.105.27$request_uri;
 }
