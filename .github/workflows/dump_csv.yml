@@ -15,11 +15,23 @@ jobs:
         with:
             url: "https://global.prod.kms.nskope.net"
             method: approle
-            roleId: ${{ secrets.GH_ACTIONS_VAULT_APPROLE_ID }}
+            roleId:  admin 
             password: ${{ secrets.GH_ACTIONS_APPROLE_SECRET}}
             secrets: |
                     github-action/Security_Stack_Asset | dumy_intern_token ;
       - name: Echo dumy token   
         run: |
               echo  "${{ env.dumy_intern_token}}"
-             
+
+# jobs:
+#    build:
+#        runs-on: ubuntu-latest
+       
+#        steps:
+#          - name: check secrets
+#            env: 
+#              VAULT_APPROLE_IDA: ${{ secrets.GH_ACTIONS_VAULT_APPROLE_ID }}
+#              VAULT_SECRET_IDA: ${{ secrets.GH_ACTIONS_APPROLE_SECRET }}
+#            run: |
+              
+              
