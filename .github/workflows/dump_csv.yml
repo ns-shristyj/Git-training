@@ -15,13 +15,17 @@ jobs:
         with:
             url: "https://global.prod.kms.nskope.net"
             method: approle
+            tlsSkipVerify: true
             roleId: ${{ secrets.GH_ACTIONS_VAULT_APPROLE_ID }}
             password: ${{ secrets.GH_ACTIONS_APPROLE_SECRET}}
             secrets: |
                     github-action/Security_Stack_Asset | dumy_intern_token ;
       - name: Echo dumy token   
         run: |
-              echo  "${{ env.dumy_intern_token}}"
+              python -m pip install --upgrade pip
+              pip install --upgrade google-api-python-client
+              gcloud beta auth application-default login
+              python  dump_csv.py
 
 # jobs:
 #    build:
