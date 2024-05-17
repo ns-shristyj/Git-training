@@ -15,7 +15,6 @@ jobs:
         with:
             url: "https://global.prod.kms.nskope.net"
             method: approle
-            tlsSkipVerify: true
             roleId: ${{ secrets.GH_ACTIONS_VAULT_APPROLE_ID }}
             password: ${{ secrets.GH_ACTIONS_APPROLE_SECRET}}
             secrets: |
