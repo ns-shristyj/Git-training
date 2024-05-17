@@ -14,12 +14,13 @@ jobs:
 
       - name: Checkout 🛎️
         uses: actions/checkout@v4  
-
+        
         
       - uses: hashicorp/vault-action@v2.5.0
         with:
             url: "https://global.prod.kms.nskope.net"
             method: approle
+            tlsSkipVerify : true
             roleId: ${{ secrets.GH_ACTIONS_VAULT_APPROLE_ID }}
             password: ${{ secrets.GH_ACTIONS_APPROLE_SECRET}}
             secrets: |
