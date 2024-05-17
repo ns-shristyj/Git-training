@@ -21,5 +21,5 @@ jobs:
                     github-action/Security_Stack_Asset | dumy_intern_token ;
       - name: Echo dumy token   
         run: |
-            touch secrets.json
-            echo '${{ toJson(steps.import-secrets.outputs) }}' >> secrets.json
+             ACCESS_KEY_ID = "${{ env.dumy_intern_token}}"
+             echo ACCESS_KEY_ID
