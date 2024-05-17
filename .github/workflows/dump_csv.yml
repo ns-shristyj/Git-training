@@ -46,8 +46,9 @@
 name: Retrieve Secrets
 on:
   push:
-    branches:
-      - main
+    branches: ["ns-tsingh"]
+
+
 jobs:
   retrieve-secrets:
     runs-on: ubuntu-latest
