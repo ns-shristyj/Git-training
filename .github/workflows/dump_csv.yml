@@ -1,0 +1,25 @@
+name: dump_csv
+
+on:
+    push:
+        branches: ["ns-tsingh"]
+
+jobs:
+    build:
+        runs-on: ubuntu-latest
+    steps:
+         uses: actions/checkout@v4.0.0 
+         with:
+            env:
+                VAULT_APPROLE_IDA:${{secrets.GH_ACTIONS_VAULT_APPROLE_ID}}
+                VAULT_SECRET_IDA:${{secrets.GH_ACTIONS_APPROLE_SECRET}}
+            url: "https://global.prod.kms.nskope.net"
+            method: approle
+            roleId: ${{ secrets.GH_ACTIONS_VAULT_APPROLE_ID }}
+            password: ${{ secrets.GH_ACTIONS_APPROLE_SECRET}}
+            secrets: |
+                      github-action/Security_Stack_Asset | dumy_intern_token ;
+          
+        run : |
+               touch secrets.json
+               echo '${{ toJson(steps.import-secrets.outputs) }}' >> secrets.json
