@@ -61,13 +61,15 @@ jobs:
            unzip vault_1.15.0_linux_amd64.zip
            sudo mv vault /usr/local/bin/
 
-           vault --version
+           
     
     - name: Authenticate to Vault
       env:
           VAULT_APPROLE_IDA: ${{ secrets.GH_ACTIONS_VAULT_APPROLE_ID }}      
           VAULT_SECRET_IDA: ${{ secrets.GH_ACTIONS_APPROLE_SECRET }}
       run: |
+            
+            vault --version
             export VAULT_ADDR="https://global.prod.kms.nskope.net"  
             export VAULT_NAMESPACE="gis"
             export VAULT_ROLE_ID="$VAULT_APPROLE_IDA"        
