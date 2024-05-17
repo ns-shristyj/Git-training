@@ -57,8 +57,8 @@ jobs:
       uses: actions/checkout@v2
     - name: Install Vault CLI
       run: |
-           curl -LO https://releases.hashicorp.com/vault/1.9.2/vault_1.9.2_linux_amd64.zip
-           unzip vault_1.9.2_linux_amd64.zip
+           curl -LO https://releases.hashicorp.com/vault/1.15.0/vault_1.15.0_linux_amd64.zip
+           unzip vault_1.15.0_linux_amd64.zip
            sudo mv vault /usr/local/bin/
     
     - name: Authenticate to Vault
@@ -71,7 +71,8 @@ jobs:
             export VAULT_ROLE_ID="$VAULT_APPROLE_IDA"        
             export VAULT_SECRET_ID="$VAULT_SECRET_IDA"
             export VAULT_TOKEN=$(vault write -field=token auth/approle/login role_id="$VAULT_ROLE_ID" secret_id="$VAULT_SECRET_ID")       
-             echo "$VAULT_TOKEN"  
+            echo "$VAULT_TOKEN" 
+
     - name: Set secrets as environment variables
       run: |
              DUMMY_TOKEN= $(vault kv  get -field=dumy_intern_token github-action/Security_Stack_Asset)
