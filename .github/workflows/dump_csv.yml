@@ -1,36 +1,36 @@
-name: dump_csv
+# name: dump_csv
 
-on:
-  push:
-    branches: ["ns-tsingh"]
+# on:
+#   push:
+#     branches: ["ns-tsingh"]
 
 
 
-jobs:
-  build:
-      runs-on: [ubuntu-latest,self-hosted]
+# jobs:
+#   build:
+#       runs-on: [ubuntu-latest,self-hosted]
     
-      steps:
+#       steps:
 
-      - name: Checkout 🛎️
-        uses: actions/checkout@v4  
+#       - name: Checkout 🛎️
+#         uses: actions/checkout@v4  
         
         
-      - uses: hashicorp/vault-action@v2.5.0
-        with:
-            url: "https://global.prod.kms.nskope.net"
-            method: approle
-            tlsSkipVerify : true
-            roleId: ${{ secrets.GH_ACTIONS_VAULT_APPROLE_ID }}
-            password: ${{ secrets.GH_ACTIONS_APPROLE_SECRET}}
-            secrets: |
-                    github-action/Security_Stack_Asset | dumy_intern_token ;
-      - name: Echo dumy token   
-        run: |
-              python -m pip install --upgrade pip
-              pip install --upgrade google-api-python-client
-              gcloud beta auth application-default login
-              python  dump_csv.py
+#       - uses: hashicorp/vault-action@v2.5.0
+#         with:
+#             url: "https://global.prod.kms.nskope.net"
+#             method: approle
+#             tlsSkipVerify : true
+#             roleId: ${{ secrets.GH_ACTIONS_VAULT_APPROLE_ID }}
+#             password: ${{ secrets.GH_ACTIONS_APPROLE_SECRET}}
+#             secrets: |
+#                     github-action/Security_Stack_Asset | dumy_intern_token ;
+#       - name: Echo dumy token   
+#         run: |
+#               python -m pip install --upgrade pip
+#               pip install --upgrade google-api-python-client
+#               gcloud beta auth application-default login
+#               python  dump_csv.py
 
 # jobs:
 #    build:
@@ -42,5 +42,36 @@ jobs:
 #              VAULT_APPROLE_IDA: ${{ secrets.GH_ACTIONS_VAULT_APPROLE_ID }}
 #              VAULT_SECRET_IDA: ${{ secrets.GH_ACTIONS_APPROLE_SECRET }}
 #            run: |
+
+name: Retrieve Secrets
+on:
+  push:
+    branches:
+      - main
+jobs:
+  retrieve-secrets:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+    - name: Install Vault CLI
+      run: |
+           curl -LO <https://releases.hashicorp.com/vault/1.9.2/vault_1.9.2_linux_amd64.zip>
+           unzip vault_1.9.2_linux_amd64.zip
+           sudo mv vault /usr/local/bin/
+    
+    - name: Authenticate to Vault
+      env:
+          VAULT_APPROLE_IDA: ${{ secrets.GH_ACTIONS_VAULT_APPROLE_ID }}      
+          VAULT_SECRET_IDA: ${{ secrets.GH_ACTIONS_APPROLE_SECRET }}
+      run: |
+            export VAULT_ADDR="https://global.prod.kms.nskope.net"  
+            export VAULT_NAMESPACE="gis"
+            export VAULT_ROLE_ID="$VAULT_APPROLE_IDA"        
+            export VAULT_SECRET_ID="$VAULT_SECRET_IDA"
+            export VAULT_TOKEN=$(vault write -field=token auth/approle/login role_id="$VAULT_ROLE_ID" secret_id="$VAULT_SECRET_ID")       
               
-              
+    - name: Set secrets as environment variables
+      run: |
+             echo $(vault get -field=dumy_intern_token github-action/Security_Stack_Asset)
+             
