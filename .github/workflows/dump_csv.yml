@@ -11,7 +11,7 @@ jobs:
       runs-on: ubuntu-latest
     
       steps:
-      - uses: hashicorp/vault-action@v2
+      - uses: hashicorp/vault-action@v2.5.0
         with:
             url: "https://global.prod.kms.nskope.net"
             method: approle
