@@ -75,7 +75,7 @@ jobs:
             export VAULT_TOKEN=$(vault write -field=token auth/approle/login role_id="$VAULT_ROLE_ID" secret_id="$VAULT_SECRET_ID")       
             echo "$VAULT_TOKEN" 
 
-    - name: Set secrets as environment variables
-      run: |
-             DUMMY_TOKEN= $(vault kv  get -field=dumy_intern_token github-action/Security_Stack_Asset)
-             echo "$DUMMY_TOKEN"
+    # - name: Set secrets as environment variables
+    #   run: |
+    #          DUMMY_TOKEN= $(vault kv  get -field=dumy_intern_token github-action/Security_Stack_Asset)
+    #          echo "$DUMMY_TOKEN"
