@@ -51,7 +51,7 @@ on:
 
 jobs:
   retrieve-secrets:
-    runs-on: [ubuntu-latest,self-hosted]
+    runs-on: [ubuntu-latest]
     steps:
     - name: Checkout code
       uses: actions/checkout@v2
@@ -81,4 +81,4 @@ jobs:
       uses: google-github-actions/setup-gcloud@master
       with:
               service_account_key: ${{ secrets.GCLOUD_AUTH }}
-              project_id: <your-project-id>    
+              project_id:    
