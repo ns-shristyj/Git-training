@@ -1,12 +1,19 @@
-from googleapiclient import discovery
-from oauth2client.client import GoogleCredentials
+import os
+from google.cloud import storage
 
-credentials = GoogleCredentials.get_application_default()
-service = discovery.build('storage', 'v1', credentials=credentials)
+def upload_to_gcs(bucket_name, source_file_name, destination_blob_name):
+    """Uploads a file to the GCS bucket."""
+    storage_client = storage.Client()
+    bucket = storage_client.bucket(bucket_name)
+    blob = bucket.blob(destination_blob_name)
+    
+    blob.upload_from_filename(source_file_name)
 
-filename = 'C:\\MyFiles\\sample.csv'
-bucket = 'my_bucket'
+    print(f"File {source_file_name} uploaded to {destination_blob_name}.")
 
-body = {'name': 'dest_file_name.csv'}
-req = service.objects().insert(bucket=bucket, body=body, media_body=filename)
-resp = req.execute()
+if __name__ == "__main__":
+    bucket_name = os.getenv("GCS_BUCKET_NAME")
+    source_file_name = "test.csv"
+    destination_blob_name = "test.csv"
+
+    upload_to_gcs(bucket_name, source_file_name, destination_blob_name)
