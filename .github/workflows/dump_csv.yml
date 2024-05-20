@@ -95,7 +95,7 @@ name: Upload to GCS
 on:
   push:
     branches:
-      - main
+      - ns-tsingh
 
 jobs:
   upload-to-gcs:
