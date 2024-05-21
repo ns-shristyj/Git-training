@@ -134,3 +134,7 @@ jobs:
       - name: List contents of the GCS bucket
         run: |
          gcloud storage ls gs://test-saas-bucket
+
+      - name: Run Python script to upload file to GCS
+        run: |  
+           python  dump_csv.py 
