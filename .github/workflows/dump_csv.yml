@@ -129,4 +129,4 @@ jobs:
       
       - name: List contents of the GCS bucket
         run: |
-          gsutil ls gs://test-saas-bucket 
+         gcloud storage ls gs://my-bucket
