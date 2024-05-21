@@ -19,6 +19,6 @@ def upload_file_to_gcs(bucket_name, source_file_name):
 if __name__ == "__main__":
    
     bucket_name = "test-saas-bucket"
-    source_file_name = "C:\Users\TusharSingh\GIS-SecEng-Intern\test.csv"
+    source_file_name = "test.csv"
     
     upload_file_to_gcs(bucket_name, source_file_name)
