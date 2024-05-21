@@ -121,11 +121,11 @@ jobs:
         with:
           credentials_json: '${{ secrets.GCP_SIEM_SERVICEACCOUNT_JSONKEY }}'
 
-      # - name: Set GCS Bucket Name
-      #   run: echo "GCS_BUCKET_NAME=saas-monitoring-test" >> $GITHUB_ENV
+      - name: Set GCS Bucket Name
+        run: echo "GCS_BUCKET_NAME=saas-monitoring-test" >> $GITHUB_ENV
 
-      # - name: Run Python script to upload test.csv
-      #   run: python dump_csv.py
+      - name: Run Python script to upload test.csv
+        run: python dump_csv.py
       
       - name: List contents of the GCS bucket
         run: |
