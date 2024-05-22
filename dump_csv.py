@@ -26,5 +26,5 @@ if __name__ == "__main__":
    
     bucket_name = "test-saas-bucket"
     source_file_name = "test.csv"
-    destination_blob_name="test2.csv"
+    destination_blob_name="test.csv"
     upload_file_to_gcs(bucket_name, source_file_name,destination_blob_name)
