@@ -143,4 +143,4 @@ jobs:
 
       - name: check what's in the file
         run : |
-            gsutils cat gs://test-saas-bucket/test.csv
+             gsutil cat gs://test-saas-bucket/test.csv
