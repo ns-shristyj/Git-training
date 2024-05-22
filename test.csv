@@ -1,3 +1,4 @@
 
 service,status
 censys ,operational
+cloudstrike,operational
