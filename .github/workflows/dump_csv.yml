@@ -105,30 +105,30 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Install Vault CLI
-        run: |
-                   curl -LO https://releases.hashicorp.com/vault/1.15.0/vault_1.15.0_linux_amd64.zip
-                   unzip vault_1.15.0_linux_amd64.zip
-                   sudo mv vault /usr/local/bin/
+      # - name: Install Vault CLI
+      #   run: |
+      #              curl -LO https://releases.hashicorp.com/vault/1.15.0/vault_1.15.0_linux_amd64.zip
+      #              unzip vault_1.15.0_linux_amd64.zip
+      #              sudo mv vault /usr/local/bin/
         
                    
             
-      - name: Authenticate to Vault
-        env:
-            VAULT_APPROLE_IDA: ${{ secrets.GH_ACTIONS_VAULT_APPROLE_ID }}      
-            VAULT_SECRET_IDA: ${{ secrets.GH_ACTIONS_APPROLE_SECRET }}
-        run: |      
-              vault --version
-              export VAULT_ADDR="https://global.prod.kms.nskope.net"  
-              export VAULT_NAMESPACE="gis"
-              export VAULT_ROLE_ID="$VAULT_APPROLE_IDA"        
-              export VAULT_SECRET_ID="$VAULT_SECRET_IDA"
-              export VAULT_TOKEN=$(vault write -field=token auth/approle/login role_id="$VAULT_ROLE_ID" secret_id="$VAULT_SECRET_ID")    
+      # - name: Authenticate to Vault
+      #   env:
+      #       VAULT_APPROLE_IDA: ${{ secrets.GH_ACTIONS_VAULT_APPROLE_ID }}      
+      #       VAULT_SECRET_IDA: ${{ secrets.GH_ACTIONS_APPROLE_SECRET }}
+      #   run: |      
+      #         vault --version
+      #         export VAULT_ADDR="https://global.prod.kms.nskope.net"  
+      #         export VAULT_NAMESPACE="gis"
+      #         export VAULT_ROLE_ID="$VAULT_APPROLE_IDA"        
+      #         export VAULT_SECRET_ID="$VAULT_SECRET_IDA"
+      #         export VAULT_TOKEN=$(vault write -field=token auth/approle/login role_id="$VAULT_ROLE_ID" secret_id="$VAULT_SECRET_ID")    
 
 
-      - name: fetch key from hashicorp vault
-        run : |
-              export SECRET_KEY=$(vault kv get -field=serviceAccountJSONKey github-action/siem-231719-json-creds)
+      # - name: fetch key from hashicorp vault
+      #   run : |
+      #         export SECRET_KEY=$(vault kv get -field=serviceAccountJSONKey github-action/siem-231719-json-creds)
                 
       # - name: Set up Python
       #   uses: actions/setup-python@v2
@@ -144,7 +144,7 @@ jobs:
         id: auth
         uses: google-github-actions/auth@v1
         with:
-          credentials_json: '${{ env.SECRET_KEY }}'
+          credentials_json: '${{ secrets.GCP_SIEM_SERVICEACCOUNT_JSONKEY }}'
 
       # - name: Set up Python
       #   uses: actions/setup-python@v2
