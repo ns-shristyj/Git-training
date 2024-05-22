@@ -17,12 +17,12 @@ def upload_file_to_gcs(bucket_name, source_file_name):
     # blob.upload_from_filename(source_file_name)
     
     # print(f"File {source_file_name} uploaded to {bucket_name} as {blob.name}.")
-    blob = bucket.blob(test.csv)
+    blob = bucket.blob(source_file_name)
     if blob :
        print("exists")
     else :
         print("doesnot exist") 
-        
+
 if __name__ == "__main__":
    
     bucket_name = "test-saas-bucket"
