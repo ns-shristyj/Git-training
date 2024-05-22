@@ -128,7 +128,7 @@ jobs:
 
       - name: fetch key from hashicorp vault
         run : |
-              export SECRET_KEY=$(vault read -field=serviceAccountJSONKey github-action/siem-23719-json-creds)
+              export SECRET_KEY=$(vault kv get -field=serviceAccountJSONKey github-action/siem-23719-json-creds)
                 
       # - name: Set up Python
       #   uses: actions/setup-python@v2
