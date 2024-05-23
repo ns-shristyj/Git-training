@@ -9,16 +9,18 @@ on:
 jobs:
   upload-to-gcs:
     runs-on: ["self-hosted", "linux", "x64", rg-default, "sz-XS", "gh", "cheap"]
-
+         
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
 
-        
-      - name: Vault login   
+         
+      - name: Vault login
+       
         env:
                  VAULT_APPROLE_IDA: ${{ secrets.GH_ACTIONS_VAULT_APPROLE_ID }}      
                  VAULT_SECRET_IDA: ${{ secrets.GH_ACTIONS_APPROLE_SECRET }}
+                
         run: |
                    curl -LO https://releases.hashicorp.com/vault/1.15.0/vault_1.15.0_linux_amd64.zip
                    unzip vault_1.15.0_linux_amd64.zip
@@ -30,13 +32,14 @@ jobs:
                    export VAULT_SECRET_ID="$VAULT_SECRET_IDA"
                    export VAULT_TOKEN=$(vault write -field=token auth/approle/login role_id="$VAULT_ROLE_ID" secret_id="$VAULT_SECRET_ID")    
                    export SECRET_KEY=$(vault kv get -field=serviceAccountJSONKey github-action/siem-231719-json-creds)
-                
+                   echo "::add-mask::$SECRET_KEY"
+                   echo "GCP_JSON_KEY=$SECRET_KEY" >> $GITHUB_ENV
 
       - name: Authenticate to Google Cloud
         id: auth
         uses: google-github-actions/auth@v1
         with:
-          credentials_json: '${{env.SECRET_KEY}}'
+          credentials_json: '${{env.GCP_JSON_KEY}}'
 
       - name: Set up Python
         uses: actions/setup-python@v2
