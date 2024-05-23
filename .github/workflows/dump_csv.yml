@@ -13,11 +13,12 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
+
+        
+      - name: Vault login   
         env:
                  VAULT_APPROLE_IDA: ${{ secrets.GH_ACTIONS_VAULT_APPROLE_ID }}      
                  VAULT_SECRET_IDA: ${{ secrets.GH_ACTIONS_APPROLE_SECRET }}
-
-      - name: Install Vault CLI
         run: |
                    curl -LO https://releases.hashicorp.com/vault/1.15.0/vault_1.15.0_linux_amd64.zip
                    unzip vault_1.15.0_linux_amd64.zip
