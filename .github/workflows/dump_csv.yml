@@ -1,95 +1,4 @@
-# name: dump_csv
 
-# on:
-#   push:
-#     branches: ["ns-tsingh"]
-
-
-
-# jobs:
-#   build:
-#       runs-on: [ubuntu-latest,self-hosted]
-    
-#       steps:
-
-#       - name: Checkout 🛎️
-#         uses: actions/checkout@v4  
-        
-        
-#       - uses: hashicorp/vault-action@v2.5.0
-#         with:
-#             url: "https://global.prod.kms.nskope.net"
-#             method: approle
-#             tlsSkipVerify : true
-#             roleId: ${{ secrets.GH_ACTIONS_VAULT_APPROLE_ID }}
-#             password: ${{ secrets.GH_ACTIONS_APPROLE_SECRET}}
-#             secrets: |
-#                     github-action/Security_Stack_Asset | dumy_intern_token ;
-#       - name: Echo dumy token   
-#         run: |
-#               python -m pip install --upgrade pip
-#               pip install --upgrade google-api-python-client
-#               gcloud beta auth application-default login
-#               python  dump_csv.py
-
-# jobs:
-#    build:
-#        runs-on: ubuntu-latest
-       
-#        steps:
-#          - name: check secrets
-#            env: 
-#              VAULT_APPROLE_IDA: ${{ secrets.GH_ACTIONS_VAULT_APPROLE_ID }}
-#              VAULT_SECRET_IDA: ${{ secrets.GH_ACTIONS_APPROLE_SECRET }}
-#            run: |
-
-# name: Retrieve Secrets
-# on:
-#   push:
-#     branches: ["ns-tsingh"]
-
-
-# jobs:
-#   retrieve-secrets:
-#     runs-on: [ubuntu-latest]
-#     steps:
-#     - name: Checkout code
-#       uses: actions/checkout@v2
-#     - name: Install Vault CLI
-#       run: |
-#            curl -LO https://releases.hashicorp.com/vault/1.15.0/vault_1.15.0_linux_amd64.zip
-#            unzip vault_1.15.0_linux_amd64.zip
-#            sudo mv vault /usr/local/bin/
-
-           
-    
-#     - name: Authenticate to Vault
-#       env:
-#           VAULT_APPROLE_IDA: ${{ secrets.GH_ACTIONS_VAULT_APPROLE_ID }}      
-#           VAULT_SECRET_IDA: ${{ secrets.GH_ACTIONS_APPROLE_SECRET }}
-#       run: |
-            
-#             vault --version
-#             export VAULT_ADDR="https://global.prod.kms.nskope.net"  
-#             export VAULT_NAMESPACE="gis"
-#             export VAULT_ROLE_ID="$VAULT_APPROLE_IDA"        
-#             export VAULT_SECRET_ID="$VAULT_SECRET_IDA"
-#             export VAULT_TOKEN=$(vault write -field=token auth/approle/login role_id="$VAULT_ROLE_ID" secret_id="$VAULT_SECRET_ID")       
-#             echo "$VAULT_TOKEN" 
-
-    
-          
-        
-#     - id: 'auth'
-#       uses: 'google-github-actions/auth@v2'
-#       with:
-#          credentials_json: '${{ secrets.GCP_CREDENTIALS }}'
-            
-#     - name: 'Set up Cloud SDK'
-#       uses: 'google-github-actions/setup-gcloud@v2'
-            
-#     - name: 'Use gcloud CLI'
-#       run: 'gcloud info'
 name: Upload to GCS
 
 on:
@@ -105,27 +14,27 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Install Vault CLI
-        run: |
-                   curl -LO https://releases.hashicorp.com/vault/1.15.0/vault_1.15.0_linux_amd64.zip
-                   unzip vault_1.15.0_linux_amd64.zip
-                   sudo mv vault /usr/local/bin/
+      # - name: Install Vault CLI
+      #   run: |
+      #              curl -LO https://releases.hashicorp.com/vault/1.15.0/vault_1.15.0_linux_amd64.zip
+      #              unzip vault_1.15.0_linux_amd64.zip
+      #              sudo mv vault /usr/local/bin/
         
                    
             
-      - name: Authenticate to Vault
-        env:
-            VAULT_APPROLE_IDA: ${{ secrets.GH_ACTIONS_VAULT_APPROLE_ID }}      
-            VAULT_SECRET_IDA: ${{ secrets.GH_ACTIONS_APPROLE_SECRET }}
-        run: |      
-              vault --version
-              export VAULT_ADDR="https://global.prod.kms.nskope.net"  
-              export VAULT_NAMESPACE="gis"
-              export VAULT_ROLE_ID="$VAULT_APPROLE_IDA"        
-              export VAULT_SECRET_ID="$VAULT_SECRET_IDA"
-              export VAULT_TOKEN=$(vault write -field=token auth/approle/login role_id="$VAULT_ROLE_ID" secret_id="$VAULT_SECRET_ID")    
+      # - name: Authenticate to Vault
+      #   env:
+      #       VAULT_APPROLE_IDA: ${{ secrets.GH_ACTIONS_VAULT_APPROLE_ID }}      
+      #       VAULT_SECRET_IDA: ${{ secrets.GH_ACTIONS_APPROLE_SECRET }}
+      #   run: |      
+      #         vault --version
+      #         export VAULT_ADDR="https://global.prod.kms.nskope.net"  
+      #         export VAULT_NAMESPACE="gis"
+      #         export VAULT_ROLE_ID="$VAULT_APPROLE_IDA"        
+      #         export VAULT_SECRET_ID="$VAULT_SECRET_IDA"
+      #         export VAULT_TOKEN=$(vault write -field=token auth/approle/login role_id="$VAULT_ROLE_ID" secret_id="$VAULT_SECRET_ID")    
 
-
+  
       - name: fetch key from hashicorp vault
         run : |
               export SECRET_KEY=$(vault kv get -field=serviceAccountJSONKey github-action/siem-231719-json-creds)
@@ -135,30 +44,30 @@ jobs:
         id: auth
         uses: google-github-actions/auth@v1
         with:
-          credentials_json: '${{ env.SECRET_KEY}}'
+          credentials_json: '${{secrets.GCP_SIEM_SERVICEACCOUNT_JSONKEY}}'
 
-      # - name: Set up Python
-      #   uses: actions/setup-python@v2
-      #   with:
-      #     python-version: '3.8'
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.8'
 
-      # - name: Install dependencies
-      #   run: |
-      #     python -m pip install --upgrade pip
-      #     pip install google-cloud-storage
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install google-cloud-storage
       
       
 
-      # - name: Run Python script to upload file to GCS
-      #   run: |  
-      #      python dump_csv.py 
+      - name: Run Python script to upload file to GCS
+        run: |  
+           python dump_csv.py 
 
-      # - name: List contents of the GCS bucket
-      #   run: |
-      #    gcloud storage ls gs://test-saas-bucket
+      - name: List contents of the GCS bucket
+        run: |
+         gcloud storage ls gs://test-saas-bucket
 
-      # - name: info about the object 
-      #   run: |
-      #      gcloud storage objects describe gs://test-saas-bucket/test.csv
+      - name: info about the object 
+        run: |
+           gcloud storage objects describe gs://test-saas-bucket/test.csv
     
      
