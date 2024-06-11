@@ -1,0 +1,40 @@
+# name: AWS S3 Buckets Exposed ASM
+# on:
+#   push:
+#     branches: [ "SOC" ]
+#   pull_request:
+#     branches: [ "SOC" ]
+#   workflow_dispatch:
+#   schedule:
+#     - cron: '00 11 * * *'
+
+#     # TO-DO:
+#     # - GitHub Secrets for:
+#     #   - Censys Team API: bf858fdf-f887-499a-81a3-cd12e40f14aa
+#     #   - Jira API: ATATT3xFfGF0egXeDrtUY4xsAoyOxGDYDWNNiQqlAzgB3dUeDMdpK8DNNqMCjAtUwqMFPLOhEqE4uPZ7l7Uv8Fth9DCmE2Xy_2G1hZeJi-B2EH9q48Ys4Cg0Bckk1fsXCiu_FXoF0A0ensEZPFBqFJLkF4QJirlB-PDUc3OfDY3lRZyHSVmNMMU=AE63AC26
+
+
+# jobs:
+#   build:
+
+#     runs-on: ["self-hosted", "linux", "x64", "rg-default", "gh", "cheap"]
+
+#     steps:
+#     - uses: actions/checkout@v4.0.0
+#     - name: Set up Python 3.8 - 10
+#       uses: actions/setup-python@v4.0.0
+#       with:
+#         python-version: 3.8
+#     - name: Generate S3 Address List...
+#       env:
+#         CENSYS_API_KEY: ${{ secrets.CENSYS_API_KEY }}
+#       working-directory: ./censys-python
+#       run: python3 s3buckets.py
+#     - name: Run S3Sec on List of Addresses...
+#       working-directory: ./censys-python
+#       run: cat urls.txt | python3 ./s3sec/s3sec.py
+#     - name: Genereate Jira Ticket...
+#       env:
+#         JIRA_API_KEY: ${{ secrets.JIRA_API_KEY }}
+#       working-directory: ./censys-python
+#       run: python3 jira_ticketing.py
