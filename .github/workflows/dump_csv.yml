@@ -48,34 +48,34 @@ jobs:
         #            echo "::add-mask::$SECRET_KEY"
         #            echo "GCP_JSON_KEY=$SECRET_KEY" >> $GITHUB_ENV
 
-      - name: Authenticate to Google Cloud
-        id: auth
-        uses: google-github-actions/auth@v1
-        with:
-          credentials_json: '${{env.GCP_JSON_KEY}}'
+      # - name: Authenticate to Google Cloud
+      #   id: auth
+      #   uses: google-github-actions/auth@v1
+      #   with:
+      #     credentials_json: '${{env.GCP_JSON_KEY}}'
 
-      - name: Set up Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: '3.8'
+      # - name: Set up Python
+      #   uses: actions/setup-python@v2
+      #   with:
+      #     python-version: '3.8'
 
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install google-cloud-storage
+      # - name: Install dependencies
+      #   run: |
+      #     python -m pip install --upgrade pip
+      #     pip install google-cloud-storage
       
       
 
-      - name: Run Python script to upload file to GCS
-        run: |  
-           python dump_csv.py 
+      # - name: Run Python script to upload file to GCS
+      #   run: |  
+      #      python dump_csv.py 
 
-      - name: List contents of the GCS bucket
-        run: |
-         gcloud storage ls gs://test-saas-bucket
+      # - name: List contents of the GCS bucket
+      #   run: |
+      #    gcloud storage ls gs://test-saas-bucket
 
-      - name: info about the object 
-        run: |
-           gcloud storage objects describe gs://test-saas-bucket/test.csv
+      # - name: info about the object 
+      #   run: |
+      #      gcloud storage objects describe gs://test-saas-bucket/test.csv
     
      
