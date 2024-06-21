@@ -3,7 +3,7 @@ import json
 import requests
 
 headers = {
-    "Censys-Api-Key": "bf858fdf-f887-499a-81a3-cd12e40f14aa"
+    "Censys-Api-Key": "bf858fdf-f887-499a-81a3-cd12e40f14aa" #cycode_secret_ignore_here
 }
 #get all gcp risk instances and write them into a json file called gcpRisks.json
 def getGCPRisks():
