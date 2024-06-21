@@ -1,0 +1,118 @@
+[
+      {
+            "id": 1091171,
+            "typeID": "gcp-storage-bucket-exposed",
+            "context": {
+                  "cri": "cri:bucket:gcp:gcs:itsumo",
+                  "type": "bucket"
+            },
+            "displayName": "Storage bucket is publicly writable",
+            "severity": "high",
+            "status": "open",
+            "firstComputedAt": "2023-06-18T11:13:43Z",
+            "lastUpdatedAt": "2023-10-16T08:36:19Z",
+            "lastComputedAt": "2024-06-20T13:06:21Z",
+            "categories": [
+                  [
+                        "Exposure",
+                        "Information Leakage",
+                        "Cloud Storage Exposure"
+                  ]
+            ],
+            "metadata": [
+                  {
+                        "cloud": "Google Cloud",
+                        "src": "system",
+                        "srcID": "cloud-info"
+                  }
+            ],
+            "hostData": null
+      },
+      {
+            "id": 1097888,
+            "typeID": "gcp-storage-bucket-exposed",
+            "context": {
+                  "cri": "cri:bucket:gcp:gcs:test-mike",
+                  "type": "bucket"
+            },
+            "displayName": "Storage bucket is publicly readable",
+            "severity": "high",
+            "status": "open",
+            "firstComputedAt": "2023-08-25T10:04:02Z",
+            "lastUpdatedAt": "2023-08-25T10:04:02Z",
+            "lastComputedAt": "2024-06-20T13:06:21Z",
+            "categories": [
+                  [
+                        "Exposure",
+                        "Information Leakage",
+                        "Cloud Storage Exposure"
+                  ]
+            ],
+            "metadata": [
+                  {
+                        "cloud": "Google Cloud",
+                        "src": "system",
+                        "srcID": "cloud-info"
+                  }
+            ],
+            "hostData": null
+      },
+      {
+            "id": 1095864,
+            "typeID": "gcp-storage-bucket-exposed",
+            "context": {
+                  "cri": "cri:bucket:gcp:gcs:windowsmedia",
+                  "type": "bucket"
+            },
+            "displayName": "Storage bucket is publicly readable and writable",
+            "severity": "high",
+            "status": "open",
+            "firstComputedAt": "2023-08-06T09:38:51Z",
+            "lastUpdatedAt": "2023-08-06T09:38:51Z",
+            "lastComputedAt": "2024-06-20T13:06:21Z",
+            "categories": [
+                  [
+                        "Exposure",
+                        "Information Leakage",
+                        "Cloud Storage Exposure"
+                  ]
+            ],
+            "metadata": [
+                  {
+                        "cloud": "Google Cloud",
+                        "src": "system",
+                        "srcID": "cloud-info"
+                  }
+            ],
+            "hostData": null
+      },
+      {
+            "id": 43408,
+            "typeID": "gcp-storage-bucket-exposed",
+            "context": {
+                  "cri": "cri:bucket:gcp:gcs:iberiademo_publico",
+                  "type": "bucket"
+            },
+            "displayName": "Storage bucket is publicly readable",
+            "severity": "high",
+            "status": "open",
+            "firstComputedAt": "2021-10-28T18:47:25Z",
+            "lastUpdatedAt": "2022-03-17T23:20:23Z",
+            "lastComputedAt": "2024-06-20T13:06:21Z",
+            "categories": [
+                  [
+                        "Exposure",
+                        "Information Leakage",
+                        "Cloud Storage Exposure"
+                  ]
+            ],
+            "metadata": [
+                  {
+                        "cloud": "Google Cloud",
+                        "src": "system",
+                        "srcID": "cloud-info"
+                  }
+            ],
+            "hostData": null
+      }
+]
