@@ -12,11 +12,7 @@
 #
 #
 
-import sys
-import requests
-import subprocess
-import os
-import urllib3
+import sys, requests, subprocess, os, urllib3 # type: ignore
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 

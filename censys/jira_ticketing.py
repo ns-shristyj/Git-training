@@ -165,8 +165,8 @@ def add_attachment(issue_key):
         headers={'X-Atlassian-Token': 'no-check'}, 
         auth=auth, 
         files = {
-            "file": ('S3 Bucket List', open('s3status.txt', 'rb'), "application-type"),
-            "file": ('GCP Bucket List', open('gcpSecUrls.txt', 'rb'), "application-type")
+            "file1": ('S3_Bucket_List.txt', open('s3status.txt', 'rb'), "application-type"),
+            "file2": ('GCP_Bucket_List.txt', open('gcpSecUrls.txt', 'rb'), "application-type")
         })
     
     if response.status_code == 200:
