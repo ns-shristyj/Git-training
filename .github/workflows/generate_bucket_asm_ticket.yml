@@ -1,6 +1,9 @@
-name: AWS S3 Buckets Exposed ASM
+name: Daily ASM Cloud Buckets Exposed
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - SOCScripts
   # workflow_dispatch:
   # schedule:
   #   - cron: '00 11 * * *'
