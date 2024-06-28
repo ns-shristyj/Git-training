@@ -165,12 +165,19 @@ def add_attachment(issue_key):
         headers={'X-Atlassian-Token': 'no-check'}, 
         auth=auth, 
         files = {
-            "file1": ('S3_Bucket_List.txt', open('s3status.txt', 'rb'), "application-type"),
-            "file2": ('GCP_Bucket_List.txt', open('gcpSecUrls.txt', 'rb'), "application-type")
+            "file1": ('S3_Bucket_List.txt', open('s3status.txt', 'rb'), "application-type")
         })
     
     if response.status_code == 200:
-        print(f"Attachment has been added successfully to issue {issue_key}")
+        print(f"S3 Buckets Attachment has been added successfully to issue {issue_key}")
+
+        response = requests.post(
+            add_attachment_url, 
+            headers={'X-Atlassian-Token': 'no-check'}, 
+            auth=auth, 
+            files = {
+                "file2": ('GCP_Bucket_List.txt', open('gcpSecUrls.txt', 'rb'), "application-type")
+            })
     else:
         print(f'Failed to add attachment. Status code: {response.status_code}')
         print(f'Response: {response.text}')
