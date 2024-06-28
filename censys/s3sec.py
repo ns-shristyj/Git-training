@@ -112,7 +112,7 @@ for line in sys.stdin:
     url = line.strip().replace("https://","").replace(".s3.amazonaws.com","").replace("s3.amazonaws.com/","")
     process(url)
 
-file = open('urls.txt', 'w')
+file = open('s3status.txt', 'w')
 for url in list:
     file.write(url+"\n")
 file.close()
