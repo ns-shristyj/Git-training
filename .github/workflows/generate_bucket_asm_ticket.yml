@@ -1,9 +1,6 @@
 name: AWS S3 Buckets Exposed ASM
 on:
-  push:
-    branches: [ "SOC" ]
-  pull_request:
-    branches: [ "SOC" ]
+  workflow_dispatch:
   # workflow_dispatch:
   # schedule:
   #   - cron: '00 11 * * *'
@@ -15,19 +12,31 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4.0.0
-    - name: Set up Python 3.8 - 10
-      uses: actions/setup-python@v4.0.0
+    - uses: actions/setup-python@v4.0.0
       with:
         python-version: 3.8
+
     - name: Generate S3 Address List...
       env:
         CENSYS_API_KEY: ${{ secrets.CENSYS_API_KEY }}
       working-directory: ./censys-python
       run: python3 s3buckets.py
+
+    - name: Generate GCP Address List...
+      env:
+        CENSYS_API_KEY: ${{ secrets.CENSYS_API_KEY }}
+      working-directory: ./censys-python
+      run: python3 gcp_buckets.py
+
     - name: Run S3Sec on List of Addresses...
       working-directory: ./censys-python
       run: cat urls.txt | python3 s3sec.py
-    - name: Genereate Jira Ticket...
+
+    - name: Run GCPSec on List of Addresses...
+      working-directory: ./censys-python
+      run: python3 gcpSec.py --check-list gcpUrls.txt
+
+    - name: Generate Jira Ticket...
       env:
         JIRA_API_KEY: ${{ secrets.JIRA_API_KEY }}
       working-directory: ./censys-python

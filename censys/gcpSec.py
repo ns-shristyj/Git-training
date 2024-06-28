@@ -1,28 +1,9 @@
 #!/usr/bin/env python3
-import argparse
-import time
-import multiprocessing
-import sys
+import argparse, time, multiprocessing, sys, requests
 
 from functools import partial
 from datetime import datetime, timedelta
 
-import requests
-import google.oauth2.credentials # type: ignore
-
-from google.cloud import storage
-from google.oauth2 import service_account # type: ignore
-
-
-
-# import and run gcp bucket retrieval
-# from gcp_buckets import getGCPRisks, getURLS
-
-# getGCPRisks()
-# getURLS()
-
-
-# def gcpSecFunction():
 
 # Clear file contents for new data
 open("gcpSecUrls.txt", 'w').close()
@@ -33,39 +14,6 @@ def outprint(data='', file_path='', normal_print=''):
     with open(file_path, 'a+') as f:
         f.write('{}\n'.format(data))
 
-
-
-# def generate_bucket_permutations(keyword):
-#     permutation_templates = [
-#         '{keyword}-{permutation}',
-#         '{permutation}-{keyword}',
-#         '{keyword}_{permutation}',
-#         '{permutation}_{keyword}',
-#         '{keyword}{permutation}',
-#         '{permutation}{keyword}'
-#     ]
-#     with open('./permutations.txt', 'r') as f:
-#         permutations = f.readlines()
-#         buckets = []
-#         for perm in permutations:
-#             perm = perm.rstrip()
-#             for template in permutation_templates:
-#                 generated_string = template.replace('{keyword}', keyword).replace('{permutation}', perm)
-#                 buckets.append(generated_string)
-
-#     buckets.append(keyword)
-#     buckets.append('{}.com'.format(keyword))
-#     buckets.append('{}.net'.format(keyword))
-#     buckets.append('{}.org'.format(keyword))
-#     buckets = list(set(buckets))
-
-#     # Strip any guesses less than 3 characters or more than 63 characters
-#     for bucket in buckets:
-#         if len(bucket) < 3 or len(bucket) > 63:
-#             del buckets[bucket]
-
-#     print('\nGenerated {} bucket permutations.\n'.format(len(buckets)))
-#     return buckets
 
 def read_wordlist(filename):
     try:
@@ -107,8 +55,7 @@ def main(args):
                 client = None
 
     subprocesses = []
-    # if args.keyword:
-    #     buckets = generate_bucket_permutations(args.keyword)
+
     if args.wordlist:
         buckets = read_wordlist(args.wordlist)
     elif args.check:

@@ -82,7 +82,7 @@ def process(url, protocol="https"):
                 return
         return
     elif(b.text.find("ListBucketResult")>=0):
-        print(f"[read] {url}.s3.amazonaws.comå")
+        print(f"[read] {url}.s3.amazonaws.com")
         list.append(f"[read] {url}.s3.amazonaws.com")
     else:
         if(protocol=="http"):

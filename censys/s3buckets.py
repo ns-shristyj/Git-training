@@ -2,10 +2,10 @@ import os
 from censys.asm import AsmClient
 from censys.common.exceptions import CensysException
 
-## This uses https://github.com/0xmoot/s3sec to test for read, write, and delete permissions 
-## https://rhinosecuritylabs.com/penetration-testing/penetration-testing-aws-storage/
+# Clear file contents for new data
+open("s3status.txt.txt", 'w').close()
 
-api_key = os.environ('CENSYS_API_KEY')
+api_key = os.getenv('CENSYS_API_TOKEN')
 s3_buckets_url = []
 
 severity_ranking = { "critical": 1, "high": 2, "medium": 3, "low": 4}
@@ -33,7 +33,11 @@ try:
         for x in range(0, len(sorted_risks_dict)):
             if sorted_risks_dict[f"risk_{x + 1}"]["typeID"] == "aws-storage-bucket-exposed":
                 s3_buckets_name = str(sorted_risks_dict[f"risk_{x + 1}"]["context"]["cri"]).split(":")
-                s3_buckets_url.append(f'https://{s3_buckets_name[4]}.s3.amazonaws.com')
+                # print(s3_buckets_name[4])
+                if "vgse" not in s3_buckets_name[4]:
+                    if "npa" not in s3_buckets_name[4]:
+                        if "demo" not in s3_buckets_name[4]:
+                            s3_buckets_url.append(f'https://{s3_buckets_name[4]}.s3.amazonaws.com')
         
         print(f"AWS S3 Exposed Buckets: {len(s3_buckets_url)}")
 

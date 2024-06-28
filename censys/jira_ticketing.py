@@ -1,10 +1,14 @@
-import requests, os, json
-from requests.auth import HTTPBasicAuth
+import requests, os, json # type: ignore
+from requests.auth import HTTPBasicAuth # type: ignore
+from dotenv import load_dotenv # type: ignore
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Jira Instance Details
-JIRA_URL = 'https://netskope.atlassian.net'
-USERNAME = 'cquinlan@netskope.com'
-API_TOKEN = os.environ('JIRA_API_KEY')
+JIRA_URL = os.environ.get('JIRA_NS_URL')
+USERNAME = os.getenv('JIRA_USERNAME')
+API_TOKEN = os.getenv('JIRA_API_TOKEN')
 
 # Project and queue details
 PROJECT_KEY = 'TQI'
@@ -21,6 +25,10 @@ READ_LIST = []
 WRITE_LIST = []
 DELETE_LIST = []
 ERROR_LIST = []
+GCP_READ_LIST = []
+GCP_WRITE_LIST = []
+GCP_DELETE_LIST = []
+GCP_LIST_LIST = []
 
 file = open('s3status.txt', 'r')
 lines = file.readlines()
@@ -36,22 +44,42 @@ for line in lines:
         ERROR_LIST.append(line)
 file.close()
 
+gcp = open('gcpSecUrls.txt', 'r')
+gcplines = gcp.readlines()
+for line in lines: 
+    if "READ" in line:
+        GCP_READ_LIST.append(line)
+    if "WRITE" in line:
+        GCP_WRITE_LIST.append(line)   
+    if "LIST" in line:
+        GCP_LIST_LIST.append(line)
+    if "DELETE" in line:
+        GCP_DELETE_LIST.append(line)
+gcp.close()
+
 DESCRIPTION = f"""
 
-**Issue Summary**
+*Issue Summary*
 
-    This issue was created via automation that checks Censys ASM for any AWS S3 Buckets that are exposed to the public internet.
+    This issue was created via automation that checks Censys ASM for any AWS S3 Buckets and GCP Buckets that are exposed to the public internet.
 
     
-**S3 Bucket Status**
+*S3 Bucket Status*
 
     There are currently {len(READ_LIST)} buckets are publicly readable.
     There are currently {len(WRITE_LIST)} buckets are publicly writable.
     There are currently {len(DELETE_LIST)} buckets are publicly deletable.
     There are currently {len(ERROR_LIST)} buckets have a error status.
 
+*GCP Bucket Status*
+
+    There are currently {len(GCP_READ_LIST)} buckets are publicly readable.
+    There are currently {len(GCP_WRITE_LIST)} buckets are publicly writable.
+    There are currently {len(GCP_DELETE_LIST)} buckets are publicly deletable.
+    There are currently {len(GCP_LIST_LIST)} buckets have a error status.
+
     
-**Additional Information** 
+*Additional Information*
 
 For more details, visit:
  https://netskope.atlassian.net/wiki/spaces/ISI/pages/4516938819/BIS-Netskope+Information+Security+Playbook+-+AWS+S3+Buckets
@@ -76,8 +104,6 @@ def get_queues():
     return None
 
 # Create the issue in the specified project
-# Field Name: Jira Queue, Field ID: customfield_23583
-# Field Name: Jira Queue, Field ID: customfield_23598
 def create_issue():
     create_issue_url = f'{JIRA_URL}/rest/servicedeskapi/request'
     issue_data = {
@@ -147,6 +173,8 @@ def add_attachment(issue_key):
     else:
         print(f'Failed to add attachment. Status code: {response.status_code}')
         print(f'Response: {response.text}')
+
+
 # Main Script Execution 
 queue_id = get_queues()
 if queue_id:
