@@ -26,13 +26,13 @@ jobs:
 
     - name: Generate S3 Address List...
       env:
-        CENSYS_API_KEY: ${{ secrets.CENSYS_API_KEY }}
+        CENSYS_API_KEY: ${{ secrets.CENSYS_API_TOKEN }}
       working-directory: ./censys
       run: python3 s3buckets.py
 
     - name: Generate GCP Address List...
       env:
-        CENSYS_API_KEY: ${{ secrets.CENSYS_API_KEY }}
+        CENSYS_API_KEY: ${{ secrets.CENSYS_API_TOKEN }}
       working-directory: ./censys
       run: python3 gcp_buckets.py
 
@@ -46,6 +46,6 @@ jobs:
 
     - name: Generate Jira Ticket...
       env:
-        JIRA_API_KEY: ${{ secrets.JIRA_API_KEY }}
+        JIRA_API_KEY: ${{ secrets.JIRA_CQUINLAN_API_TOKEN }}
       working-directory: ./censys
       run: python3 jira_ticketing.py

@@ -6,9 +6,9 @@ from dotenv import load_dotenv # type: ignore
 load_dotenv()
 
 # Jira Instance Details
-JIRA_URL = os.environ.get('JIRA_NS_URL')
+JIRA_URL = os.environ.get('JIRA_URL')
 USERNAME = os.getenv('JIRA_USERNAME')
-API_TOKEN = os.getenv('JIRA_API_TOKEN')
+API_TOKEN = os.getenv('JIRA_CQUINLAN_API_TOKEN')
 
 # Project and queue details
 PROJECT_KEY = 'TQI'
