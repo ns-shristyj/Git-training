@@ -47,13 +47,13 @@ file.close()
 gcp = open('gcpSecUrls.txt', 'r')
 gcplines = gcp.readlines()
 for line in lines: 
-    if "READ" in line:
+    if "READABLE" in line:
         GCP_READ_LIST.append(line)
-    if "WRITE" in line:
+    if "WRITEABLE" in line:
         GCP_WRITE_LIST.append(line)   
-    if "LIST" in line:
+    if "LISTABLE" in line:
         GCP_LIST_LIST.append(line)
-    if "DELETE" in line:
+    if "DELETEABLE" in line:
         GCP_DELETE_LIST.append(line)
 gcp.close()
 
@@ -62,7 +62,7 @@ DESCRIPTION = f"""
 *Issue Summary*
 
     This issue was created via automation that checks Censys ASM for any AWS S3 Buckets and GCP Buckets that are exposed to the public internet.
-
+    Link to Asset Sheet: https://docs.google.com/spreadsheets/d/17LHdlWXygNPbl26eWORIUB0uTSA34-LG5XlIeXUYjVk/edit#gid=570228557
     
 *S3 Bucket Status*
 
@@ -76,7 +76,7 @@ DESCRIPTION = f"""
     There are currently {len(GCP_READ_LIST)} buckets are publicly readable.
     There are currently {len(GCP_WRITE_LIST)} buckets are publicly writable.
     There are currently {len(GCP_DELETE_LIST)} buckets are publicly deletable.
-    There are currently {len(GCP_LIST_LIST)} buckets have a error status.
+    There are currently {len(GCP_LIST_LIST)} buckets have a list status.
 
     
 *Additional Information*
