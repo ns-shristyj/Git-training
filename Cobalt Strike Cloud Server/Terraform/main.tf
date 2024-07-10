@@ -149,21 +149,22 @@ resource "aws_eip" "EIP-1" {
 }
 
 // Create Ubuntu Server and install Cobalt Strike
-resource "aws_instance" "cobalt" {
-  ami               = "ami-0ce2cb35386fc22e9"
-  instance_type     = "t2.medium"
-  availability_zone = "us-west-1b"
-  key_name          = "seceng-intern-key-pair"
+# resource "aws_instance" "cobalt" {
+#   ami               = "ami-0ce2cb35386fc22e9"
+#   instance_type     = "t2.medium"
+#   availability_zone = "us-west-1b"
+#   key_name          = "seceng-intern-key-pair"
+#   vpc_security_group_ids = "4"
 
-  network_interface {
-    device_index          = 0
-    network_interface_id  = aws_network_interface.net_face.id
-  }
-}
+#   network_interface {
+#     device_index          = 0
+#     network_interface_id  = aws_network_interface.net_face.id
+#   }
+# }
 
 # Useful for outputting the server's public IP
 # Running a command similar to this will allow for different value's
 # to be stored in GitHub Actions
-output "server_public_ip" {
-  value = aws_eip.EIP-1.public_ip
-}
+# output "server_public_ip" {
+#   value = aws_eip.EIP-1.public_ip
+# }
