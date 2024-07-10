@@ -1,0 +1,31 @@
+#Check the platform and set the path to the cyclonedx binary accordingly
+PLATFORM: ${EMU_PLATFORM}
+#Path to the sqlite3.exe executable on Windows, set this before running
+WIN_SQLITE_PATH: C:\\Users\\Jose Ramirez\\Documents\\sqlite\\sqlite3.exe
+#Path to the sqlite3 binary on Linux, set this before running
+LINUX_SQLITE_PATH: ""
+#Path to the sqlite package on MacOS, set this before running
+MAC_SQLITE_PATH: ""
+#Install/Home path, will be set automatically by main.py
+EMU_INSTALL_PATH: ${EMU_INSTALL_PATH}
+#Config file path
+CONFIG_PATH: ${EMU_INSTALL_PATH}\\config.YAML
+#SBOM Databse Path
+DB_PATH: ${EMU_INSTALL_PATH}\\database.db
+#SBOM file temp path - temporary while file is converted to JSON
+TEMP_PATH: ${EMU_INSTALL_PATH}\\temp
+#SBOM file upload path
+DATA_PATH: ${EMU_INSTALL_PATH}\\data
+#Cyclone-DX binary path(Mac)
+CYDX_MAC_PATH: ${EMU_INSTALL_PATH}\\cyclonedx-osx-x64
+#Cyclone-DX binary path(Linux)
+CYDX_LIN_PATH: ${EMU_INSTALL_PATH}\\cyclonedx-linux-x64
+#Cyclone-DX binary path(Windows)
+CYDX_WIN_PATH: ${EMU_INSTALL_PATH}\\cyclonedx-win-x64.exe
+#Allowed extensions
+ALLOWED_EXT:
+  - json
+  - xml
+  - spdx
+  - xlsx
+  - csv
