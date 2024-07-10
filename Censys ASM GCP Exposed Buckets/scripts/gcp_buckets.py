@@ -1,9 +1,8 @@
-from censys.asm import Risks
-import json
-import requests
+from censys.asm import Risks # type: ignore
+import json, requests, os # type: ignore
 
 headers = {
-    "Censys-Api-Key": "bf858fdf-f887-499a-81a3-cd12e40f14aa"
+    "Censys-Api-Key": os.getenv("CENSYS_API_KEY")
 }
 #get all gcp risk instances and write them into a json file called gcpRisks.json
 def getGCPRisks():

@@ -1,12 +1,6 @@
 name: AWS S3 Buckets Exposed ASM
 on:
-  push:
-    branches: [ "SOC" ]
-  pull_request:
-    branches: [ "SOC" ]
-  # workflow_dispatch:
-  # schedule:
-  #   - cron: '00 11 * * *'
+  workflow_dispatch:
 
 jobs:
   build:

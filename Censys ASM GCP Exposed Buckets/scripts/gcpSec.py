@@ -7,7 +7,7 @@ import sys
 from functools import partial
 from datetime import datetime, timedelta
 
-import requests
+import requests # type: ignore
 import google.oauth2.credentials # type: ignore
 
 from google.cloud import storage

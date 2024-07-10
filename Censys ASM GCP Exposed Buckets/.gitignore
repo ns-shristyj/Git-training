@@ -3,3 +3,4 @@
 *.txt
 *myenv
 .pytest_cache
+*.json
