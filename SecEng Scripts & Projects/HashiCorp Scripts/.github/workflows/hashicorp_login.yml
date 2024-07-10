@@ -1,0 +1,78 @@
+ 
+name: Upload to GCS
+
+on:
+  workflow_dispatch:
+
+jobs:
+  upload-to-gcs:
+    runs-on: ["self-hosted", "linux", "x64", rg-default, "sz-XS", "gh", "cheap"]
+         
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+         
+      # - name: Vault login
+       
+      #   env:
+      #            VAULT_APPROLE_IDA: ${{ secrets.GH_ACTIONS_VAULT_APPROLE_ID }}      
+      #            VAULT_SECRET_IDA: ${{ secrets.GH_ACTIONS_APPROLE_SECRET }}
+        
+                 
+      - name: Import Secrets
+        id: import-secrets
+        uses: hashicorp/vault-action@v2
+        with:
+           url: https://global.prod.kms.nskope.net
+          #  caCertificate: ${{ secrets.VAULT_CA_CERT }}
+           method: approle
+           roleId: ${{  secrets.GH_ACTIONS_VAULT_APPROLE_ID}}
+           secretId: ${{secrets.GH_ACTIONS_APPROLE_SECRET }}  
+        
+
+        # run: |
+        #            curl -LO https://releases.hashicorp.com/vault/1.15.0/vault_1.15.0_linux_amd64.zip
+        #            unzip vault_1.15.0_linux_amd64.zip
+        #            sudo mv vault /usr/local/bin/      
+        #            vault --version
+        #            export VAULT_ADDR="https://global.prod.kms.nskope.net"  
+        #            export VAULT_NAMESPACE="gis"
+        #            export VAULT_ROLE_ID="$VAULT_APPROLE_IDA"        
+        #            export VAULT_SECRET_ID="$VAULT_SECRET_IDA"
+        #            export VAULT_TOKEN=$(vault write -field=token auth/approle/login role_id="$VAULT_ROLE_ID" secret_id="$VAULT_SECRET_ID")    
+        #            export SECRET_KEY=$(vault kv get -field=serviceAccountJSONKey github-action/siem-231719-json-creds)
+        #            echo "::add-mask::$SECRET_KEY"
+        #            echo "GCP_JSON_KEY=$SECRET_KEY" >> $GITHUB_ENV
+
+      # - name: Authenticate to Google Cloud
+      #   id: auth
+      #   uses: google-github-actions/auth@v1
+      #   with:
+      #     credentials_json: '${{env.GCP_JSON_KEY}}'
+
+      # - name: Set up Python
+      #   uses: actions/setup-python@v2
+      #   with:
+      #     python-version: '3.8'
+
+      # - name: Install dependencies
+      #   run: |
+      #     python -m pip install --upgrade pip
+      #     pip install google-cloud-storage
+      
+      
+
+      # - name: Run Python script to upload file to GCS
+      #   run: |  
+      #      python dump_csv.py 
+
+      # - name: List contents of the GCS bucket
+      #   run: |
+      #    gcloud storage ls gs://test-saas-bucket
+
+      # - name: info about the object 
+      #   run: |
+      #      gcloud storage objects describe gs://test-saas-bucket/test.csv
+    
+     
