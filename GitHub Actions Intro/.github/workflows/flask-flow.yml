@@ -1,0 +1,105 @@
+# For more informatio on how to setup GitHub Actions with Terraform, documentation is here:
+# https://developer.hashicorp.com/terraform/tutorials/automation/github-actions
+# https://www.pluralsight.com/resources/blog/cloud/how-to-use-github-actions-to-automate-terraform
+
+# 1. First, the GitHub Actoins Runner needs to be set up so that these commands can be ran.
+# 2. Allow the Checkout action to be ran on the GitHub Runner, this will allow for smooth clean ups.
+# 3. Create Jobs.   
+    #     - Start a virtual environment using Python3
+    #     - Running a pip install GUnicorn
+    #     - Responsible for running Commands on Runner --> this will be responsible for installing python-pip, ssh, ansible, and updating the runner with apt
+    #     - Responsible for setting up SSH on Self-Hosted Server to connect with Ubuntu Server --> you can not uncomment this!
+    #     - Running commands to SSH into Ubuntu Server from Self-Hosted Server with Ansible --> you will need to figure out how to run a Ansible Playbook in a Ubuntu Server using SSH. The playbook will need to run as user "ubuntu", have a inventory file, and carry over the IP as a extra variable
+    #     - Uncomment one of the jobs below that will be responsible for setting up SSH on the Runner.
+    #     - One of these jobs will be running a Ansible Playbook on a Ubuntu Server through SSH. You
+      #       won't have to create a playbook (unless you want to) but that will mainly be done on my end.
+
+# We will be using our own ubuntu server, not GitHub's. To do that, specify with the runs-on command:
+# runs-on: ["self-hosted", "linux", "x64", "sz-XS", "gh", "cheap"]
+
+# We have several variables that are encrypted that can be and will be called in this project. 
+# Although, I'm unsure if you will need AWS Keys, but just in case I will list them here:
+# AWS Public Access Key: ${{secrets.AWS_ACCESS_KEY}}
+# AWS Secret Access Key: ${{secrets.AWS_SECRET_ACCESS_KEY}}
+
+# One of the most important variables that we have encrypted with GitHub Secrets is called a SSH Key.
+# This key is what allows a user to be able to connect from one remote device to another, this is
+# especially important when it comes to security. A lot of this has been done already, but it's important
+# to know what it's called:
+# The Ubuntu SSH Key: ${{secrets.SECENG_INTERN_KEY_PAIR}}
+  #   - After the Job "Set Up SSH Host Key" is ran, the key will then be called: "~/.ssh/id_rsa" 
+
+# Below is code I'm leaving from my previous project with setting up this Runner to work with SSH.
+# The GitHub Runner will act as a way to connect the Flask Application to the remote AWS Ubuntu Server
+# so that it can become public facing. 
+    # Responsible for setting up SSH on Self-Hosted Server to connect with Ubuntu Server 
+    # - name: Set Up SSH Host key
+      #   run: |
+        #     mkdir -p ~/.ssh/
+        #     echo -e "-----BEGIN RSA PRIVATE KEY-----\n${{secrets.SECENG_INTERN_KEY_PAIR}}\n-----END RSA PRIVATE KEY-----" > ~/.ssh/id_rsa
+        #     chmod 600 ~/.ssh/id_rsa
+        #     ssh-keyscan -t rsa ${{ env.TF_IP_ADDRESS }} >> ~/.ssh/known_hosts
+        #     chmod 644 ~/.ssh/known_hosts
+
+# # FIRST GitHub Action
+# name: learn-github-actions
+# #run-name: ${{ github.actor }} is learning GitHub Actions
+# on: [push]
+# jobs:
+#   check-bats-version:
+#     runs-on: ["self-hosted", "linux", "x64", "sz-XS", "gh", "cheap"]
+#     steps:
+#       - uses: actions/checkout@v4
+#       - uses: actions/setup-node@v4
+#         with:
+#           node-version: '14'
+#       - run: npm install -g bats
+#       - run: bats -v
+
+##  hello world GHAction
+# name: hello-world 
+# on: push
+# jobs: 
+    # my-jobs: 
+        # runs-on: ["self-hosted", "linux", "x64", "sz-XS", "gh", "cheap"]
+        # steps: 
+            # - name: my-step
+            #   run: echo "Hello World!!"
+
+# Running the actual script
+name: running-different-jobs
+#run-name: ${{ github.actor }} is crushing GitHub Actions
+on: [push]
+jobs:
+  check-bats-version:
+    runs-on: ["self-hosted", "linux", "x64", "rg-default", "sz-XS", "gh", "cheap"]
+    steps:
+      - uses: actions/checkout@v4
+      - name: install GUnicorn
+        run: pip install gunicorn
+
+      - name: Running Commands on Runner...
+        run: |
+          sudo apt update
+          sudo apt install -y python3-pip
+          sudo apt install -y openssh-client
+          sudo apt install -y ansible
+          sudo apt update
+
+      - name: Setting Up SSH Host key...
+        run: |
+          mkdir -p ~/.ssh/
+          echo -e "-----BEGIN RSA PRIVATE KEY-----\n${{secrets.SECENG_INTERN_KEY_PAIR}}\n-----END RSA PRIVATE KEY-----" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -t rsa 13.52.105.27 >> ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+
+      - name: SSHing to Another Device...
+        run: |
+            ssh ubuntu@13.52.105.27
+        #echo $PATH
+      
+      - name: Running a Playbook Command...
+        run: |
+            echo -en "\n13.52.105.27" >> ./Ansible/inventory/hosts
+            ansible-playbook -i ./Ansible/inventory/hosts -u ubuntu -e 13.52.105.27 ./Ansible/playbooks/playbook.yml 

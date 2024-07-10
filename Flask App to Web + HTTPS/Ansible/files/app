@@ -1,0 +1,81 @@
+geo $limit {
+    default 1;
+    10.0.0.0/8 0;
+    192.168.0.0/24 0;
+}
+ 
+map $limit $limit_key {
+    0 "";
+    1 $binary_remote_addr;
+}
+
+limit_req_zone $limit_key zone=req_zone:10m rate=5r/s;
+limit_req_zone $binary_remote_addr zone=req_zone_wl:10m rate=15r/s;
+
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    server_name 13.52.105.27;
+
+    include snippets/self-signed.conf;
+    include snippets/ssl-params.conf;
+
+    access_log /var/log/nginx/13.52.105.27.access.log;
+    error_log /var/log/nginx/13.52.105.27.error.log;
+
+    client_body_timeout 5s;
+    client_header_timeout 5s;
+
+    add_header X-Frame-Options "SAMEORIGIN";
+    add_header Strict-Transport-Security "max-age=31536000; includeSubdomains; preload";
+    add_header Content-Security-Policy "default-src 'self' http: https: data: blob: 'unsafe-inline'" always;
+    add_header X-XSS-Protection "1; mode=block";
+
+    location / {
+
+        if ($http_user_agent ~* foo|bar) {
+            return 403;
+        }
+        if ($request_method !~ ^(GET|HEAD|POST)$ ) {
+            return 405; 
+        }
+
+
+        limit_except GET HEAD POST { deny all; }
+
+        include proxy_params;
+        limit_req zone=req_zone burst=10 nodelay;
+        limit_req zone=req_zone_wl burst=20 nodelay;
+        limit_req_log_level warn;
+        limit_req_status 444;
+        proxy_pass http://unix:/home/ubuntu/GIS-SecEng-Intern/project-emu-develop/app.sock;
+    }
+    location ~ sbom.netskope.io/api/internal/user/* {
+
+        if ($http_user_agent ~* foo|bar) {
+            return 403;
+        }
+
+        include proxy_params;
+        limit_req zone=req_zone burst=10 nodelay;
+        limit_req zone=req_zone_wl burst=20 nodelay;
+        limit_req_log_level warn;
+        limit_req_status 444;
+        proxy_pass http://unix:/home/ubuntu/GIS-SecEng-Intern/project-emu-develop/app.sock;
+    }
+    location /foo.php {
+        deny all;
+    }
+    location ~* \.(jpg|jpeg|png|gif|ico)$ {
+        expires 30d;
+        add_header Cache-Control "public, no-transform";
+    }
+ 
+}
+server {
+    listen 80;
+
+    server_name 13.52.105.27;
+
+    return 301 https://13.52.105.27$request_uri;
+}
