@@ -1,0 +1,29 @@
+name: Cleanup Failed Workflows
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # Runs every day at midnight
+  workflow_dispatch: # Allows manual triggering
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Delete failed workflows older than a week
+        env:
+          NSCQUINLAN_GHA_TOKEN: ${{ secrets.NSCQUINLAN_GHA_TOKEN}}
+        run: |
+          echo "Fetching failed workflow runs older than a week..."
+          2week_ago=$(date -d '14 days ago' --utc +%Y-%m-%dT%H:%M:%SZ)
+          repo="ns-cquinlan/GIS-SecEng-Intern"
+          failed_runs=$(curl -s -H "Authorization: token $NSCQUINLAN_GHA_TOKEN" "https://api.github.com/repos/$repo/actions/runs?status=failure&per_page=100" | jq -r --arg 2week_ago "$2week_ago" '.workflow_runs[] | select(.created_at < $2week_ago) | .id')
+
+          for run_id in $failed_runs; do
+            echo "Deleting workflow run $run_id..."
+            curl -s -X DELETE -H "Authorization: token $NSCQUINLAN_GHA_TOKEN" "https://api.github.com/repos/$repo/actions/runs/$run_id"
+          done
+
+          echo "Cleanup complete!"
