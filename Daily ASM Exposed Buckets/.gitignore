@@ -1,5 +1,0 @@
-.env
-*.env
-*.txt
-*myenv
-.pytest_cache
