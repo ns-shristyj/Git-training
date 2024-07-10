@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+<head>
+    {% block title %} SBOM Manager - SSO Setup {% endblock %}
+</head>
+{% block content %}
+<div class="container mt-3">
+    <h1 class="page_title">Settings</h1>
+    <hr><br>
+    <h4 class="text-muted">Integrations</h4>
+    <br>
+    <h5><img src="{{ url_for('static', filename='images/bitsight_vrm.svg') }}"> BitSight VRM (ThirdPartyTrust)</h5>
+    <br>
+    <form action="{{ url_for('update_third_party_trust_integration') }}" method="POST">
+        <table class="table">
+            <tbody>
+                <tr>
+                    <th scope="row">API Key</th>
+                    <td><input type="text" class="form-control" name="api_key" value="{{ '•' * API_KEY_LENGTH }}"></td>
+                </tr>
+                <tr>
+                    <th scope="row">Requirement Label ID for SBOM</th>
+                    <td><input type="text" class="form-control" name="requirement_label_id" value="{{ REQUIREMENT_LABEL_ID }}"></td>
+                </tr>
+            </tbody>
+        </table>
+        <!-- Buttons side-by-side -->
+        <div class="d-flex justify-content-start">
+            <button type="submit" class="btn btn-success btn-sm save-btn me-2">Save</button>
+        </div>
+    </form>
+    <br><hr><br>
+    <h4 class="text-muted">Logo</h4>
+    <br>
+    <form action="{{ url_for('update_logo') }}" method="POST">
+        <div class="mb-3">
+            <label for="formFile" class="form-label">Upload a new logo</label>
+            <input class="form-control" type="file" id="formFile" name="logoFile">
+            <br>
+            <button type="submit" class="btn btn-sm save-btn me-2" style="background-color: orange; color: white; font-weight: bold;">Upload</button>
+        </div>
+    </form> 
+</div>
+{% endblock %}

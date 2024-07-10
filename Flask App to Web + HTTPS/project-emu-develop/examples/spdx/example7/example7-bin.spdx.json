@@ -1,0 +1,80 @@
+{
+  "spdxVersion": "SPDX-2.2",
+  "dataLicense": "CC0-1.0",
+  "SPDXID": "SPDXRef-DOCUMENT",
+  "creationInfo": {
+    "created": "2020-11-24T01:12:27Z",
+    "creators": [
+      "Person: Nisha K (nishak@vmware.com)"
+    ]
+  },
+  "name": "hello-go-binary.spdx.json",
+  "documentNamespace": "https://swinslow.net/spdx-examples/example7/hello-go-binary",
+  "externalDocumentRefs": [
+    {
+      "externalDocumentId": "DocumentRef-hello-go-module",
+      "checksum": {
+        "algorithm": "SHA1",
+        "checksumValue": "11d7774ac38f40e009dcee453a760750aea75bbd"
+      },
+      "spdxDocument": "https://swinslow.net/spdx-examples/example7/hello-go-module-cfa0c58d-79db-4860-99b6-258477e4838b"
+    },
+    {
+      "externalDocumentId": "DocumentRef-golang-dist",
+      "checksum": {
+        "algorithm": "SHA1",
+        "checksumValue": "fd1a82d7affd688cca8896211ca1a3f177214323"
+      },
+      "spdxDocument": "https://swinslow.net/spdx-examples/example7/golang-dist-492dfde4-318b-49f7-b48c-934bfafbde48"
+    },
+    {
+      "externalDocumentId": "DocumentRef-hello-imports",
+      "checksum": {
+        "algorithm": "SHA1",
+        "checksumValue": "c8a2beb3405bfe9eed0076b0e237ff59f6c4188f"
+      },
+      "spdxDocument": "https://swinslow.net/spdx-examples/example7/hello-imports-c2d068df-67aa-4c68-98c8-100b450fc408"
+    }
+  ],
+  "documentDescribes": [
+    "SPDXRef-go-bin-hello"
+  ],
+  "packages": [
+    {
+      "name": "hello",
+      "SPDXID": "SPDXRef-go-bin-hello",
+      "downloadLocation": "git://github.com/swinslow/spdx-examples.git#example7/content/build/hello",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION"
+    }
+  ],
+  "relationships": [
+    {
+      "relatedSpdxElement": "DocumentRef-golang-dist:SPDXRef-golang-dist",
+      "spdxElementId": "SPDXRef-go-bin-hello",
+      "relationshipType": "BUILD_TOOL_OF"
+    },
+    {
+      "relatedSpdxElement": "DocumentRef-golang-dist:SPDXRef-go-compiler",
+      "spdxElementId": "SPDXRef-go-bin-hello",
+      "relationshipType": "GENERATES"
+    },
+    {
+      "relatedSpdxElement": "DocumentRef-hello-imports:SPDXRef-go-module-text",
+      "spdxElementId": "SPDXRef-go-bin-hello",
+      "relationshipType": "STATIC_LINK"
+    },
+    {
+      "relatedSpdxElement": "DocumentRef-hello-imports:SPDXRef-go-module-quote",
+      "spdxElementId": "SPDXRef-go-bin-hello",
+      "relationshipType": "STATIC_LINK"
+    },
+    {
+      "relatedSpdxElement": "DocumentRef-hello-imports:SPDXRef-go-module-sampler",
+      "spdxElementId": "SPDXRef-go-bin-hello",
+      "relationshipType": "STATIC_LINK"
+    }
+  ]
+}
