@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+
+<head>
+    {% block title %} SBOM Manager - Components {% endblock %}
+</head>
+
+{% block content %}
+
+<!-- Include jQuery -->
+<script src="https://code.jquery.com/jquery-3.5.1.js"></script>
+<!-- DataTables CSS -->
+<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.11.3/css/jquery.dataTables.min.css">
+<!-- DataTables JS -->
+<script src="https://cdn.datatables.net/1.11.3/js/jquery.dataTables.min.js"></script>
+
+<script>
+    $(document).ready(function () {
+        $('#componentsTable').DataTable({
+            "language": {
+                "search": "", // If you want to remove the 'Search:' label
+                "searchPlaceholder": "🔍 Search"
+            },
+            "order": [[1, 'asc']],
+            "responsive": true,
+            "stateSave": true
+        });
+    });
+</script>
+
+
+<h1 class="page_title">Components</h1>
+<br><br>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+
+<!-- Table -->
+<table class="display" id="componentsTable">
+    <thead>
+        <tr>
+            <th scope="col">Vendor</th>
+            <th scope="col">Name</th>
+            <th scope="col">Version</th>
+            <th scope="col">License</th>
+            <th scope="col">Package URL</th>
+            <th scope="col">Hash</th>
+            <th scope="col">Hash Type</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for component in components %}
+        <tr>
+            <td><a href="{{ url_for('vendor', vendor_id=component.vendor.id) }}" class="text-muted" style="text-decoration: none;">{{ component.vendor.name }}</a></td>
+            <td>
+                <a href="{{ url_for('component', component_id=component.id) }}">{{ component.name }}</a>
+            </td>
+            <td>{{ component.version }}</td>
+            <td>{{ component.license }}</td>
+            <td>{{ component.package_url }}</td>
+            <td>{{ component.hash }}</td>
+            <td>{{ component.hash_type }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+
+
+{% endblock %}
