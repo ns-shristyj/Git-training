@@ -17,14 +17,11 @@ test('Init data', async ({ request }) => {
     },
   ]);
   await addUsers(request, [
-    // {
-    // cycode_secret_ignore_here	
-    //   name: 'Jean Michel'
-    // cycode_secret_ignore_here		
-    //   user_email: 'jean.michel@filigran.test',
-    // cycode_secret_ignore_here		
-    //   password: 'jeanmichel',
-    //   groups: ['Dashboards group'],
-    // },
+    {
+      name: 'Jean Michel', // #cycode_secret_ignore_here	
+      user_email: 'jean.michel@filigran.test', // #cycode_secret_ignore_here	
+      password: 'jeanmichel', // #cycode_secret_ignore_here	
+      groups: ['Dashboards group'],
+    },
   ]);
 });

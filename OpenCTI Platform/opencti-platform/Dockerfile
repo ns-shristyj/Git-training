@@ -26,7 +26,7 @@ COPY opencti-graphql/.yarn ./.yarn
 #cycode_ignore_violation_for_resource_here	
 COPY opencti-graphql/patch ./patch
 #cycode_ignore_violation_for_resource_here	
-RUN set -ex; \
+RUN set -ex; \ 
     apk add --no-cache \
     git=$GIT_VERSION \
     tini=$TINI_VERSION \
