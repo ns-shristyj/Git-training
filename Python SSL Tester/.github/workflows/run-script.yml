@@ -1,0 +1,23 @@
+name: OpenSSL Web Verification Script
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+
+    runs-on: ["self-hosted", "linux", "x64", "rg-default", "gh", "cheap"]
+
+    steps:
+    - uses: actions/checkout@v4.0.0
+    - name: Set up Python 3.8 - 10 
+      uses: actions/setup-python@v4.0.0
+      with:
+        python-version: 3.8
+    - name: Create Website Address List ## In Production, don't hardcode IP's into files like this. 
+      run: |
+        touch addresslist.txt
+        echo "qa.goskope.com" > addresslist.txt 
+        echo "13.52.105.27" >> addresslist.txt
+    - name: Run OpenSSL Python Script
+      run: |
+        python3 main.py
