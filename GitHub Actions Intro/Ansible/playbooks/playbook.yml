@@ -13,19 +13,12 @@
     - name: Update apt
       apt:
         update_cache: yes
-        upgrade: 'yes'
-    - name: Install OpenJDK 11 with APT
-      command: sudo apt-get -y install openjdk-11-jdk
-    - name: Make OpenJDK 11 the default
-      command: sudo update-java-alternatives -s java-1.11.0-openjdk-amd64
+        upgrade: 'yes'  
     # another way of saying sudo apt install nginx
-<<<<<<<< HEAD:GitHub Actions Intro/Ansible/playbooks/playbook.yml
     # - name: Installing Debian Keyring
     #   command: sudo apt install -y debian-keyring debian-archive-keyring apt-transport-https
     # - name: Installing Caddy
     #   command: sudo apt install caddy
-========
->>>>>>>> develop:Cobalt Strike Cloud Server/Ansible/playbooks/playbook.yml
     - name: Install nginx
       apt:
         name: nginx
@@ -62,30 +55,3 @@
           - git
         state: latest
         update_cache: true
-    - name: Copy Cobalt Strike
-      copy:
-        src: ./files/cobaltstrike-dist.tgz
-        dest: /tmp/cobaltstrike-dist.tgz
-    - name: Extract Cobalt Strike
-      command: sudo tar -xvzf /tmp/cobaltstrike-dist.tgz -C /tmp/
-    - name: Update Cobalt Strike
-      expect:
-        command: timeout 900 ./update
-        chdir: "/tmp/cobaltstrike/"
-        responses:
-          "Please enter your license key:": "{{license_key}}"
-        timeout: 200
-  
-    - name: Create and set JAVA_OPTS in custom file
-      blockinfile:
-        path: /home/ubuntu/my_environment
-        block: |
-          export JAVA_OPTS="$JAVA_OPTS -Dhttps.protocols=TLSv1.2 -Djdk.tls.client.protocols=TLSv1.2 -Djava.security.egd=file:/dev/./urandom"
-        create: yes
-    - name: Reload /home/ubuntu/my_environment
-      shell: . /home/ubuntu/my_environment
-
-    - name: Starting Cobalt Strike Team Server
-      shell: nohup sudo ./teamserver 10.0.1.50 password &
-      args:
-        chdir: "/tmp/cobaltstrike/"
