@@ -1,9 +1,6 @@
 name: OpenSSL Web Verification Script
 on:
-  push:
-    branches: [ "AppSec" ]
-  pull_request:
-    branches: [ "AppSec" ]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -16,10 +13,10 @@ jobs:
       uses: actions/setup-python@v4.0.0
       with:
         python-version: 3.8
-    - name: Create Website Address List
+    - name: Create Website Address List ## In Production, don't hardcode IP's into files like this. 
       run: |
         touch addresslist.txt
-        echo "qa.goskope.com" > addresslist.txt
+        echo "qa.goskope.com" > addresslist.txt 
         echo "13.52.105.27" >> addresslist.txt
     - name: Run OpenSSL Python Script
       run: |
