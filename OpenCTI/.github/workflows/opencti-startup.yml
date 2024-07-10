@@ -1,0 +1,72 @@
+name: OpenCTI
+
+on: workflow_dispatch
+
+jobs:
+  aws-startup:
+    name: AWS Start up
+    runs-on: ["self-hosted", "linux", "x64", "rg-default", "sz-XS", "gh", "cheap"]
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+    # Checkout checks out the repository. Uses defines the GitHub action or Docker image to run that specific step. 
+    # The checkout step uses GitHub's actions/checkout@v3 action.
+    - uses: actions/checkout@v4
+    - uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_wrapper: false
+   # Responsible for downloading AWS Ec2 Packages
+    - name: Downloading necessary Terraform AWS Ec2 Packages...
+      id: init
+      working-directory: ./Terraform
+      env:
+        AWS_ACCESS_KEY_ID: ${{secrets.AWS_ACCESS_KEY}}
+        AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
+      run: terraform init 
+    # Responsible for generating (or using auto) plan for Ec2 Instance
+    - name: Planning AWS Ec2 Server...
+      id: plan
+      working-directory: ./Terraform
+      env:
+        AWS_ACCESS_KEY_ID: ${{secrets.AWS_ACCESS_KEY}}
+        AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
+      run: terraform plan -no-color
+    # Applying the auto-generated (or manual) plan for the Ec2 Instance
+    - name: Applying AWS Ec2 Server...
+      id: apply
+      working-directory: ./Terraform
+      env:
+        AWS_ACCESS_KEY_ID: ${{secrets.AWS_ACCESS_KEY}}
+        AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
+      run: terraform apply -auto-approve 
+      # Storing the IP generated for Ec2 Instance
+    - name: Storing Public Ip...
+      id: store
+      working-directory: ./Terraform
+      env:
+        AWS_ACCESS_KEY_ID: ${{secrets.AWS_ACCESS_KEY}}
+        AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
+      run: |
+        echo TF_IP_ADDRESS=$(terraform output -raw server_public_ip) >> $GITHUB_ENV
+    # Responsible for running Commands on Runner
+    - name: Configuring Runner...
+      id: runner
+      run: |
+          sudo apt install sshpass
+          pip install ansible
+    # Responsible for setting up SSH on Self-Hosted Server to connect with Ubuntu Server 
+    - name: Set Up SSH Host key
+      run: |
+        mkdir -p ~/.ssh/
+        echo -e "-----BEGIN RSA PRIVATE KEY-----\n${{secrets.SECENG_INTERN_KEY_PAIR}}\n-----END RSA PRIVATE KEY-----" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan -t rsa ${{ env.TF_IP_ADDRESS }} >> ~/.ssh/known_hosts
+        chmod 644 ~/.ssh/known_hosts
+    # Running commands to SSH into Ubuntu Server from Self-Hosted Server with Ansible
+    - name: Running Ansible Playbook...
+      id: playbook
+      working-directory: ./Ansible
+      run: |
+          echo -e ${{ env.TF_IP_ADDRESS }} >> ./inventory/hosts
+          ansible-playbook ./playbooks/playbook.yml -u ubuntu -i ./inventory/hosts -e "ip_address=${{env.TF_IP_ADDRESS}}"

@@ -1,6 +1,6 @@
-import requests,re,csv,json
+import requests,re,csv,json # type: ignore
 from datetime import timedelta, datetime
-from falconpy import Hosts
+from falconpy import Hosts # type: ignore
 
 
 crowdstrike_client_id = ''

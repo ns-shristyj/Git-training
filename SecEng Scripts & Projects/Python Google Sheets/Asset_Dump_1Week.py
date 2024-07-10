@@ -1,6 +1,6 @@
-import requests,re,csv,json
+import requests,re,csv,json # type: ignore
 from datetime import timedelta, datetime, timezone, time
-from falconpy import Hosts
+from falconpy import Hosts # type: ignore
 import os
 from datetime import datetime
 
