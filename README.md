@@ -1,4 +1,0 @@
-### GIS-SECENG-INTERN REPO
-
-```
-```

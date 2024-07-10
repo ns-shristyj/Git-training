@@ -2,9 +2,7 @@
 name: Upload to GCS
 
 on:
-  push:
-    branches:
-      - ns-tsingh
+  workflow_dispatch:
 
 jobs:
   upload-to-gcs:
@@ -25,7 +23,6 @@ jobs:
       - name: Import Secrets
         id: import-secrets
         uses: hashicorp/vault-action@v2
-        
         with:
            url: https://global.prod.kms.nskope.net
           #  caCertificate: ${{ secrets.VAULT_CA_CERT }}
