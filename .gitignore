@@ -1,8 +1,0 @@
-# Ignore Python Virtual Environment's
-*.venv
-
-# Ignore Python Cache's
-__pycache__s
-
-# Ignore Private Keys
-*.pem
