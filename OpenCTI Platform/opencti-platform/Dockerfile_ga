@@ -1,8 +1,26 @@
 FROM node:20-alpine3.20 AS app
 
+# Create and switch to a new user
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+
+# Switch to the new user
+USER appuser
+
+# Specify the versions of the APK packages
+ENV TINI_VERSION=0.19.0-r0 \
+    PYTHON3_VERSION=3.10.12-r0 \
+    PY3_PIP_VERSION=22.3.1-r0 \
+    PYTHON3_DEV_VERSION=3.10.12-r0 \
+    GIT_VERSION=2.40.1-r0
+
 WORKDIR /opt
-RUN apk add tini python3 py3-pip python3-dev git
-COPY opencti ./
+RUN apk add --no-cache \
+    tini=$TINI_VERSION \
+    python3=$PYTHON3_VERSION \
+    py3-pip=$PY3_PIP_VERSION \
+    python3-dev=$PYTHON3_DEV_VERSION \
+    git=$GIT_VERSIONCOPY opencti ./
+
 RUN pip3 install --no-cache-dir --break-system-packages --requirement ./dependencies/requirements.txt
 ENV PYTHONUNBUFFERED=1
 ENV NODE_OPTIONS=--max_old_space_size=12288

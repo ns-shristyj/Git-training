@@ -20,7 +20,7 @@ import LeftBarPage from '../model/menu/leftBar.pageModel';
 
 const noBypassUserAuthFile = 'tests_e2e/.setup/.auth/no-bypass-ref-user.json';
 const noBypassUserLogin = 'noBypassReferences@user.test';
-const noBypassUserPassword = 'qwerty123';
+const noBypassUserPassword = 'J8sdf0K!@#!ds';
 const noBypassUserName = 'NoBypassReferencesUser';
 const noBypassRoleName = 'NoBypassReferencesRole';
 const noBypassGroupName = 'NoBypassReferencesTestGroup';

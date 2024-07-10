@@ -1,9 +1,9 @@
 # Create storage bucket and add install and connectors script to it.
-resource "google_storage_bucket" "opencti_storage" {
-  name          = var.storage_bucket
-  location      = var.region
-  force_destroy = true
-}
+# resource "google_storage_bucket" "opencti_storage" {
+#   name          = var.storage_bucket
+#   location      = var.region
+#   force_destroy = true
+# }
 
 resource "google_storage_bucket_object" "opencti_install_script" {
   name   = local.install_script_name

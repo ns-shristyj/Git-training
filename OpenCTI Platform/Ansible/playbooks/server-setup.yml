@@ -49,7 +49,7 @@
         timeout: 200
     - name: Cloning GitHub Repository
       git:
-       repo: https://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@github.com/ns-cquinlan/OpenCTI
+       repo: ChangeMe!
        dest: /home/ubuntu/temp-repo/
        version: OpenCTI
     - name: Update the website files

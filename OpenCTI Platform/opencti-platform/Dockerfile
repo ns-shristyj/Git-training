@@ -3,14 +3,39 @@ FROM node:20-alpine AS base
 RUN corepack enable
 
 FROM base AS graphql-deps-builder
+FROM node:14-alpine
+
+# Specify the versions of the APK packages
+ENV GIT_VERSION=2.30.2-r0 \
+    TINI_VERSION=0.19.0-r0 \
+    GCC_VERSION=10.2.1_pre1-r3 \
+    GXX_VERSION=10.2.1_pre1-r3 \
+    MAKE_VERSION=4.3-r0 \
+    MUSL_DEV_VERSION=1.2.2-r1 \
+    CARGO_VERSION=1.47.0-r1 \
+    PYTHON3_VERSION=3.8.10-r0 \
+    PYTHON3_DEV_VERSION=3.8.10-r0 \
+    POSTFIX_VERSION=3.5.8-r0 \
+    POSTFIX_PCRE_VERSION=2.10-r1
 
 WORKDIR /opt/opencti-build/opencti-graphql
 COPY opencti-graphql/package.json opencti-graphql/yarn.lock opencti-graphql/.yarnrc.yml ./
 COPY opencti-graphql/.yarn ./.yarn
 COPY opencti-graphql/patch ./patch
 RUN set -ex; \
-    apk add --no-cache git tini gcc g++ make musl-dev cargo python3 python3-dev postfix postfix-pcre \
-    && npm install -g node-gyp \
+    apk add --no-cache \
+    git=$GIT_VERSION \
+    tini=$TINI_VERSION \
+    gcc=$GCC_VERSION \
+    g++=$GXX_VERSION \
+    make=$MAKE_VERSION \
+    musl-dev=$MUSL_DEV_VERSION \
+    cargo=$CARGO_VERSION \
+    python3=$PYTHON3_VERSION \
+    python3-dev=$PYTHON3_DEV_VERSION \
+    postfix=$POSTFIX_VERSION \
+    postfix-pcre=$POSTFIX_PCRE_VERSION \
+    && npm install -g node-gyp@8.2.0 \
     && yarn install --frozen-lockfile && yarn cache clean --all
 
 
@@ -20,12 +45,24 @@ WORKDIR /opt/opencti-build/opencti-graphql
 COPY opencti-graphql/package.json opencti-graphql/yarn.lock opencti-graphql/.yarnrc.yml ./
 COPY opencti-graphql/.yarn ./.yarn
 COPY opencti-graphql/patch ./patch
+
 RUN set -ex; \
-    apk add --no-cache git tini gcc g++ make musl-dev cargo python3 python3-dev postfix postfix-pcre \
+    apk add --no-cache \
+    git=$GIT_VERSION \
+    tini=$TINI_VERSION \
+    gcc=$GCC_VERSION \
+    g++=$GXX_VERSION \
+    make=$MAKE_VERSION \
+    musl-dev=$MUSL_DEV_VERSION \
+    cargo=$CARGO_VERSION \
+    python3=$PYTHON3_VERSION \
+    python3-dev=$PYTHON3_DEV_VERSION \
+    postfix=$POSTFIX_VERSION \
+    postfix-pcre=$POSTFIX_PCRE_VERSION \
     && rm -f /usr/lib/python3.11/EXTERNALLY-MANAGED \
     && rm -f /usr/lib/python3.12/EXTERNALLY-MANAGED \
-    && npm install -g node-gyp \
-    && yarn install
+    && npm install -g node-gyp@8.2.0 \
+    && yarn install --frozen-lockfile && yarn cache clean --all
 COPY opencti-graphql /opt/opencti-build/opencti-graphql
 RUN yarn build:prod
 

@@ -7,33 +7,33 @@ provider "google" {
 }
 
 // Bucket to store Website
-resource "google_storage_bucket" "opencti-storage" {
-  name = "opencti-storage"
-  location = "us-west1"
-}
+# resource "google_storage_bucket" "opencti-storage" {
+#   name = "opencti-storage"
+#   location = "us-west1"
+# }
 
 resource "google_compute_network" "opencti-network" {
   name = "opencti-network"
 }
 
-resource "google_compute_subnetwork" "opencti-subnet" {
-  name = "opencti-subnet"
-  network = google_compute_network.opencti-network.id
-  ip_cidr_range = "10.0.0.0/24"
-  region = "us-west1"
-}
+# resource "google_compute_subnetwork" "opencti-subnet" {
+#   name = "opencti-subnet"
+#   network = google_compute_network.opencti-network.id
+#   ip_cidr_range = "10.0.0.0/24"
+#   region = "us-west1"
+# }
 
-resource "google_compute_firewall" "opencti-firewall" {
-  name = "opencti-firewall"
-  network = google_compute_network.opencti-network.name
+# resource "google_compute_firewall" "opencti-firewall" {
+#   name = "opencti-firewall"
+#   network = google_compute_network.opencti-network.name
 
-  allow {
-    protocol = "tcp"
-    ports = ["80", "443", "22"]
-  }
+#   allow {
+#     protocol = "tcp"
+#     ports = ["80", "443", "22"]
+#   }
 
-  source_ranges = ["0.0.0.0/0"]
-}
+#   source_ranges = ["0.0.0.0/0"]
+# }
 
 resource "google_compute_instance_template" "opencti-template" {
   name          = "opencti-template"
