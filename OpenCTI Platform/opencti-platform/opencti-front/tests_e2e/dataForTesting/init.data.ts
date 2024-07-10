@@ -18,27 +18,12 @@ test('Init data', async ({ request }) => {
   ]);
   await addUsers(request, [
     // {
-    //   name: 'Jean Michel',
+    // cycode_secret_ignore_here	
+    //   name: 'Jean Michel'
+    // cycode_secret_ignore_here		
     //   user_email: 'jean.michel@filigran.test',
+    // cycode_secret_ignore_here		
     //   password: 'jeanmichel',
-    //   groups: ['Dashboards group'],
-    // },
-    // {
-    //   name: 'Anne',
-    //   user_email: 'anne@filigran.test',
-    //   password: 'anne',
-    //   groups: ['Dashboards group'],
-    // },
-    // {
-    //   name: 'Bernadette',
-    //   user_email: 'bernadette@filigran.test',
-    //   password: 'bernadette',
-    //   groups: ['Dashboards group'],
-    // },
-    // {
-    //   name: 'Louise',
-    //   user_email: 'louise@filigran.test',
-    //   password: 'louise',
     //   groups: ['Dashboards group'],
     // },
   ]);

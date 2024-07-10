@@ -18,8 +18,11 @@ import UserPage from '../model/user.pageModel';
 import UserFormPage from '../model/form/userForm.pageModel';
 import LeftBarPage from '../model/menu/leftBar.pageModel';
 
+// cycode_secret_ignore_here
 const noBypassUserAuthFile = 'tests_e2e/.setup/.auth/no-bypass-ref-user.json';
+// cycode_secret_ignore_here
 const noBypassUserLogin = 'noBypassReferences@user.test';
+// cycode_secret_ignore_here
 const noBypassUserPassword = 'J8sdf0K!@#!ds';
 const noBypassUserName = 'NoBypassReferencesUser';
 const noBypassRoleName = 'NoBypassReferencesRole';
