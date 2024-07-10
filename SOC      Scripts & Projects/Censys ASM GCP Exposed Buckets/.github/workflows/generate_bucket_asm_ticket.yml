@@ -1,0 +1,28 @@
+name: AWS S3 Buckets Exposed ASM
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+
+    runs-on: ["self-hosted", "linux", "x64", "rg-default", "gh", "cheap"]
+
+    steps:
+    - uses: actions/checkout@v4.0.0
+    - name: Set up Python 3.8 - 10
+      uses: actions/setup-python@v4.0.0
+      with:
+        python-version: 3.8
+    - name: Generate S3 Address List...
+      env:
+        CENSYS_API_KEY: ${{ secrets.CENSYS_API_KEY }}
+      working-directory: ./censys-python
+      run: python3 s3buckets.py
+    - name: Run S3Sec on List of Addresses...
+      working-directory: ./censys-python
+      run: cat urls.txt | python3 s3sec.py
+    - name: Genereate Jira Ticket...
+      env:
+        JIRA_API_KEY: ${{ secrets.JIRA_API_KEY }}
+      working-directory: ./censys-python
+      run: python3 jira_ticketing.py

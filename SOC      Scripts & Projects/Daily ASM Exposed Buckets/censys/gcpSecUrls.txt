@@ -1,0 +1,6 @@
+windowsmedia is: LISTABLE, WRITEABLE
+test-mike is: LISTABLE, READABLE
+itsumo is: LISTABLE, READABLE, WRITEABLE
+iberiademo_publico: exists but has no allowed permissions
+
+Scanned 4 potential buckets in 1 second(s).
