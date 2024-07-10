@@ -1,0 +1,53 @@
+name: Daily ASM Cloud Buckets Exposed
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - SOCScripts
+  # workflow_dispatch:
+  # schedule:
+  #   - cron: '00 11 * * *'
+
+jobs:
+  generate_ticket:
+    runs-on: ["self-hosted", "linux", "x64", "rg-default", "gh", "cheap"]
+
+    steps:
+    - uses: actions/checkout@v4.0.0
+    - uses: actions/setup-python@v4.0.0
+      with:
+        python-version: 3.8
+    
+    - name: Install Dependencies
+      run: |
+        pip install requests
+        pip install censys
+        pip install python-dotenv
+
+    - name: Generate S3 Address List...
+      env:
+        CENSYS_API_TOKEN: ${{ secrets.CENSYS_API_TOKEN }}
+      working-directory: ./censys
+      run: python3 s3buckets.py
+
+    - name: Generate GCP Address List...
+      env:
+        CENSYS_API_TOKEN: ${{ secrets.CENSYS_API_TOKEN }}
+      working-directory: ./censys
+      run: python3 gcp_buckets.py
+
+    - name: Run S3Sec on List of Addresses...
+      working-directory: ./censys
+      run: cat urls.txt | python3 s3sec.py
+
+    - name: Run GCPSec on List of Addresses...
+      working-directory: ./censys
+      run: python3 gcpSec.py --check-list gcpUrls.txt
+
+    - name: Generate Jira Ticket...
+      env:
+        JIRA_CQUINLAN_API_TOKEN: ${{ secrets.JIRA_CQUINLAN_API_TOKEN }}
+        JIRA_USERNAME: ${{ secrets.JIRA_USERNAME }}
+        JIRA_URL: ${{ secrets.JIRA_URL }}
+      working-directory: ./censys
+      run: python3 jira_ticketing.py
