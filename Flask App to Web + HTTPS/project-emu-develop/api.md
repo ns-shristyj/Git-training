@@ -346,7 +346,7 @@ Permissions :: `Admin`
 Data Type :: `Form`
 
 ```
-api_key=TPT834jf8fdsjfsd8fsd0jfsd8
+api_key=ChangeMe
 requirement_label=d7fd80sfj-fdhd8fdsj-fdhds8ff-fd8dfjfff
 ```
 
@@ -369,8 +369,8 @@ Data Type :: `Form`
 ```
 OIDC_PROVIDER=Okta
 PROVIDER_DOMAIN=test.okta.com
-CLIENT_ID=384904380248
-CLIENT_SECRET=jfsd8jfds8jf30dsfj830jd
+CLIENT_ID=ChangeMe
+CLIENT_SECRET=ChangeMe
 ```
 
 </details><br>

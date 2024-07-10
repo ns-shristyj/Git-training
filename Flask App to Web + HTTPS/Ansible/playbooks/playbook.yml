@@ -49,7 +49,7 @@
         timeout: 200
     - name: Cloning GitHub Repository
       git:
-       repo: https://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@github.com/netSkope/GIS-SecEng-Intern.git
+       repo: ChangeMe
        dest: /home/ubuntu/temp-repo/
        version: FLASK_webserver
     - name: Update the website files
