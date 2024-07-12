@@ -18,7 +18,7 @@ jobs:
         run: |
           echo "Fetching failed workflow runs older than two weeks..."
           two_weeks_ago=$(date -d '14 days ago' --utc +%Y-%m-%dT%H:%M:%SZ)
-          repo="ns-cquinlan/GIS-SecEng-Intern"
+          repo="netSkope/GIS-SecEng-Intern"
           response=$(curl -s -H "Authorization: token $NSCQUINLAN_GHA_TOKEN" "https://api.github.com/repos/$repo/actions/runs?status=failure&per_page=100")
           
           echo "API response: $response"
