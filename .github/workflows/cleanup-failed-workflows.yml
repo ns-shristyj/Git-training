@@ -16,14 +16,21 @@ jobs:
         env:
           NSCQUINLAN_GHA_TOKEN: ${{ secrets.NSCQUINLAN_GHA_TOKEN}}
         run: |
-          echo "Fetching failed workflow runs older than a week..."
+          echo "Fetching failed workflow runs older than two weeks..."
           two_weeks_ago=$(date -d '14 days ago' --utc +%Y-%m-%dT%H:%M:%SZ)
           repo="ns-cquinlan/GIS-SecEng-Intern"
-          failed_runs=$(curl -s -H "Authorization: token $NSCQUINLAN_GHA_TOKEN" "https://api.github.com/repos/$repo/actions/runs?status=failure&per_page=100" | jq -r --arg two_weeks_ago "$two_weeks_ago" '.workflow_runs[] | select(.created_at < $two_weeks_ago) | .id')
-
-          for run_id in $failed_runs; do
-            echo "Deleting workflow run $run_id..."
-            curl -s -X DELETE -H "Authorization: token $NSCQUINLAN_GHA_TOKEN" "https://api.github.com/repos/$repo/actions/runs/$run_id"
-          done
-
-          echo "Cleanup complete!"
+          response=$(curl -s -H "Authorization: token $NSCQUINLAN_GHA_TOKEN" "https://api.github.com/repos/$repo/actions/runs?status=failure&per_page=100")
+          
+          echo "API response: $response"
+          
+          failed_runs=$(echo "$response" | jq -r --arg two_weeks_ago "$two_weeks_ago" '.workflow_runs[] | select(.created_at < $two_weeks_ago) | .id')
+          
+          if [ -z "$failed_runs" ]; then
+            echo "No failed workflow runs found older than two weeks."
+          else
+            for run_id in $failed_runs; do
+              echo "Deleting workflow run $run_id..."
+              curl -s -X DELETE -H "Authorization: token $NSCQUINLAN_GHA_TOKEN" "https://api.github.com/repos/$repo/actions/runs/$run_id"
+            done
+            echo "Cleanup complete!"
+          fi
