@@ -4848,6 +4848,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/xml2js@npm:0.4.14":
+  version: 0.4.14
+  resolution: "@types/xml2js@npm:0.4.14"
+  dependencies:
+    "@types/node": "npm:*"
+  checksum: 10/d76338b8d6ce8540c7af6a32aacf96c38f6de48254568f58f6e5ac2af3f88e6bd1490e5346d3bb336990f91267d23c5cc09e8bf7e80840a63c7855dbf174ecbb
+  languageName: node
+  linkType: hard
+
 "@typescript-eslint/eslint-plugin@npm:7.3.1":
   version: 7.3.1
   resolution: "@typescript-eslint/eslint-plugin@npm:7.3.1"
@@ -5864,16 +5873,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"axios@npm:^0.21.1":
-  version: 0.21.4
-  resolution: "axios@npm:0.21.4"
-  dependencies:
-    follow-redirects: "npm:^1.14.0"
-  checksum: 10/da644592cb6f8f9f8c64fdabd7e1396d6769d7a4c1ea5f8ae8beb5c2eb90a823e3a574352b0b934ac62edc762c0f52647753dc54f7d07279127a7e5c4cd20272
-  languageName: node
-  linkType: hard
-
-"axios@npm:^1.6.0":
+"axios@npm:1.7.2, axios@npm:^1.6.0":
   version: 1.7.2
   resolution: "axios@npm:1.7.2"
   dependencies:
@@ -5881,6 +5881,15 @@ __metadata:
     form-data: "npm:^4.0.0"
     proxy-from-env: "npm:^1.1.0"
   checksum: 10/6ae80dda9736bb4762ce717f1a26ff997d94672d3a5799ad9941c24d4fb019c1dff45be8272f08d1975d7950bac281f3ba24aff5ecd49ef5a04d872ec428782f
+  languageName: node
+  linkType: hard
+
+"axios@npm:^0.21.1":
+  version: 0.21.4
+  resolution: "axios@npm:0.21.4"
+  dependencies:
+    follow-redirects: "npm:^1.14.0"
+  checksum: 10/da644592cb6f8f9f8c64fdabd7e1396d6769d7a4c1ea5f8ae8beb5c2eb90a823e3a574352b0b934ac62edc762c0f52647753dc54f7d07279127a7e5c4cd20272
   languageName: node
   linkType: hard
 
@@ -11158,6 +11167,7 @@ __metadata:
     "@types/tough-cookie": "npm:4.0.5"
     "@types/turndown": "npm:5.0.4"
     "@types/uuid": "npm:9.0.8"
+    "@types/xml2js": "npm:0.4.14"
     "@typescript-eslint/eslint-plugin": "npm:7.3.1"
     "@typescript-eslint/parser": "npm:7.3.1"
     "@vitest/coverage-v8": "npm:1.4.0"
@@ -11170,6 +11180,7 @@ __metadata:
     archiver: "npm:7.0.1"
     archiver-zip-encrypted: "npm:2.0.0"
     async-lock: "npm:1.4.1"
+    axios: "npm:1.7.2"
     axios-cookiejar-support: "npm:5.0.0"
     bcryptjs: "npm:2.4.3"
     blocked-at: "npm:1.2.0"
@@ -11266,6 +11277,7 @@ __metadata:
     vitest: "npm:1.4.0"
     winston: "npm:3.13.0"
     winston-daily-rotate-file: "npm:5.0.0"
+    xml2js: "npm:0.6.2"
   languageName: unknown
   linkType: soft
 
@@ -14295,8 +14307,8 @@ __metadata:
   linkType: hard
 
 "ws@npm:^5.2.0 || ^6.0.0 || ^7.0.0":
-  version: 7.5.9
-  resolution: "ws@npm:7.5.9"
+  version: 7.5.10
+  resolution: "ws@npm:7.5.10"
   peerDependencies:
     bufferutil: ^4.0.1
     utf-8-validate: ^5.0.2
@@ -14305,7 +14317,7 @@ __metadata:
       optional: true
     utf-8-validate:
       optional: true
-  checksum: 10/171e35012934bd8788150a7f46f963e50bac43a4dc524ee714c20f258693ac4d3ba2abadb00838fdac42a47af9e958c7ae7e6f4bc56db047ba897b8a2268cf7c
+  checksum: 10/9c796b84ba80ffc2c2adcdfc9c8e9a219ba99caa435c9a8d45f9ac593bba325563b3f83edc5eb067cc6d21b9a6bf2c930adf76dd40af5f58a5ca6859e81858f0
   languageName: node
   linkType: hard
 
@@ -14342,6 +14354,16 @@ __metadata:
     escape-html: "npm:^1.0.3"
     xpath: "npm:0.0.32"
   checksum: 10/128cbabe06a8531b4df8b46b589d28e7d6532e90c131c04dded8f2782cdf11ca467a32e330b7675c172ff4f688b848b088102c8299e04014a6ef54a19891558d
+  languageName: node
+  linkType: hard
+
+"xml2js@npm:0.6.2":
+  version: 0.6.2
+  resolution: "xml2js@npm:0.6.2"
+  dependencies:
+    sax: "npm:>=0.6.0"
+    xmlbuilder: "npm:~11.0.0"
+  checksum: 10/df29de8eeedb762c367d87945c39bcf54db19a2c522607491c266ed6184b5a749e37ff29cfaed0ac149da9ba332ac3dcf8e5ff2bd0a206be3343eca95faa941d
   languageName: node
   linkType: hard
 
