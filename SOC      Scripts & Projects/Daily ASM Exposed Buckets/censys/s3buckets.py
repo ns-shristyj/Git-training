@@ -12,7 +12,7 @@ exception = [
     "netskopevgse-bucket1-z7yuo4z2ssrx", "cloudfront-lab-dgarrison", "totally-public-bucket01", "csw-labs",
     "nslab-labbucket1-1ej6dyro32ugu", "nslab-labbucket0-ugby3le454nd", "netskopevgse-bucket1-113wf2ov58464",
     "npademo-labbucket1-7gz3d7kt2lkd", "netskopevgsestasa-bucket1-1m6t287juqw8u", "open-and-empty", "netskopevgse-bucket1-13s9789y91gxc",
-    "netskopevgse-bucket1-1ewoj4yavb9c0", "npalab-labbucket0-154yltt26pdc3", "jim-corporate"
+    "netskopevgse-bucket1-1ewoj4yavb9c0", "npalab-labbucket0-154yltt26pdc3", "jim-corporate", "2-2-8-s3-1681578156", "tvm-normal-bucket-test"
 ]
 
 # Function to check if value is in the exception list
