@@ -1,0 +1,46 @@
+
+name: Endor Labs Dependency and Secrets Scan
+on:
+  push:
+jobs:
+  endor_scan:
+    permissions:
+      security-events: write # Used to upload Sarif artifact to GitHub
+      contents: read # Used to check out a private repository
+      actions: read # Required for private repositories to upload Sarif files. GitHub Advanced Security licenses are required.
+      id-token: write # Used for keyless authentication with Endor Labs
+      issues: write # Required to automatically comment on PRs for new policy violations
+      pull-requests: write # Required to automatically comment on PRs for new policy violations
+    runs-on: [self-hosted, linux, x64, rg-default, sz-S, cheap, docker]
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        
+      - name: Setup Java JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'oracle' # See 'Supported distributions' for available options
+          java-version: '21'
+          
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12' 
+          
+
+      - name: Building the tool
+        run: |
+          pip3 install virtualenv
+          python3 -m virtualenv venv
+          echo "ENDOR_SCAN_PYTHON_VIRTUAL_ENV=${{ github.workspace }}/venv" >> $GITHUB_ENV
+          source venv/bin/activate
+        
+             
+
+      - name: Endor Labs Scan Pull Request
+        uses: endorlabs/github-action@v1.1.1
+        with:
+          namespace: 'netskope' # Replace with your Endor Labs tenant namespac
+          scan_dependencies: true
+          scan_secrets: true
+          enable_github_action_token: true # This is required to have the GitHub Action use OIDC authentication
+          pr: false
