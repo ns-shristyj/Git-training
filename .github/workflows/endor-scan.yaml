@@ -26,7 +26,10 @@ jobs:
         with:
           python-version: '3.12' 
           
-
+      - name: Installing npm
+        run: |
+         npm install -g npm
+         
       - name: Building the tool
         run: |
           pip3 install virtualenv
