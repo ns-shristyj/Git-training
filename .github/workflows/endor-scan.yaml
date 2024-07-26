@@ -28,8 +28,9 @@ jobs:
           
       - name: Installing npm
         run: |
-         npm install -g npm
-         npm --version
+          sudo apt install nodejs
+          sudo apt install npm
+          npm --version
          
       - name: Building the tool
         run: |
