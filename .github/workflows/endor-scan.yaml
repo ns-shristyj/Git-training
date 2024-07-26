@@ -29,6 +29,7 @@ jobs:
       - name: Installing npm
         run: |
          npm install -g npm
+         npm --version
          
       - name: Building the tool
         run: |
