@@ -5,14 +5,13 @@ from google.cloud import storage
 
 import json
 import requests # type: ignore
-ST_API_KEY = "21n26nEJ_XFzywPDEiHyj6SiumMRxE-9"
 DOMAIN_NAME = "zscaler.net"
 
 url = f"https://api.securitytrails.com/v1/domain/{DOMAIN_NAME}/subdomains?children_only=false&include_inactive=true"
 
 
 headers = {
-    "APIKEY": ST_API_KEY,
+    "APIKEY": "21n26nEJ_XFzywPDEiHyj6SiumMRxE-9,
     "accept": "application/json"
 }
 
