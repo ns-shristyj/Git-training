@@ -48,7 +48,7 @@ getDomains()
 bucket_name = "dnsmonitoringbucket"
 
 # The path to your file to upload
-source_file_name = r"C:\Users\MayaAngia\Desktop\Domains\securityTrailsResults.json"
+source_file_name = r"C:\Users\MayaAngia\Desktop\Domains\securityTrailsResults.json" #THIS NEEDS TO BE CHANGED OUT OF MY LOCAL PATH
 
 # The ID of your GCS object
 destination_blob_name = "zscalerSubdomains" + date.today().strftime("%Y%m%d")
