@@ -1,3 +1,0 @@
-schema:
-  - ./opencti-graphql/config/schema/opencti.graphql
-  - ./opencti-graphql/src/modules/**/*.graphql

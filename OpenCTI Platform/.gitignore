@@ -1,9 +1,0 @@
-*.env
-*.txt
-*.crt
-*.keys
-*.pem
-*myenv
-
-.pytest_cache
-__pycache__
