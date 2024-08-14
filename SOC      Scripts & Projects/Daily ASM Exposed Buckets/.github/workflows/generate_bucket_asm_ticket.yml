@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - SOCScripts
+      - develop
   # workflow_dispatch:
   # schedule:
   #   - cron: '00 11 * * *'
