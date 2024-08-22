@@ -37,7 +37,7 @@ else:
 
 # Define the query to fetch IP addresses (limited to 5 IPs from each table)
 query = """
-(SELECT ip_range FROM `research-special-programs.tbl_inventory_sub_all_ext.tbl_inventory_sub_aws` LIMIT 5)
+(SELECT ip_range FROM `research-special-programs.ds_prod.tbl_inventory_sub_all_ext` LIMIT 5)
 """
 
 # Run the query and get the results
