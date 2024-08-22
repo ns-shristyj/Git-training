@@ -1,0 +1,42 @@
+name: bchavis-test
+
+on:
+    workflow_dispatch:
+
+#jobs:
+  #run-script:
+    #runs-on: ubuntu-latest
+jobs:
+  run-script:
+    runs-on: ["self-hosted", "linux", "x64", "rg-default", "sz-XS", "gh", "cheap"]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.8'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install google-cloud-bigquery requests
+
+      - name: Run Seclytics IP Processing Script
+        env:
+          GCP_RSP_SERVICEACCOUNT_JSON: ${{ secrets.GCP_RSP_SERVICEACCOUNT_JSON }}
+          SECLYTICS_ACCESS_TOKEN: ${{ secrets.SECLYTICS_ACCESS_TOKEN }}
+          JIRA_EMAIL_HIMIL: ${{ secrets.JIRA_EMAIL_HIMIL }}
+          JIRA_TOKEN_HIMIL: ${{ secrets.JIRA_TOKEN_HIMIL }}
+          JIRA_PROJECT_KEY_HIMIL: ${{ secrets.JIRA_PROJECT_KEY_HIMIL }}
+        run: |
+          python main.py
+
+      - name: Upload logs
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: seclytics-logs
+          path: '**/*.log'
