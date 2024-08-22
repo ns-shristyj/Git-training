@@ -28,7 +28,7 @@ client = bigquery.Client(credentials=credentials, project=credentials.project_id
 
 # Define the query to fetch IP addresses (limited to 5 IPs from each table)
 query = """
-(SELECT deviceId FROM `siem-231719.csDevs.csDevices` LIMIT 5)
+(SELECT ip_range FROM `research-special-programs.tbl_inventory_sub_all_ext.tbl_inventory_sub_aws` LIMIT 5)
 """
 
 # Run the query and get the results
