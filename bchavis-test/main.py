@@ -4,6 +4,7 @@ import requests
 from google.cloud import bigquery
 from google.oauth2 import service_account
 import logging
+import sys
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -35,6 +36,12 @@ query_job = client.query(query)
 
 # Fetch the results
 results = query_job.result()
+
+# Iterate through the results and print them
+for row in results:
+    print(f"{row.deviceId}")
+
+sys.exit(0)
 
 # Initialize an empty list to store IPs
 ip_list = []
