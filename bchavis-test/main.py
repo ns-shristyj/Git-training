@@ -26,6 +26,15 @@ credentials = service_account.Credentials.from_service_account_info(service_acco
 # Initialize the BigQuery client with the credentials
 client = bigquery.Client(credentials=credentials, project=credentials.project_id)
 
+datasets = list(client.list_datasets(project="research-special-programs"))
+if datasets:
+    print(f"Datasets in project:")
+    for dataset in datasets:
+        print(dataset.dataset_id)
+else:
+    print(f"No datasets found in project.")
+
+
 # Define the query to fetch IP addresses (limited to 5 IPs from each table)
 query = """
 (SELECT ip_range FROM `research-special-programs.tbl_inventory_sub_all_ext.tbl_inventory_sub_aws` LIMIT 5)
