@@ -31,7 +31,8 @@ jobs:
           JIRA_EMAIL_HIMIL: ${{ secrets.JIRA_EMAIL_HIMIL }}
           JIRA_TOKEN_HIMIL: ${{ secrets.JIRA_TOKEN_HIMIL }}
           JIRA_PROJECT_KEY_HIMIL: ${{ secrets.JIRA_PROJECT_KEY_HIMIL }}
-        run: |
+        run: |-
+          cd "${{ github.workspace }}/bchavis-test/"
           python main.py
 
       - name: Upload logs
