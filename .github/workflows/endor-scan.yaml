@@ -54,4 +54,5 @@ jobs:
           scan_dependencies: true
           scan_secrets: true
           enable_github_action_token: true # This is required to have the GitHub Action use OIDC authentication
+          additional_args: "--as-default-branch"
           pr: false
