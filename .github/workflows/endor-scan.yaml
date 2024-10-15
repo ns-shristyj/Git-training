@@ -1,4 +1,3 @@
-
 name: Endor Labs Dependency and Secrets Scan
 on:
   push:
@@ -21,30 +20,37 @@ jobs:
         with:
           distribution: 'oracle' # See 'Supported distributions' for available options
           java-version: '21'
-          
-      - uses: actions/setup-python@v5
+
+      - name: Install Python (if needed)
+        uses: actions/setup-python@v4
         with:
-          python-version: '3.12' 
-          
-      - name: Installing npm
+          python-version: '3.x' # Specify the required Python version
+
+      - name: Install Poetry
         run: |
-          sudo apt install -y nodejs
-          sudo apt install -y npm
-          npm --version
-         
-      - name: Building the tool
+          python -m pip install --upgrade pip
+          python -m pip install poetry
+
+      - name: Find and Build Projects with requirements.txt
         run: |
-          pip3 install virtualenv
-          python3 -m virtualenv venv
-          echo "ENDOR_SCAN_PYTHON_VIRTUAL_ENV=${{ github.workspace }}/venv" >> $GITHUB_ENV
-          source venv/bin/activate
-        
-             
+          # Loop through all folders and check for requirements.txt
+          for dir in $(find . -type d); do
+            if [ -f "$dir/requirements.txt" ]; then
+              echo "Found requirements.txt in $dir"
+              cd $dir
+              python -m pip install -r requirements.txt
+              # Add custom build logic here if needed (e.g., run tests or build commands)
+              echo "Installed and built project in $dir"
+              cd - # Go back to the root folder
+            else
+              echo "No requirements.txt found in $dir"
+            fi
+          done
 
       - name: Endor Labs Scan Pull Request
         uses: endorlabs/github-action@v1.1.1
         with:
-          namespace: 'netskope' # Replace with your Endor Labs tenant namespac
+          namespace: 'netskope' # Replace with your Endor Labs tenant namespace
           scan_dependencies: true
           scan_secrets: true
           enable_github_action_token: true # This is required to have the GitHub Action use OIDC authentication
