@@ -1,15 +1,20 @@
+""" 
+    This script will scrape security info from the 'audit' account console and create a csv file of the findings.
+    Specify the target AWS region below where client is declared (line 18)
+    Author: Woodrow Davidson
+"""
+
 import boto3
 import logging
 import csv
 from collections import defaultdict
 
-# Configure logging (ensure this is at the top of your script)
+# Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def get_security_hub_findings():
-    """
-    Retrieves current, active findings from Security Hub with added logging.
-    """
+    """Retrieves current, active findings from Security Hub with added logging."""
+    
     client = boto3.client("securityhub", region_name="us-west-2")
     findings_list = []
     
@@ -35,6 +40,7 @@ def get_security_hub_findings():
 
 def extract_finding_details(finding):
     """Extract relevant details from a Security Hub finding."""
+    
     account_id = finding.get("AwsAccountId", "N/A")
     account_name = finding.get("AwsAccountName", "N/A")
     control_id = finding.get("Compliance", {}).get("SecurityControlId", "N/A")
@@ -64,6 +70,7 @@ def extract_finding_details(finding):
 
 def export_to_csv(findings_list, filename="security_hub_report.csv"):
     """Export list of dictionaries to CSV."""
+    
     if not findings_list:
         logging.info("No data to export.")
         return
