@@ -1,6 +1,6 @@
 """ 
     This script will scrape security info from the 'audit' account console and create a csv file of the findings.
-    Specify the target AWS region below where client is declared (line 18)
+    NOTE: Specify the target AWS region below where client is declared (line 18)
     Author: Woodrow Davidson
 """
 
