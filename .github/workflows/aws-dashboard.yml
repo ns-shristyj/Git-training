@@ -31,4 +31,4 @@ jobs:
         run: |-
           echo "$AWS_DASHBOARD_GOOGLE_SECRET" > secrets.json
           cd "${{ github.workspace }}/SecEng Scripts & Projects/aws_dashboard"
-          python main.py
+          python *.py
