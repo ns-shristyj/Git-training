@@ -5,7 +5,7 @@ on:
 
 jobs:
   run-script:
-    runs-on: ["self-hosted", "linux", "x64", "rg-default", "sz-XS", "gh", "cheap"]
+    runs-on: arc-default-basic-cheap-s-set
 
     steps:
       - name: Set up Python
@@ -25,5 +25,5 @@ jobs:
           FILE_PATH: ${{ github.workspace }}/secret.json
         run: |-
           echo "$AWS_DASHBOARD_GOOGLE_SECRET" > secrets.json
-          cd "${{ github.workspace }}/SecEng Scripts & Projects/aws_dashboard/"
+          cd "${{ github.workspace }}/aws_dashboard/"
           python *.py
