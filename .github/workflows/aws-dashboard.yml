@@ -25,5 +25,5 @@ jobs:
           FILE_PATH: ${{ github.workspace }}/secret.json
         run: |-
           echo "$AWS_DASHBOARD_GOOGLE_SECRET" > secrets.json
-          cd "SecEng Scripts & Projects/aws_dashboard"
+          cd "${{ github.workspace }}/SecEng Scripts & Projects/aws_dashboard"
           python *.py
