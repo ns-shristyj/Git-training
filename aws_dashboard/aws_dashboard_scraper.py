@@ -68,18 +68,18 @@ def extract_finding_details(finding):
         "Remediation URL": remediation_url,
     }
 
-def export_to_csv(findings_list, filename="security_hub_report.csv"):
-    """Export list of dictionaries to CSV."""
+#def export_to_csv(findings_list, filename="security_hub_report.csv"):
+#    """Export list of dictionaries to CSV."""
     
-    if not findings_list:
-        logging.info("No data to export.")
-        return
-    keys = findings_list[0].keys()
-    with open(filename, mode="w", newline="") as csvfile:
-        writer = csv.DictWriter(csvfile, fieldnames=keys)
-        writer.writeheader()
-        writer.writerows(findings_list)
-    logging.info(f"CSV report saved as {filename}")
+#    if not findings_list:
+#        logging.info("No data to export.")
+#        return
+#    keys = findings_list[0].keys()
+#    with open(filename, mode="w", newline="") as csvfile:
+#        writer = csv.DictWriter(csvfile, fieldnames=keys)
+#        writer.writeheader()
+#        writer.writerows(findings_list)
+#    logging.info(f"CSV report saved as {filename}")
 
 if __name__ == "__main__":
     logging.info("Starting Security Hub findings retrieval...")
