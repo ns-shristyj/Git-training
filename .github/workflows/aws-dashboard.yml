@@ -8,10 +8,12 @@ jobs:
     runs-on: arc-default-basic-cheap-s-set
 
     steps:
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - name: checkout
+        uses: actions/checkout@v4.0.0
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v4.0.0
         with:
-          python-version: '3.8'
+          python-version: 3.12
 
       - name: Install boto3
         run: pip install boto3
@@ -22,8 +24,8 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_DASHBOARD_ACCESS_KEY }}
           AWS_SESSION_TOKEN: ${{ secrets.AWS_DASHBOARD_SESSION_TOKEN }}
           AWS_DASHBOARD_GOOGLE_SECRET: ${{ secrets.AWS_DASHBOARD_GOOGLE_SECRET }}
-          FILE_PATH: ${{ github.workspace }}/secret.json
-        working-directory: ${{ github.workspace }}/aws_dashboard
+          FILE_PATH: ${{ github.workspace }}/aws_dashboard/secret.json
         run: |-
+          cd "${{ github.workspace }}/aws_dashboard/"
           echo "$AWS_DASHBOARD_GOOGLE_SECRET" > secrets.json
           python *.py
