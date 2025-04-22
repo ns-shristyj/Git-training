@@ -23,7 +23,7 @@ jobs:
           AWS_SESSION_TOKEN: ${{ secrets.AWS_DASHBOARD_SESSION_TOKEN }}
           AWS_DASHBOARD_GOOGLE_SECRET: ${{ secrets.AWS_DASHBOARD_GOOGLE_SECRET }}
           FILE_PATH: ${{ github.workspace }}/secret.json
+        working-directory: ${{ github.workspace }}/aws_dashboard
         run: |-
           echo "$AWS_DASHBOARD_GOOGLE_SECRET" > secrets.json
-          cd "${{ github.workspace }}/aws_dashboard/"
           python *.py
