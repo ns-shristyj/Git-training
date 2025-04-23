@@ -30,9 +30,9 @@ if not os.path.exists(keyfile_path):
      raise FileNotFoundError(f"Service account key file not found at: {keyfile_path}")
 
 # The ID of the spreadsheet (REPLACE with your actual Spreadsheet ID)
-spreadsheet_id = '' 
+spreadsheet_id = '1uvC8izOY3z-E7skDw3kjkRPOgdwRT76ZFNNbmdQjWXo' 
 # The name of the tab within the spreadsheet (REPLACE with your actual Sheet Name)
-sheet_name = '' 
+sheet_name = 'Sheet1' 
 
 if not spreadsheet_id or not sheet_name:
     print("WARNING: 'spreadsheet_id' or 'sheet_name' is not set. Please edit the script.")
