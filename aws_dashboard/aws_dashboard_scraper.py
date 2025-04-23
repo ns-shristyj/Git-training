@@ -8,13 +8,13 @@
 import boto3
 import logging
 import os
-from dotenv import load_dotenv
+#from dotenv import load_dotenv
 from google.oauth2 import service_account
 import googleapiclient.discovery
 from collections import defaultdict # Keep defaultdict if needed elsewhere, otherwise remove if unused.
 
 # --- Google Sheets Configuration ---
-load_dotenv() # Loads variables from .env file (e.g., FILE_PATH)
+#load_dotenv() # Loads variables from .env file (e.g., FILE_PATH)
 
 # Path to the downloaded JSON key file from environment variable
 keyfile_path = os.getenv('FILE_PATH')
