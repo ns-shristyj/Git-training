@@ -161,33 +161,26 @@ def get_security_hub_findings():
     findings_list = []
     
     # Specify the standards you are interested in
-    standard_arns = [
-        "arn:aws:securityhub:::ruleset/cis-aws-foundations-benchmark/v/1.2.0", # Example, adjust if needed
-        "arn:aws:securityhub:us-west-2::standards/cis-aws-foundations-benchmark/v/3.0.0", # Example for v3.0.0 in us-west-2
-        "arn:aws:securityhub:us-west-2::standards/nist-800-53/v/5.0.0" # Example for NIST in us-west-2
-        # Add or modify ARNs based on the exact standards and regions enabled in your Security Hub
+    standard_ids = [
+        "standards/cis-aws-foundations-benchmark/v/3.0.0",
+        "standards/nist-800-53/v/5.0.0"
     ]
     # Create filters based on the Compliance.AssociatedStandards.StandardsId field
-    standards_filters = [{"Comparison": "EQUALS", "Value": arn} for arn in standard_arns]
 
 
     paginator = client.get_paginator("get_findings")
     
     filters = {
-        # Using 'StandardsArn' or 'ProductFields' with 'aws/securityhub/ProductName': 'Security Hub' might be more reliable
-         "ComplianceAssociatedStandardsId": standards_filters, # Filter by specific standard ARNs
+        "ComplianceAssociatedStandardsId": [{"Value": standard_id, "Comparison": "EQUALS"} for standard_id in standard_ids],
         "ComplianceStatus": [{"Value": "FAILED", "Comparison": "EQUALS"}],
-        "WorkflowStatus": [{"Value": "NEW", "Comparison": "EQUALS"}], # Only get NEW findings
-        # If you want NEW and IN_PROGRESS:
-        # "WorkflowStatus": [{"Value": "NEW", "Comparison": "EQUALS"}, {"Value": "IN_PROGRESS", "Comparison": "EQUALS"}], 
+        "WorkflowStatus": [{"Value": "NEW", "Comparison": "EQUALS"}, {"Value": "IN_PROGRESS", "Comparison": "EQUALS"}],
         "RecordState": [{"Value": "ACTIVE", "Comparison": "EQUALS"}],
-    } 
+    }
     
     logging.info(f"Retrieving findings with filters: {filters}")
     
     try:
-        page_iterator = paginator.paginate(Filters=filters, PaginationConfig={"PageSize": 100})
-        for page_num, page in enumerate(page_iterator):
+        for page, pagenum in paginator.paginate(Filters=filters, PaginationConfig={"PageSize": 100}):
             findings_in_page = page.get("Findings", [])
             logging.info(f"Retrieved page {page_num + 1} with {len(findings_in_page)} findings.")
             findings_list.extend(findings_in_page)
