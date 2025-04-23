@@ -1,4 +1,3 @@
-# Assumed filename: update_dashboard.py (or adjust as needed)
 
 import boto3
 import logging
