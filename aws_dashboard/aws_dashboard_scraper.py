@@ -30,9 +30,9 @@ if not os.path.exists(keyfile_path):
      raise FileNotFoundError(f"Service account key file not found at: {keyfile_path}")
 
 # The ID of the spreadsheet (REPLACE with your actual Spreadsheet ID)
-spreadsheet_id = '' 
+spreadsheet_id = '1uvC8izOY3z-E7skDw3kjkRPOgdwRT76ZFNNbmdQjWXo' 
 # The name of the tab within the spreadsheet (REPLACE with your actual Sheet Name)
-sheet_name = '' 
+sheet_name = 'Sheet1' 
 
 if not spreadsheet_id or not sheet_name:
     print("WARNING: 'spreadsheet_id' or 'sheet_name' is not set. Please edit the script.")
@@ -247,6 +247,7 @@ def extract_finding_details(finding):
 # --- Main Execution ---
 
 if __name__ == "__main__":
+    clearSheet(sheet_name, spreadsheet_id)
     if not service:
         logging.error("Google Sheets service setup failed. Exiting.")
     elif not spreadsheet_id or not sheet_name:
@@ -297,5 +298,5 @@ if __name__ == "__main__":
         else:
             logging.info("No findings retrieved. Clearing Google Sheet.")
              # Clear the sheet if no findings were found
-            clearSheet(sheet_name, spreadsheet_id)
+           
             logging.info("Google Sheet cleared as no findings were retrieved.")
