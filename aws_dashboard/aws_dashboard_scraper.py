@@ -261,6 +261,7 @@ if __name__ == "__main__":
             extracted_data = []
             for finding in findings:
                 details = extract_finding_details(finding)
+                print(details)
                 extracted_data.append(details)
             
             logging.info(f"Finished extracting details for {len(extracted_data)} findings.")
