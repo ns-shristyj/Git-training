@@ -2,15 +2,9 @@
     This script retrieves specific failed, active findings from AWS Security Hub 
     (CIS 3.0.0 and NIST 800-53 v5 standards) in a specified region, 
     extracts relevant details, and writes the data to a specified Google Sheet.
-    
     NOTE: Specify the target AWS region below where the securityhub client is declared (line ~56)
-    NOTE: Ensure a .env file is present in the same directory with:
-          FILE_PATH=/path/to/your/google_service_account_key.json
-    NOTE: Fill in spreadsheet_id and sheet_name variables below.
-
-    Author: Bradley Chavis & Woodrow Davidson (AWS part), Integration by AI Assistant
+    Author: Bradley Chavis & Woodrow Davidson, Integration by AI Assistant
 """
-
 import boto3
 import logging
 import os
@@ -36,9 +30,6 @@ sheet_name = 'Sheet1'
 
 if not spreadsheet_id or not sheet_name:
     print("WARNING: 'spreadsheet_id' or 'sheet_name' is not set. Please edit the script.")
-    # Optionally, exit if these are required:
-    # import sys
-    # sys.exit("Error: Spreadsheet ID and Sheet Name must be configured.")
 
 # --- Logging Configuration ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -54,12 +45,8 @@ try:
     logging.info("Successfully authenticated with Google Sheets API.")
 except Exception as e:
     logging.error(f"Failed to authenticate or build Google Sheets service: {e}")
-    # Depending on requirements, you might want to exit here
-    # import sys
-    # sys.exit()
 
 # --- Google Sheets Helper Functions ---
-
 def clearSheet(sheetName, spreadsheetID):
     """ Clears all data from the specified sheet (A:Z range). """
     if not service:
@@ -153,7 +140,6 @@ def writeToSheet(sheetName, data, spreadsheetID, startRow=1, startColumn="A"):
         return None
 
 # --- AWS Security Hub Functions ---
-
 def get_security_hub_findings():
     """Retrieves current, active findings from Security Hub for specific standards."""
     # *** REPLACE "us-west-2" with your target AWS region if different ***
@@ -165,11 +151,9 @@ def get_security_hub_findings():
         "standards/cis-aws-foundations-benchmark/v/3.0.0",
         "standards/nist-800-53/v/5.0.0"
     ]
-    # Create filters based on the Compliance.AssociatedStandards.StandardsId field
-
-
     paginator = client.get_paginator("get_findings")
     
+    # Create filters based on the Compliance.AssociatedStandards.StandardsId field
     filters = {
         "ComplianceAssociatedStandardsId": [{"Value": standard_id, "Comparison": "EQUALS"} for standard_id in standard_ids],
         "ComplianceStatus": [{"Value": "FAILED", "Comparison": "EQUALS"}],
@@ -234,24 +218,6 @@ def extract_finding_details(finding):
             remediation_url,
             finding.get("Id", "N/A")
            ]
-'''
-    return {
-        "Account ID": finding.get("AwsAccountId", "N/A"),
-        "Account Name": finding.get("AwsAccountName", "N/A"), # Note: AwsAccountName might not always be populated
-        "Control ID": control_id,
-        "Resource Type": resource.get("Type", "N/A"),
-        "Resource ID": resource.get("Id", "N/A"),
-        "Region": resource.get("Region", finding.get("Region", "N/A")), # Get region from resource or finding
-        "Severity": severity.get("Label", "N/A"),
-        "Title": finding.get("Title", "N/A"),
-        "Description": finding.get("Description", "N/A"),
-        "First Observed": finding.get("FirstObservedAt", "N/A"), # Changed from CreatedAt for consistency
-        "Last Observed": finding.get("LastObservedAt", "N/A"),   # Changed from UpdatedAt
-        "Remediation": remediation_text,
-        "Remediation URL": remediation_url,
-        "Finding ID": finding.get("Id", "N/A") # Often useful for tracking
-    }
-'''
 
 # --- Main Execution ---
 
@@ -276,50 +242,3 @@ if __name__ == "__main__":
         
         for finding in findings:
             print(finding)
-
-        '''
-        if findings:
-            extracted_data = []
-            for finding in findings:
-                details = extract_finding_details(finding)
-                print(details)
-                extracted_data.append(details)
-            
-            logging.info(f"Finished extracting details for {len(extracted_data)} findings.")
-
-            # Prepare data for Google Sheets (list of lists, including header)
-            if extracted_data:
-                # Define headers in the desired order - MUST match keys in extract_finding_details
-                headers = [
-                    "Account ID", "Account Name", "Control ID", "Resource Type", 
-                    "Resource ID", "Region", "Severity", "Title", "Description", 
-                    "First Observed", "Last Observed", "Remediation", 
-                    "Remediation URL", "Finding ID"
-                ]
-                
-                sheet_data = [headers] # Start with header row
-                
-                # Append data rows, ensuring values are in the same order as headers
-                for finding_dict in extracted_data:
-                    row = [str(finding_dict.get(header, "")) for header in headers] # Use .get for safety, convert all to string
-                    sheet_data.append(row)
-
-                logging.info("Clearing existing data from Google Sheet...")
-                clearSheet(sheet_name, spreadsheet_id)
-
-                logging.info("Writing new data to Google Sheet...")
-                writeToSheet(sheet_name, sheet_data, spreadsheet_id)
-                
-                logging.info("Google Sheet update complete.")
-            else:
-                logging.info("No details could be extracted from the findings.")
-                # Optionally clear the sheet even if no new data
-                # logging.info("Clearing existing data from Google Sheet as no new findings were processed...")
-                # clearSheet(sheet_name, spreadsheet_id)
-
-        else:
-            logging.info("No findings retrieved. Clearing Google Sheet.")
-             # Clear the sheet if no findings were found
-           
-            logging.info("Google Sheet cleared as no findings were retrieved.")
-        '''
