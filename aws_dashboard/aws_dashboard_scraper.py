@@ -180,11 +180,11 @@ def get_security_hub_findings():
     logging.info(f"Retrieving findings with filters: {filters}")
     
     try:
-        for page, pagenum in paginator.paginate(Filters=filters, PaginationConfig={"PageSize": 100}):
-            findings_in_page = page.get("Findings", [])
-            logging.info(f"Retrieved page {page_num + 1} with {len(findings_in_page)} findings.")
-            findings_list.extend(findings_in_page)
-            # Add a small delay if hitting API limits, e.g., time.sleep(0.5)
+        for page in paginator.paginate(Filters=filters, PaginationConfig={"PageSize": 100}):
+            for finding in page["Findings"]:
+                result = extract_finding_details(finding)
+                findings_list.append(result)
+
             
     except client.exceptions.InvalidAccessException as e:
          logging.error(f"Security Hub Error: Invalid Access - Check permissions or if Security Hub is enabled in region. Details: {e}")
@@ -250,6 +250,10 @@ if __name__ == "__main__":
         findings = get_security_hub_findings()
         logging.info(f"Retrieved {len(findings)} findings.")
 
+        for finding in findings:
+            print(finding)
+
+        '''
         if findings:
             extracted_data = []
             for finding in findings:
@@ -294,3 +298,4 @@ if __name__ == "__main__":
              # Clear the sheet if no findings were found
            
             logging.info("Google Sheet cleared as no findings were retrieved.")
+        '''
