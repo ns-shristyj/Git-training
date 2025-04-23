@@ -8,13 +8,9 @@
 import boto3
 import logging
 import os
-#from dotenv import load_dotenv
 from google.oauth2 import service_account
 import googleapiclient.discovery
 from collections import defaultdict # Keep defaultdict if needed elsewhere, otherwise remove if unused.
-
-# --- Google Sheets Configuration ---
-#load_dotenv() # Loads variables from .env file (e.g., FILE_PATH)
 
 # Path to the downloaded JSON key file from environment variable
 keyfile_path = os.getenv('FILE_PATH')
@@ -23,9 +19,9 @@ if not keyfile_path:
 if not os.path.exists(keyfile_path):
      raise FileNotFoundError(f"Service account key file not found at: {keyfile_path}")
 
-# The ID of the spreadsheet (REPLACE with your actual Spreadsheet ID)
+# The ID of the spreadsheet
 spreadsheet_id = '1uvC8izOY3z-E7skDw3kjkRPOgdwRT76ZFNNbmdQjWXo' 
-# The name of the tab within the spreadsheet (REPLACE with your actual Sheet Name)
+# The name of the tab within the spreadsheet
 sheet_name = 'Sheet1' 
 
 if not spreadsheet_id or not sheet_name:
@@ -93,7 +89,6 @@ def get_column_from_letter(letter, offset):
      except Exception as e:
          logging.error(f"Error calculating column letter from letter '{letter}' with offset {offset}: {e}")
          return None
-
 
 def writeToSheet(sheetName, data, spreadsheetID, startRow=1, startColumn="A"):
     """ Write the data (list of lists) to the specified sheet. """
@@ -239,6 +234,3 @@ if __name__ == "__main__":
         clearSheet(sheet_name, spreadsheet_id)
 
         writeToSheet(sheet_name, findings, spreadsheet_id)
-        
-        for finding in findings:
-            print(finding)
