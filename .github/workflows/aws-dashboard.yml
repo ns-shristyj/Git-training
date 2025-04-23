@@ -1,32 +1,36 @@
 name: aws-dashboard
 
-on: 
+on:
   workflow_dispatch:
 
 jobs:
   run-script:
-    runs-on: arc-default-basic-cheap-s-set
+    runs-on: arc-default-basic-cheap-s-set # Your self-hosted runner
 
     steps:
       - name: checkout
-        uses: actions/checkout@v4.0.0
+        uses: actions/checkout@v4.0.0 # Consider updating to latest v4 if needed
+
       - name: Set up Python 3.12
-        uses: actions/setup-python@v4.0.0
+        uses: actions/setup-python@v5 # Use latest v5 action
         with:
           python-version: 3.12
 
       - name: Install dependencies
-        run: pip install boto3 python-dotenv google-api-python-client google-auth-httplib2 google-auth-oauthlib
-
+        run: pip install boto3 google-api-python-client google-auth-httplib2 google-auth-oauthlib # Removed python-dotenv
 
       - name: Run the AWS Dashboard Data Update Script
         env:
+          # Pass AWS credentials directly (as you currently do)
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_DASHBOARD_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_DASHBOARD_ACCESS_KEY }}
-          AWS_SESSION_TOKEN: ${{ secrets.AWS_DASHBOARD_SESSION_TOKEN }}
-          AWS_DASHBOARD_GOOGLE_SECRET: ${{ secrets.AWS_DASHBOARD_GOOGLE_SECRET }}
-          FILE_PATH: ${{ github.workspace }}/aws_dashboard/secret.json
-        run: |-
-          cd "${{ github.workspace }}/aws_dashboard/"
-          echo "$AWS_DASHBOARD_GOOGLE_SECRET" > secrets.json
-          python *.py
+          AWS_SESSION_TOKEN: ${{ secrets.AWS_DASHBOARD_SESSION_TOKEN }} # Optional: Only if using temporary keys this way
+
+          # Pass Google credentials and sheet info directly from secrets
+          GOOGLE_SPREADSHEET_ID: ${{ secrets.GOOGLE_SPREADSHEET_ID }}
+          GOOGLE_SHEET_NAME: ${{ secrets.GOOGLE_SHEET_NAME }}
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }} # Pass the JSON content
+
+        # Run the specific python script within its directory
+        # Use 'python -u' for unbuffered output, often helpful in Actions logs
+        run: python -u "${{ github.workspace }}/aws_dashboard/update_dashboard.py" #<-- Specify your script name
