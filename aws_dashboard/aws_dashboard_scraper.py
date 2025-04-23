@@ -219,7 +219,22 @@ def extract_finding_details(finding):
     # Remediation details
     remediation_text = recommendation.get("Text", "N/A")
     remediation_url = recommendation.get("Url", "N/A")
-    
+    return [finding.get("AwsAccountId", "N/A"),
+            finding.get("AwsAccountName", "N/A"),
+            control_id,
+            resource.get("Type", "N/A"),
+            resource.get("Id", "N/A"),
+            resource.get("Region", finding.get("Region", "N/A")),
+            severity.get("Label", "N/A"),
+            finding.get("Title", "N/A"),
+            finding.get("Description", "N/A"),
+            finding.get("FirstObservedAt", "N/A"),
+            finding.get("LastObservedAt", "N/A"),
+            remediation_text,
+            remediation_url,
+            finding.get("Id", "N/A")
+           ]
+'''
     return {
         "Account ID": finding.get("AwsAccountId", "N/A"),
         "Account Name": finding.get("AwsAccountName", "N/A"), # Note: AwsAccountName might not always be populated
@@ -236,11 +251,12 @@ def extract_finding_details(finding):
         "Remediation URL": remediation_url,
         "Finding ID": finding.get("Id", "N/A") # Often useful for tracking
     }
+'''
 
 # --- Main Execution ---
 
 if __name__ == "__main__":
-    clearSheet(sheet_name, spreadsheet_id)
+    
     if not service:
         logging.error("Google Sheets service setup failed. Exiting.")
     elif not spreadsheet_id or not sheet_name:
@@ -250,6 +266,14 @@ if __name__ == "__main__":
         findings = get_security_hub_findings()
         logging.info(f"Retrieved {len(findings)} findings.")
 
+        headers = ["Account ID","Account Name", "Control ID", "Resource Type", "Resource ID", "Region", "Severity", "Title",
+                 "Description", "First Observed", "Last Observed", "Remediation", "Remediation URL", "Finding ID"]
+        findings.insert(0, headers)
+        
+        clearSheet(sheet_name, spreadsheet_id)
+
+        writeToSheet(sheet_name, findings, spreadsheet_id)
+        
         for finding in findings:
             print(finding)
 
