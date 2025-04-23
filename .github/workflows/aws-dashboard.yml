@@ -19,7 +19,7 @@ jobs:
       - name: Install dependencies
         run: pip install boto3 google-api-python-client google-auth-httplib2 google-auth-oauthlib # Removed python-dotenv
 
-      - name: Run the AWS Dashboard Data Update Script
+      - name: Run the AWS Dashboard Scraper
         env:
           # Pass AWS credentials directly (as you currently do)
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_DASHBOARD_ACCESS_KEY_ID }}
@@ -33,4 +33,4 @@ jobs:
 
         # Run the specific python script within its directory
         # Use 'python -u' for unbuffered output, often helpful in Actions logs
-        run: python -u "${{ github.workspace }}/aws_dashboard/update_dashboard.py" #<-- Specify your script name
+        run: python -u "${{ github.workspace }}/aws_dashboard/aws_dashboard_scraper.py" #<-- Specify your script name
