@@ -2,7 +2,7 @@
     This script retrieves specific failed, active findings from AWS Security Hub 
     (CIS 3.0.0 and NIST 800-53 v5 standards) in a specified region, 
     extracts relevant details, and writes the data to a specified Google Sheet.
-    NOTE: Specify the target AWS region below where the securityhub client is declared (line ~56)
+    NOTE: Specify the target AWS region below where the securityhub client is declared (line ~141)
     Author: Bradley Chavis & Woodrow Davidson, Integration by AI Assistant
 """
 import boto3
@@ -155,8 +155,7 @@ def get_security_hub_findings():
         "ComplianceStatus": [{"Value": "FAILED", "Comparison": "EQUALS"}],
         "WorkflowStatus": [{"Value": "NEW", "Comparison": "EQUALS"}, {"Value": "IN_PROGRESS", "Comparison": "EQUALS"}],
         "RecordState": [{"Value": "ACTIVE", "Comparison": "EQUALS"}],
-    }
-    
+    }    
     logging.info(f"Retrieving findings with filters: {filters}")
     
     try:
@@ -178,26 +177,6 @@ def get_security_hub_findings():
         raise e
         
     return findings_list
-'''
-def detectDup(findings_list, currentFinding):
-    for finding in findings_list:
-        if  currentFinding[0] == finding[0] and 
-            currentFinding[2] == finding[2] and 
-            currentFinding[4] == finding[4] and
-            currentFinding[5] == finding[5] and
-            currentFinding[9] == finding[9] and
-            currentFinding[10] == finding[10]:
-            return True
-    return False
-
-for finding in page['FINDINGS']:
-    result = func() # Call your function to get the finding details
-
-    # Check if the result is NOT a duplicate before appending
-    if not detectDup(findings_list, result):
-        findings_list.append(result)
-'''
-
 
 def extract_finding_details(finding):
     """Extract relevant details from a Security Hub finding."""
@@ -253,5 +232,4 @@ if __name__ == "__main__":
         findings.insert(0, headers)
         
         clearSheet(sheet_name, spreadsheet_id)
-
         writeToSheet(sheet_name, findings, spreadsheet_id)
