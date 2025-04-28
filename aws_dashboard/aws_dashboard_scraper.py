@@ -140,6 +140,7 @@ def get_security_hub_findings():
     # *** REPLACE "us-west-2" with your target AWS region if different ***
     client = boto3.client("securityhub", region_name="us-west-2") 
     findings_list = []
+    existing_keys = set()
     
     # Specify the standards you are interested in
     standard_ids = [
@@ -162,8 +163,10 @@ def get_security_hub_findings():
         for page in paginator.paginate(Filters=filters, PaginationConfig={"PageSize": 100}):
             for finding in page["Findings"]:
                 result = extract_finding_details(finding)
-                findings_list.append(result)
-
+                key = (result[0], result[2], result[4], result[5], result[9], result[10])
+                if key not in existing_keys:
+                    findings_list.append(result)
+                    existing_keys.add(key)
             
     except client.exceptions.InvalidAccessException as e:
          logging.error(f"Security Hub Error: Invalid Access - Check permissions or if Security Hub is enabled in region. Details: {e}")
