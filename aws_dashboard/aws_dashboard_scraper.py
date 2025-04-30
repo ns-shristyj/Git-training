@@ -2,8 +2,9 @@
     This script retrieves specific failed, active findings from AWS Security Hub 
     (CIS 3.0.0 and NIST 800-53 v5 standards) in a specified region, 
     extracts relevant details, and writes the data to a specified Google Sheet.
-    NOTE: Specify the target AWS region below where the securityhub client is declared (line ~141)
-    Author: Bradley Chavis & Woodrow Davidson, Integration by AI Assistant
+    NOTE: Specify the target AWS region below where the securityhub client is declared (line ~142)
+          Specify target Google Sheet ID and name (lines ~24 and ~26)
+    Author: Bradley Chavis & Woodrow Davidson, Gemini AI integration
 """
 import boto3
 import logging
@@ -44,7 +45,7 @@ except Exception as e:
 
 # --- Google Sheets Helper Functions ---
 def clearSheet(sheetName, spreadsheetID):
-    """ Clears all data from the specified sheet (A:Z range). """
+    # Clears all data from the specified sheet (A:Z range).
     if not service:
         logging.error("Google Sheets service is not available. Cannot clear sheet.")
         return None
@@ -63,7 +64,7 @@ def clearSheet(sheetName, spreadsheetID):
         return None
 
 def get_column_letter(column_number):
-    """ Convert a 1-based column number to a letter (e.g., 1 -> 'A', 27 -> 'AA'). """
+    # Convert a 1-based column number to a letter (e.g., 1 -> 'A', 27 -> 'AA').
     result = ''
     while column_number > 0:
         column_number, remainder = divmod(column_number - 1, 26)
@@ -71,7 +72,7 @@ def get_column_letter(column_number):
     return result
 
 def get_column_from_letter(letter, offset):
-     """ Get the column letter by adding the offset to the given letter's number. """
+     # Get the column letter by adding the offset to the given letter's number.
      # Ensure letter is valid before proceeding
      if not letter or not letter.isalpha():
          logging.error(f"Invalid start column letter provided: '{letter}'")
@@ -91,7 +92,7 @@ def get_column_from_letter(letter, offset):
          return None
 
 def writeToSheet(sheetName, data, spreadsheetID, startRow=1, startColumn="A"):
-    """ Write the data (list of lists) to the specified sheet. """
+    # Write the data (list of lists) to the specified sheet.
     if not service:
         logging.error("Google Sheets service is not available. Cannot write to sheet.")
         return None
@@ -136,7 +137,7 @@ def writeToSheet(sheetName, data, spreadsheetID, startRow=1, startColumn="A"):
 
 # --- AWS Security Hub Functions ---
 def get_security_hub_findings():
-    """Retrieves current, active findings from Security Hub for specific standards."""
+    # Retrieves current, active findings from Security Hub for specific standards.
     # *** REPLACE "us-west-2" with your target AWS region if different ***
     client = boto3.client("securityhub", region_name="us-west-2") 
     findings_list = []
@@ -147,8 +148,7 @@ def get_security_hub_findings():
         "standards/cis-aws-foundations-benchmark/v/3.0.0",
         "standards/nist-800-53/v/5.0.0"
     ]
-    paginator = client.get_paginator("get_findings")
-    
+    paginator = client.get_paginator("get_findings")    
     # Create filters based on the Compliance.AssociatedStandards.StandardsId field
     filters = {
         "ComplianceAssociatedStandardsId": [{"Value": standard_id, "Comparison": "EQUALS"} for standard_id in standard_ids],
@@ -179,16 +179,13 @@ def get_security_hub_findings():
     return findings_list
 
 def extract_finding_details(finding):
-    """Extract relevant details from a Security Hub finding."""
-    
-    # Safely get nested values using .get() with default values
+    # Extract relevant details from a Security Hub finding.
     compliance = finding.get("Compliance", {})
     resources = finding.get("Resources", [{}]) # Handle cases where Resources might be missing/empty
     resource = resources[0] if resources else {}
     severity = finding.get("Severity", {})
     remediation = finding.get("Remediation", {})
     recommendation = remediation.get("Recommendation", {})
-
     # Extract Compliance related fields, including SecurityControlId if available
     control_id = compliance.get("SecurityControlId", "N/A")
     # Sometimes the standard/control is nested differently, check ProductFields as a fallback
@@ -226,10 +223,10 @@ if __name__ == "__main__":
         logging.info("Starting Security Hub findings retrieval...")
         findings = get_security_hub_findings()
         logging.info(f"Retrieved {len(findings)} findings.")
-
+        # Setup headers in target Google Sheet
         headers = ["Account ID","Account Name", "Control ID", "Resource Type", "Resource ID", "Region", "Severity", "Title",
                  "Description", "First Observed", "Last Observed", "Remediation", "Remediation URL", "Finding ID"]
         findings.insert(0, headers)
-        
+        # Clear any data in target Google Sheet and insert current findings
         clearSheet(sheet_name, spreadsheet_id)
         writeToSheet(sheet_name, findings, spreadsheet_id)
