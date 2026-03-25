@@ -21,5 +21,5 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         TARGET_USER: ${{ github.event.inputs.targetUser }}
       run: |
-        cd "$ {{ github.workspace }}/Public-Email-Check/"
+        cd "${{ github.workspace }}/SecEng Scripts & Projects/Public-Email-Check/"
         make run
