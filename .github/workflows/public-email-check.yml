@@ -1,0 +1,25 @@
+name: Public-Email-Check
+on:
+    workflow_dispatch:
+      inputs:
+        targetUser:
+          description: 'GitHub username to check'
+          required: true
+          type: string
+jobs:
+  build:
+    runs-on: arc-default-ub22-xs-set
+    steps:
+    - name: checkout
+      uses: actions/checkout@v4.0.0
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v4.0.0
+      with:
+        python-version: 3.12
+    - name: Run Script
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        TARGET_USER: ${{ github.event.inputs.targetUser }}
+      run: |
+        cd "$ {{ github.workspace }}/Public-Email-Check/"
+        make run
