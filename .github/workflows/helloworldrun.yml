@@ -2,6 +2,12 @@ name: Run Hello World
 
 on:
   push:
+    branches:
+      - develop
+  pull_request:
+    branches:
+      - develop
+  workflow_dispatch: # <--- THIS LINE adds the manual "Run workflow" button
     # Runs only when code is pushed or merged directly into the develop branch
     branches:
       - develop
