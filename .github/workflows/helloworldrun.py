@@ -2,13 +2,12 @@ name: Run Hello World
 
 on:
   push:
-    # Runs only when code is pushed or merged directly into the develop branch
     branches:
       - develop
   pull_request:
-    # Runs only when a Pull Request is opened against the develop branch
     branches:
       - develop
+  workflow_dispatch: # <--- THIS LINE adds the manual "Run workflow" button
 
 jobs:
   execute-python:
