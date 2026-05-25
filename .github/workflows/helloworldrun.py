@@ -2,27 +2,26 @@ name: Run Hello World
 
 on:
   push:
+    # Runs only when code is pushed or merged directly into the develop branch
     branches:
-      - main
+      - develop
   pull_request:
+    # Runs only when a Pull Request is opened against the develop branch
     branches:
-      - main
+      - develop
 
 jobs:
   execute-python:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Check out the repository code
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Step 2: Set up Python on the runner
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
 
-      # Step 3: Execute your specific script
       - name: Run Hello World Script
         run: python helloworld.py
