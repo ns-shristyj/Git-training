@@ -1,0 +1,25 @@
+name: Upload & Run Python Code
+
+on:
+  workflow_dispatch:
+    
+permissions:
+  contents: write
+
+jobs:
+  upload-and-run:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Run Python Code
+        run: |
+          cd "{{ github.workspace }}/NIC-SecEng-Task/"
+          python code.py
