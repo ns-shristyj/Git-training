@@ -11,7 +11,7 @@ on:
 
 jobs:
   execute-python:
-    runs-on: runs-on: [self-hosted, linux, x64, rg-default, sz-XS, gh, cheap]
+    runs-on: [self-hosted, linux, x64, rg-default, sz-XS, gh, cheap]
 
     steps:
       - name: Checkout code
