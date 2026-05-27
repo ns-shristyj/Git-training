@@ -23,5 +23,5 @@ jobs:
 
       - name: Run Hello World Script
         run: 
-        cd "NIC-SecEng-Task/Shris-test/"
-        python helloworld.py
+          cd "NIC-SecEng-Task/Shris-test/"
+          python helloworld.py
