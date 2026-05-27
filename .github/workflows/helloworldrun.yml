@@ -22,6 +22,6 @@ jobs:
           python-version: '3.10'
 
       - name: Run Hello World Script
-        run: 
+        run: |
           cd "NIC-SecEng-Task/Shris-test/"
           python helloworld.py
