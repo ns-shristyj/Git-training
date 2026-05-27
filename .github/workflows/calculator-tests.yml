@@ -1,0 +1,24 @@
+name: Run Calculator Unit Tests
+
+on:
+  push:
+    branches: [ main, ns-apanikar/task/unittest-calci-script ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: arc-default-basic-sturdy-xs-set
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.x'
+    - name: Run Unit Tests
+      run: |
+            cd "NIC-SecEng-Task/Calculator/"
+            python -m unittest test_calculator.py
