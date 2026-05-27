@@ -11,8 +11,7 @@ on:
 
 jobs:
   execute-python:
-    runs-on: ubuntu-latest
-
+    runs-on: arc-default-basic-cheap-s-set
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
