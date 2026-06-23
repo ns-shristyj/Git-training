@@ -1,17 +1,15 @@
+| spec_id | SPEC-ABC-0001 |
+| capability | unit-test-generator-agent |
+| status | Draft |
+| owner | Aryan Panikar |
+| reviewers | Peer |
+| approver | Rehman |
+| prd | - |
+| jira_epic | - |
+| version | 0.0.1 |
+| created | 2026-06-23 |
+| last_updated | 2026-06-23 |
 
----
-spec_id: SPEC-ABC-0001
-capability: unit-test-generator-agent
-status: Draft
-owner: Aryan Panikar
-reviewers: Peer
-approver: Rehman
-prd: -
-jira_epic: GIS-EPIC-TESTGEN
-version: 0.0.1
-created: 2026-06-23
-last_updated: 2026-06-23
----
 
 # spec.md --- Unit Test Generation Agent
 
