@@ -1,21 +1,18 @@
----
+| Key | Value |
+| :--- | :--- |
+| **spec_id** | SPEC-ABC-0002 |
+| **capability** | unit-test-refinement-agent |
+| **status** | Draft |
+| **owner** | Aryan Panikar |
+| **reviewers** | Peer |
+| **approver** | Rehman |
+| **prd** | - |
+| **jira_epic** | - |
+| **version** | 0.0.1 |
+| **created** | 2026-06-23 |
+| **last_updated** | 2026-06-23 |
 
-```markdown
----
-spec_id: SPEC-GHA-0025
-capability: test-refinement-agent
-status: Draft
-owner: Aryan Panikar
-reviewers: [Peer, AppSec-Team]
-approver: Rehman
-prd: https://confluence.netskope.example/display/GIS/test-refinement-agent-prd
-jira_epic: GIS-EPIC-SECTESTGEN
-version: 1.0.0
-created: 2026-06-23
-last_updated: 2026-06-23
----
-
-# spec.md — Test Refinement Agent
+# spec.md — Unit Test Refinement Agent
 
 > This is the **executable contract**. The GitHub Actions review hook, pull request 
 > comment parsing engine, and dynamic refinement iteration logic trace back 
@@ -24,7 +21,7 @@ last_updated: 2026-06-23
 
 ## 1. Summary
 
-The Test Refinement Agent is an event-driven automation layer that optimizes and corrects generated unit tests based on human reviewer feedback. When a reviewer submits a "Request Changes" review on a pull request, a dedicated GitHub Actions workflow intercepts the submission event. The agent ingests the reviewer's comments, lines of code referenced, and the existing failing test scripts.
+The Unit Test Refinement Agent is an event-driven automation layer that optimizes and corrects generated unit tests based on human reviewer feedback. When a reviewer submits a "Request Changes" review on a pull request, a dedicated GitHub Actions workflow intercepts the submission event. The agent ingests the reviewer's comments, lines of code referenced, and the existing failing test scripts.
 
 The agent passes this coupled context securely to AWS Bedrock (Claude 3.5 Sonnet) to perform localized, iterative modifications to the test suite. The updated test files are then pushed natively back into the developer's source branch, passing control back to the independent Test Execution Workflow to achieve a fast, closed-loop validation path.
 
@@ -41,7 +38,7 @@ The agent passes this coupled context securely to AWS Bedrock (Claude 3.5 Sonnet
 - Modifying, refactoring, or editing the developer's underlying application feature code.
 - Processing comments or reviews that do not explicitly target test files (`test_*.py`, `*Test.java`, etc.).
 - Executing or compiling the modified test files natively within the refinement workflow container runner.
-- Generating test baselines from scratch (delegated entirely to `SPEC-GHA-0024`).
+- Generating test baselines from scratch (delegated entirely to `SPEC-ABC-0001`).
 
 ## 3. Inputs
 
@@ -79,17 +76,17 @@ The agent's assumed AWS IAM role and repository access criteria are tightly sand
 A refinement loop executes according to the following deterministic sequence (mapping directly to Phase V of the pipeline architecture):
 
 ```text
-[PR Changes Requested] ──► [5.1. Gather Reviewer Comments] ──► [5.2. Invoke Bedrock Agent] ──► [5.3. Refine Tests] ──► [5.4. Push to Branch]
+[PR Changes Requested] ──► [Gather Reviewer Comments] ──► [Invoke Bedrock Agent] ──► [Refine Tests] ──► [Push to Feature Branch]
 
 ```
 
 1. **Trigger Evaluation:** A reviewer submits a review. The workflow validates that the state equals `changes_requested` and confirms a human actor initiated it, bypassing execution if conditions fail.
-2. **Comment Ingestion (Step 5.1):** The workflow engine extracts the markdown string body of the review along with all single-line inline code review notes submitted during the lifecycle window.
+2. **Comment Ingestion:** The workflow engine extracts the markdown string body of the review along with all single-line inline code review notes submitted during the lifecycle window.
 3. **AWS OIDC Authentication:** The container runner initiates a cryptographic handshake with AWS Security Token Service (STS) using OpenID Connect, securely logging in without passwords.
-4. **Model Context Synthesis (Step 5.2):** The script packages the existing test code, the original application code delta, and the compiled reviewer critique notes into an operational payload context.
-5. **Targeted Test Refinement (Step 5.3):** The package is dispatched to Claude 3.5 Sonnet via `bedrock:InvokeModel`. The model interprets instructions to address gaps, strip extra assertions, or correct logical errors as pointed out by the human reviewer.
-6. **Workspace Sync & Push (Step 5.4):** The corrected test suites are validated for basic syntax structure, saved into the native workspace tree, committed under the signature `github-actions[bot]`, and pushed upstream to the feature branch.
-7. **Handoff to Independent Runner:** The workflow terminates successfully. The upstream push triggers the standalone `III. TEST EXECUTION WORKFLOW` via a `synchronize` hook event to re-evaluate the suite against the regression gate.
+4. **Model Context Synthesis:** The script packages the existing test code, the original application code delta, and the compiled reviewer critique notes into an operational payload context.
+5. **Targeted Test Refinement:** The package is dispatched to Claude 3.5 Sonnet via `bedrock:InvokeModel`. The model interprets instructions to address gaps, strip extra assertions, or correct logical errors as pointed out by the human reviewer.
+6. **Workspace Sync & Push:** The corrected test suites are validated for basic syntax structure, saved into the native workspace tree, committed under the signature `github-actions[bot]`, and pushed upstream to the feature branch.
+7. **Handoff to Independent Runner:** The workflow terminates successfully. The upstream push triggers the standalone `TEST EXECUTION WORKFLOW` via a `synchronize` hook event to re-evaluate the suite against the regression gate.
 
 ## 7. Outputs / Findings
 
@@ -136,10 +133,6 @@ The agent delivers optimized, structurally stable unit test files written back d
 | AC | Verification Mechanism | Validation Context | Gating |
 | --- | --- | --- | --- |
 | **AC-1** | Feedback Iteration Check | Confirm reviewer markdown remarks convert into precise test code updates. | No |
-| **AC-2** | State Conditional Filter | Ensure approval and generic comment payloads bypass the AI execution loop entirely. | **Yes** |
-| **AC-3** | Cryptographic Token Check | Assert that cloud connection loops fail without verified OIDC handshakes. | **Yes** |
+| **AC-2** | State Conditional Filter | Ensure approval and generic comment payloads bypass the AI execution loop entirely. | No |
+| **AC-3** | Cryptographic Token Check | Assert that cloud connection loops fail without verified OIDC handshakes. | No |
 | **AC-4** | Execution Handoff Sync | Verify that branch updates trigger the standalone Test Execution Workflow. | No |
-
-```
-
-```
