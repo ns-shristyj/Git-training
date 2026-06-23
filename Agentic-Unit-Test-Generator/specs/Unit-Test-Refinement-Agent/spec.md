@@ -130,7 +130,7 @@ The agent delivers optimized, structurally stable unit test files written back d
 
 ## 10. Eval Mapping Table
 
-| AC | Verification Mechanism | Validation Context | Gating |
+| AC  | Verification Mechanism | Validation Context | Gating |
 | :--- | :--- | :--- | :--- |
 | **AC-1** | Feedback Iteration Check | Confirm reviewer markdown remarks convert into precise test code updates. | No |
 | **AC-2** | State Conditional Filter | Ensure approval and generic comment payloads bypass the AI execution loop entirely. | No |
