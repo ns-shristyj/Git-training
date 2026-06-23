@@ -13,7 +13,7 @@
 | **last_updated** | 2026-06-23 |
 
 
-# spec.md --- Unit Test Generation Agent
+# spec.md --- Unit Test Generator Agent
 
 > This is the **executable contract**. The GitHub Actions automation loop,
 > AI prompt context engineering, and pre-merge validation gates trace back
@@ -143,6 +143,6 @@ The agent outputs concrete test code files written directly to the target featur
 | AC | Verification Mechanism | Validation Context | Gating |
 | :--- | :--- | :--- | :--- |
 | **AC-1** | Language Alignment Check | Validate that test payloads perfectly match the target source file extensions. | No |
-| **AC-2** | Actor Conditional Check | Verify bot actors fail open and exit the pipeline immediately. | **Yes** |
-| **AC-3** | OIDC Token Assertions | Verify cloud role assumption rejects standard static credentials. | **Yes** |
+| **AC-2** | Actor Conditional Check | Verify bot actors fail open and exit the pipeline immediately. | No |
+| **AC-3** | OIDC Token Assertions | Verify cloud role assumption rejects standard static credentials. | No |
 | **AC-4** | Inter-Workflow Handoff | Ensure successful generation pipeline completion initiates the execution gate. | No |
