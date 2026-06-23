@@ -1,3 +1,4 @@
+| :--- | :--- |
 | spec_id | SPEC-ABC-0001 |
 | capability | unit-test-generator-agent |
 | status | Draft |
