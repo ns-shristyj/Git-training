@@ -17,7 +17,7 @@
 
 > This is the **executable contract**. The GitHub Actions automation loop,
 > AI prompt context engineering, and pre-merge validation gates trace back
-> directly to this file. Posture safety checks (AC-6, AC-7) are **gating in CI**:
+> directly to this file. Posture safety checks (AC-2, AC-3) are **gating in CI**:
 > any breakdown or infinite loop regression fails the build.
 
 ## 1. Summary
