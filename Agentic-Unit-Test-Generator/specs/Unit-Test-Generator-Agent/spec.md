@@ -12,7 +12,7 @@
 | **created** | 2026-06-24 |
 | **last_updated** | 2026-06-24 |
 
-# spec.md — Unit Test Generation Agent
+# spec.md — Unit Test Generator Agent
 
 > This is the **executable contract**. Code, evals, and PR review trace back to
 > this file. Acceptance criteria map 1:1 to eval cases under
