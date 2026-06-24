@@ -9,8 +9,8 @@
 | **prd** | - |
 | **jira_epic** | - |
 | **version** | 0.0.1 |
-| **created** | 2026-06-23 |
-| **last_updated** | 2026-06-23 |
+| **created** | 2026-06-24 |
+| **last_updated** | 2026-06-24 |
 
 
 # spec.md --- Unit Test Generator Agent
@@ -86,13 +86,13 @@ A run proceeds in the following deterministic sequence:
 
 1. **Trigger Evaluation:** A pull request is initialized. The workflow validates that a human developer initiated the action, bypassing execution if a bot action is detected.
 
-2. **Workspace Setup & Language Detection:** The runner fetches the codebase repository files. It scans the files changed in the pull request to identify file extensions, defining the programming language and target framework framework parameters.
+2. **Workspace Setup & Language Detection:** The runner fetches the codebase repository files. It scans the files changed in the pull request to identify file extensions, defining the programming language and target framework framework parameters via an Abstract Syntax Tree (AST) and dynamic dependency analysis. This step maps out all public functions, methods, and classes to calculate their logical branches for maximizing structural block coverage.
 
 3. **AWS OIDC Authentication:** The `aws-actions/configure-aws-credentials` block issues an ephemeral OIDC request token, authenticating the runner directly into AWS without secrets.
 
 4. **Context Synthesis & Model Call:** Changed source modules are parsed. The system packages the raw code along with an optimization prompt detailing explicit test instructions tailored to that specific framework's ecosystem, dispatching the collection to Claude 3.5 Sonnet via `bedrock:InvokeModel`.
 
-5. **Payload Parsing & File Generation:** The response is handled cleanly, extracting native test scripts and placing them in the language-appropriate test directory mirroring the source framework structure.
+5. **Payload Parsing & File Generation:** The response is handled cleanly through a parsing layer that isolates structural code blocks from conversational AI pleasantries using regex constraints. Native test scripts are extracted and structured to include explicit boundary value fuzzing inputs (max integer limits, empty arrays, null states), input sanitation validation strings, and deterministic mock stubs (e.g., pytest.fixture) to avoid external environment pollution. Files are mapped to the language-appropriate test directory mirroring the source framework structure.
 
 6. **Remote Repository Sync:** The runner updates local Git signatures to `github-actions[bot]`, batches the structural test files, runs `git commit`, and pushes the delta upstream to the developer's branch.
 
@@ -104,7 +104,8 @@ The agent outputs concrete test code files written directly to the target featur
 
 - **Language Alignment:** All test files must be written in the exact same programming language as the application file modified by the developer.
 - **Naming & Path Conventions:** All files must conform to the target language's native naming patterns (e.g., `tests/test_*.py` for Python, `src/test/java/*Test.java` for Java, `*.test.ts` for TypeScript).
-- **AppSec Testing Coverage:** Generated test structures must include explicit parameters verifying edge-case conditions, boundary inputs, type mismatches, and exception testing blocks native to that language's runtime.
+- **AppSec Testing Coverage:** Generated test structures must include explicit parameters verifying edge-case conditions, boundary inputs, type mismatches, and exception testing blocks native to that language's runtime. 
+- **Syntax Integrity Invariant:** Output payloads must be compiled successfully by local syntax parsers prior to workspace persistence; any corrupted formatting or hallucinated imports trigger an automatic branch push rejection.
 
 ## 8. Failure Handling
 
