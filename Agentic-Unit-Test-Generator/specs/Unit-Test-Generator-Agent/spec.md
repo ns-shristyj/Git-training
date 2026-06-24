@@ -12,7 +12,7 @@
 | **created** | 2026-06-24 |
 | **last_updated** | 2026-06-24 |
 
-# spec.md — Security Unit Test Generation Agent
+# spec.md — Unit Test Generation Agent
 
 > This is the **executable contract**. Code, evals, and PR review trace back to
 > this file. Acceptance criteria map 1:1 to eval cases under
@@ -23,7 +23,7 @@
 
 ## 1. Summary
 
-The Security Unit Test Generation Agent is a GitHub Actions–native, event-driven
+The Unit Test Generation Agent is a GitHub Actions–native, event-driven
 pipeline that automatically generates security-focused unit tests for every
 human-authored Pull Request targeting the `main` branch. On PR open, the agent
 reads the diff/patch context of changed files, dynamically detects the
