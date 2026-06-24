@@ -2,7 +2,7 @@
 spec_id: SPEC-CIAM-0003
 capability: ciam-auth0-agent
 status: Draft
-owner: Ritwik Mandal
+owner: Shristy Jaiswal
 reviewers: [Peer]
 approver: Rehman
 prd: https://confluence.netskope.example/display/GIS/ciam-auth0-agent-prd  # placeholder — link to docs/confluence/ciam-auth0-agent/prd.md until Phase 0 lands

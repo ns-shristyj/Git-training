@@ -2,7 +2,7 @@
 spec_id: SPEC-CIAM-0005
 capability: ciam-response-generator
 status: Draft
-owner: Ritwik Mandal
+owner: Shristy Jaiswal
 reviewers: [Peer]
 approver: Rehman
 prd: https://confluence.netskope.example/display/GIS/ciam-response-generator-prd  # placeholder — link to docs/confluence/ciam-response-generator/prd.md until Phase 0 lands

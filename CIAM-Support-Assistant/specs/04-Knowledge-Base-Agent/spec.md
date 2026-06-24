@@ -3,7 +3,7 @@ spec_id: SPEC-CIAM-0004
 capability: ciam-knowledge-base-agent
 status: Draft
 owner: Ritwik Mandal
-reviewers: [Peer]
+reviewers: Shristy Jaiswal
 approver: Rehman
 prd: https://confluence.netskope.example/display/GIS/ciam-knowledge-base-agent-prd  # placeholder — link to docs/confluence/ciam-knowledge-base-agent/prd.md until Phase 0 lands
 jira_epic: GIS-EPIC-CIAM  # placeholder — see docs/jira/ciam-knowledge-base-agent-epic.md until Phase 0 lands

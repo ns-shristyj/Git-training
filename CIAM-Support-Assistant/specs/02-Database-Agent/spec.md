@@ -2,7 +2,7 @@
 spec_id: SPEC-CIAM-0002
 capability: ciam-database-agent
 status: Draft
-owner: Ritwik Mandal
+owner: Shristy Jaiswal
 reviewers: [Peer]
 approver: Rehman
 prd: https://confluence.netskope.example/display/GIS/ciam-database-agent-prd  # placeholder — link to docs/confluence/ciam-database-agent/prd.md until Phase 0 lands

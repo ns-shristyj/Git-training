@@ -2,7 +2,7 @@
 spec_id: SPEC-CIAM-0001
 capability: ciam-intent-classifier
 status: Draft
-owner: Ritwik Mandal
+owner: Shristy Jaiswal
 reviewers: [Peer]
 approver: Rehman
 prd: https://confluence.netskope.example/display/GIS/ciam-intent-classifier-prd  # placeholder — link to docs/confluence/ciam-intent-classifier/prd.md until Phase 0 lands
