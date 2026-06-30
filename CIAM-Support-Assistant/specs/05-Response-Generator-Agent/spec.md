@@ -4,12 +4,12 @@ capability: ciam-response-generator
 status: Draft
 owner: Shristy Jaiswal
 reviewers: [Peer]
-approver: Rehman
+approver: Ritwik Mandal
 prd: https://confluence.netskope.example/display/GIS/ciam-response-generator-prd  # placeholder — link to docs/confluence/ciam-response-generator/prd.md until Phase 0 lands
 jira_epic: GIS-EPIC-CIAM  # placeholder — see docs/jira/ciam-response-generator-epic.md until Phase 0 lands
-version: 0.1.0
+version: 0.2.0
 created: 2026-06-23
-last_updated: 2026-06-23
+last_updated: 2026-06-30
 ---
 
 # spec.md — CIAM Response Generator (Agent 5)
@@ -17,7 +17,7 @@ last_updated: 2026-06-23
 > This is the **executable contract**. Code, evals, and PR review trace back to
 > this file. Acceptance criteria map 1:1 to eval cases under
 > `evals/ciam-response-generator/cases/`. Posture invariants (AC-10, AC-11,
-> AC-12) are **gating in CI**: a regression fails the PR.
+> AC-12, AC-15) are **gating in CI**: a regression fails the PR.
 
 ## 1. Summary
 
@@ -71,6 +71,14 @@ the **only agent in the pipeline authorised to write to Slack and Jira**.
 - Enforce **synthesis rules** (§6.3) to prevent hallucination: never add
   information not present in sub-agent payloads, never guess null values,
   always attribute each fact to its source.
+- Guarantee that internal identifiers, credentials, and infrastructure
+  details — both upstream `user_id` values (Auth0's and the NetskopeID
+  table's), `client_id`/`client_secret`/`access_token`, the Auth0 tenant
+  domain, and AWS resource identifiers — **never** appear in any output
+  delivered to the L1 engineer (Slack message or Jira note), per the
+  normative field list in §6.5. This is enforced at the schema level via
+  explicit per-source field allow-lists — not merely by prompt instruction —
+  and verified by a dedicated gating test (AC-15).
 - Hold the Phase 1 **output-only posture invariant**: zero reads from Auth0,
   DynamoDB, Salesforce, Bedrock KB, or any upstream data source; write
   permissions scoped exclusively to Slack (`chat:write`), Jira (comment +
@@ -294,6 +302,14 @@ An invocation proceeds in the following deterministic steps:
    (schema in §7.2) from the `SynthesisResult`. The § RAW DATA section is
    assembled deterministically from sub-agent payload fields — the model does
    not generate this section; the code does, to prevent hallucination.
+   `RawDataSection.auth0_data` and `RawDataSection.dynamodb_data` are each
+   built by copying **only** the fields explicitly enumerated in their
+   respective `RawAuth0Data` / `RawDynamoDbData` allow-lists (§7.1) — the
+   assembly code MUST NOT serialize the full `Auth0UserRecord` or
+   `AccountRecord` object, or any other unfiltered upstream structure, into
+   this section, since both contain a `user_id` field (two distinct
+   internal identifiers, one from Auth0 and one from the NetskopeID table)
+   that would otherwise leak through by accident. See §6.3 rule 7 and AC-15.
 
 7. **Deliver output.** Based on `source` and `source_metadata`:
    - `source == "slack"` → call Tool 1 (`post_slack_reply`). If
@@ -358,9 +374,20 @@ them is rejected and the invocation returns `error: "synthesis_rule_violation"`.
 6. **KB references are supporting evidence only.** Past tickets and Confluence
    docs from `knowledge_base_results` are cited as references, not as the
    primary basis for the diagnosis.
-7. **No credential exposure.** API tokens, M2M secrets, internal system URLs,
-   and `user_id` values from Auth0 are **never** included in any output
-   section visible to the L1 engineer.
+7. **No credential or internal-identifier exposure.** The full list of fields
+   that must never appear in L1-visible output, and the fields that should
+   appear instead, is normative and defined in §6.5 (Output Sanitization
+   Rules) — not merely by prompt instruction, but enforced at the schema
+   level via explicit allow-listed structures. See AC-15 for the
+   corresponding gating test.
+
+   **This rule applies to `response_body` only.** The audit log
+   (`ResponsePayload` written to S3/CloudWatch in §6 step 8) is an internal
+   record, not L1-visible output, and MAY retain the full upstream payloads
+   — including both `user_id` values, `client_id`, the Auth0 tenant domain,
+   and other internal identifiers — for traceability and incident
+   investigation. The retention and access-control treatment of that PII is
+   governed separately by OQ-4, not by this rule.
 
 ### 6.4 Root Cause Determination Logic
 
@@ -375,11 +402,87 @@ system prompt:
 | 3 | `auth0_payload.user_found == false` | User not provisioned in Auth0. |
 | 4 | `account_payload.account_found == false` | User not in DynamoDB / Salesforce. |
 | 5 | `kb_payload.birthright_evaluation.missing_keywords` non-empty AND `auth0_payload.sync_stale == true` | Birthright sync stale; missing keywords not yet populated. |
-| 6 | `kb_payload.birthright_evaluation.missing_keywords` non-empty AND `account_payload.recent_changes` contains `account_status` change | Account status recently changed; birthright not yet recalculated. |
-| 7 | `kb_payload.birthright_evaluation.missing_keywords` non-empty AND sync is current | Birthright misconfigured; add keywords to entitlements. |
-| 8 | `kb_payload.birthright_evaluation.extra_keywords` non-empty | Over-provisioning; security review required. |
-| 9 | `intent == "SSO_ERROR"` | Auth0 Connection or SAML federation issue. |
-| 10 | None of the above | Indeterminate; escalate with full context. |
+| 6 | `kb_payload.birthright_evaluation.missing_keywords` non-empty AND sync is current | Birthright misconfigured; add keywords to entitlements. |
+| 7 | `kb_payload.birthright_evaluation.extra_keywords` non-empty | Over-provisioning; security review required. |
+| 8 | `intent == "SSO_ERROR"` | Auth0 Connection or SAML federation issue. |
+| 9 | None of the above | Indeterminate; escalate with full context. |
+
+> **Note.** A prior revision included a signal referencing
+> `account_payload.recent_changes` (an account-status change-history field).
+> Agent 2's spec no longer exposes this field — there is no DynamoDB history
+> table in Phase 1 (see Agent 2 spec §1, OQ-1) — so that signal has been
+> removed from this table and the corresponding former AC-8 has been
+> retired. If Agent 2 reintroduces a change-history feature in a later
+> phase, a signal referencing it can be added back here as an additive
+> change.
+
+### 6.5 Output Sanitization Rules (normative)
+
+The L1-facing output (`response_body` — the Split Output posted to Slack
+and/or Jira) **MUST NOT** contain the following internal fields, regardless
+of whether they are present in the upstream payloads supplied to this agent.
+These fields remain available in the audit log (§6 step 8) for traceability,
+since the audit log is an internal record, not L1-visible output (see rule 7
+above):
+
+| Field | Why hidden | Where it's retained instead |
+| :--- | :--- | :--- |
+| `user_id` (Auth0's `Auth0UserRecord.user_id`) | Internal Auth0 identifier. Reveals the connection type and internal username format — a federated `user_id` (e.g. `con_aB3xY9kLm2pQ\|saml\|oscar@earlywarning.com`) additionally leaks the connection ID, the auth protocol, and the IdP mapping. | CloudWatch logs + S3 audit bucket |
+| `user_id` (NetskopeID table's `AccountRecord.user_id`) | Internal NetskopeID table identifier; a distinct value from Auth0's `user_id` but the same exposure risk. | CloudWatch logs + S3 audit bucket |
+| `client_id` | M2M application identifier — internal infrastructure detail. | CloudWatch logs only |
+| `client_secret` | M2M credential — never exposed under any circumstance. | Secrets Manager only; never logged anywhere, including the audit log |
+| `access_token` | Auth0 Management API bearer token — never exposed under any circumstance. | In-memory only for the agent that holds it (Agent 3); never logged, including in this agent's audit log |
+| Auth0 tenant domain (e.g. `nskp.auth0.com`) | Internal infrastructure detail; not needed for diagnosis. | CloudWatch logs only |
+| DynamoDB table name (`NetskopeID`) | Internal infrastructure detail. | CloudWatch logs only |
+| AWS account ID | Internal infrastructure detail. | CloudWatch logs only |
+| IAM role ARN | Internal infrastructure detail. | CloudWatch logs only |
+| Raw connection name when it is a federated connection ID (e.g. `con_aB3xY9kLm2pQ`) | Leaks the customer's specific federated connection identifier. Replaced with a friendly name — see below. | CloudWatch logs + S3 audit bucket (raw value retained there) |
+
+The L1-facing output **SHOULD** contain (non-exhaustive — see the full
+`RawAuth0Data` / `RawDynamoDbData` allow-lists in §7.1 for the complete set):
+
+| Field | Why shown |
+| :--- | :--- |
+| `email` (from `extracted_email`, §3) | L1 identifies the user by email, not by internal `user_id`. This is sufficient for L1's diagnostic needs in Phase 1. |
+| `connection` | Shown as a **friendly name**, not the raw connection string — see the mapping below. L1 needs to know the connection *category*, not its raw identifier. |
+| `birthright`, `entitlements` | Core diagnostic data. |
+| `last_sync`, `last_daily_sync`, `sync_stale`, `birthright_sync_stale` | Helps L1 understand whether sync is current or stale. |
+| `account_status`, `customer_status` | Core diagnostic data. |
+| `last_login`, `failed_logins_last_7_days`, `last_failed_login_reason` | Helps L1 see recent login activity and failures. |
+
+**Connection friendly-name mapping (normative).** Since the raw `connection`
+string is suppressed when it would be a federated connection ID, the agent
+maps it to a friendly name before inclusion in `response_body`:
+
+```python
+def get_friendly_connection_name(connection: str) -> str:
+    """
+    Convert internal Auth0 connection names to L1-friendly names.
+    Prevents leaking internal connection IDs (e.g. federated connection
+    IDs like "con_aB3xY9kLm2pQ") while still telling L1 which connection
+    *category* the user authenticates through.
+    """
+    if connection == "NetskopeID":
+        return "NetskopeID (Database)"
+    elif connection == "Netskope-Partners":
+        return "Legacy Partner (Database)"
+    elif connection == "Netskope":
+        return "Netskope Internal (Federated SSO)"
+    else:
+        # Federated connections have random IDs (e.g. "con_aB3xY9kLm2pQ").
+        # The raw ID is never exposed to L1 — only the category.
+        return "Customer Federated SSO"
+```
+
+This mirrors the connection-priority resolution already performed by Agent 3
+(`connection_priority` 1/2/3 — see Agent 3 spec §6.3): the friendly name is a
+presentation-layer transform applied on top of Agent 3's already-resolved
+`connection` and `connection_priority` fields, not a re-derivation of
+connection priority logic. `RawAuth0Data.connection` (§7.1) stores the
+**friendly name**, not the raw connection string — the raw string is never
+copied into `response_body` and remains available only in the audit log.
+
+
 
 ## 7. Outputs
 
@@ -436,10 +539,72 @@ class ResponseBody(BaseModel):
 
 
 class RawDataSection(BaseModel):
-    auth0_data:          dict[str, Any]         # verbatim fields from Auth0Payload
-    dynamodb_data:       dict[str, Any]         # verbatim fields from AccountPayload
-    birthright_evaluation: dict[str, Any]       # verbatim fields from KnowledgeBasePayload
-    data_availability:   dict[str, bool]        # {auth0, dynamodb, knowledge_base}: available?
+    auth0_data:          RawAuth0Data | None     # allow-listed fields only — see note below; null if auth0_payload errored
+    dynamodb_data:       RawDynamoDbData | None  # allow-listed fields only — see note below; null if account_payload errored
+    birthright_evaluation: dict[str, Any]        # verbatim fields from KnowledgeBasePayload
+    data_availability:   dict[str, bool]         # {auth0, dynamodb, knowledge_base}: available?
+
+
+class RawDynamoDbData(BaseModel):
+    """
+    Explicit allow-list of `AccountPayload` / `AccountRecord` fields
+    permitted in L1-visible output. `AccountRecord.user_id` (the NetskopeID
+    table's own internal identifier — a separate field from Auth0's
+    `user_id`) is deliberately excluded for the same reason as the Auth0
+    allow-list above: there is no field for it to occupy here, so it cannot
+    leak through this section. See §6.3 rule 7 and AC-15.
+    """
+    account_name:          str | None
+    account_status:        str | None
+    customer_status:        str | None
+    account_type:           str | None
+    primary_partner_type:   str | None
+    account_is_deleted:     bool
+    contact_full_name:      str | None
+    contact_title:          str | None
+    active_tenant_count:    int
+    company_name:           str | None
+    country_name:           str | None
+    job_title:              str | None
+    last_login:             datetime | None
+    last_sync:              datetime | None
+    last_daily_sync:        datetime | None
+    data_may_be_stale:      bool                # derived from AccountPayload.data_warnings
+    birthright_sync_stale:  bool                # derived from AccountPayload.data_warnings
+    multiple_accounts_found: bool               # derived from len(account_payload.accounts) > 1
+    # Deliberately NOT included: user_id (NetskopeID table identifier),
+    # email / contact_email (surfaced separately via extracted_email in
+    # MetadataSection, not duplicated here), fed_og_id, raw birthright /
+    # entitlements / permissions blobs (those are Agent 4's concern and are
+    # surfaced via birthright_evaluation, not duplicated here).
+
+
+class RawAuth0Data(BaseModel):
+    """
+    Explicit allow-list of Auth0 fields permitted in L1-visible output.
+    Deliberately excludes `user_id` (and any other internal identifier) —
+    there is no field for it to occupy, so it cannot be copied through by
+    accident even if the code that assembles this section is modified later.
+    See §6.3 rule 7 and AC-15.
+    """
+    connection:           str                    # FRIENDLY NAME, not the raw connection string — see §6.5 get_friendly_connection_name()
+    connection_priority:  int                    # from Auth0UserRecord
+    created_at:           datetime                # from Auth0UserRecord
+    last_login:           datetime | None         # from Auth0UserRecord
+    logins_count:         int                     # from Auth0UserRecord
+    birthright:           list[str]               # from Auth0UserRecord
+    entitlements:         list[str]                # from Auth0UserRecord
+    last_sync:            datetime | None          # from Auth0UserRecord
+    last_daily_sync:      datetime | None          # from Auth0UserRecord
+    sync_stale:           bool                     # from Auth0Payload (top level)
+    sync_stale_reason:    str | None               # from Auth0Payload (top level)
+    failed_logins_last_7_days: int                 # from Auth0Payload (top level)
+    last_failed_login_reason:  str | None          # from Auth0Payload (top level)
+    multiple_users_found: bool                     # derived from len(auth0_payload.users) > 1
+    # Deliberately NOT included: user_id, email (surfaced separately via
+    # extracted_email in MetadataSection, not duplicated here), raw Auth0
+    # API tokens, internal endpoint URLs, or the `selected` flag's
+    # underlying connection-resolution internals beyond what's listed above.
 
 
 class AIDiagnosisSection(BaseModel):
@@ -628,15 +793,15 @@ the PR in CI if they regress.
   is **not** called, and no synthesis or delivery of a split output is
   attempted.
 
-### AC-8 — Recent account_status change surfaced in root cause
+### AC-8 — RETIRED
 
-- **Given** `account_payload.recent_changes` containing a record with
-  `field_name: "account_status"`, `old_value: "Customer"`,
-  `new_value: "Former Customer"`, and `changed_date` within the last 30 days,
-  and `kb_payload.birthright_evaluation.missing_keywords: ["Support"]`,
-- **When** the agent runs,
-- **Then** `synthesis.root_cause_detail` contains a reference to the account
-  status change and the changed date, attributed to the DynamoDB source.
+This AC previously tested `account_payload.recent_changes` surfacing in root
+cause. Agent 2 no longer exposes this field (no DynamoDB history table in
+Phase 1 — see §6.4 note and Agent 2 spec §1, OQ-1). Retired rather than
+renumbered, so existing references to AC-9 through AC-15 and their eval case
+files remain stable. If Agent 2 reintroduces account-change history in a
+later phase, a new AC can be added at the end of this section rather than
+reusing this number.
 
 ### AC-9 — Synthesis rule violation rejected; no partial output delivered
 
@@ -684,11 +849,41 @@ the PR in CI if they regress.
 ### AC-14 — § RAW DATA section is code-assembled, not model-generated
 
 - **Given** any successful invocation,
-- **When** the `raw_data_section` fields are compared against the verbatim
-  field values in the upstream payloads,
-- **Then** every value in `raw_data_section` matches its upstream source field
-  exactly (byte-for-byte for strings and numbers) with no model-introduced
-  rewording or reformatting.
+- **When** the `raw_data_section` fields are compared against the
+  corresponding upstream payload fields permitted by the `RawAuth0Data` /
+  `dynamodb_data` / `birthright_evaluation` allow-lists (§7.1),
+- **Then** every included value matches its upstream source field exactly
+  (byte-for-byte for strings and numbers) with no model-introduced rewording
+  or reformatting.
+
+### AC-15 — Internal identifiers and credentials never present in L1-visible output (GATING — posture invariant)
+
+- **Given** any successful or partial invocation where the upstream payloads
+  contain: `auth0_payload.users[*].user_id` populated (e.g.
+  `"NetskopeID|oscar.armbruster"`, or a federated-style value such as
+  `"con_aB3xY9kLm2pQ|saml|oscar@earlywarning.com"`),
+  `account_payload.accounts[*].user_id` populated with a distinct NetskopeID
+  table identifier, and the agent's own runtime configuration containing a
+  `client_id`, a (mocked) `access_token`, the Auth0 tenant domain
+  (`nskp.auth0.com`), the `NetskopeID` table name, an AWS account ID, and an
+  IAM role ARN,
+- **When** the complete `response_body` (i.e. `raw_data_section`,
+  `ai_diagnosis_section`, and `metadata_section` — the full L1-visible
+  output delivered to Slack and/or Jira) is serialized and searched as text,
+- **Then** none of the following appear anywhere in `response_body`: either
+  `user_id` value, any string matching a known federated `user_id` pattern
+  (e.g. containing `"con_"` or `"|saml|"`), `client_id`, `client_secret`,
+  `access_token`, the Auth0 tenant domain string, the literal DynamoDB table
+  name, the AWS account ID, or any IAM role ARN. `RawAuth0Data` and
+  `RawDynamoDbData` (§7.1) have no field capable of holding any of these.
+  The `connection` field present in `response_body` is the **friendly
+  name** produced by `get_friendly_connection_name()` (§6.5), never the raw
+  connection string. The model-generated `ai_diagnosis_section` text is
+  checked the same way (string search against every value above in the test
+  fixture) since the model receives the full upstream payloads as inference
+  context and could otherwise restate a sensitive value verbatim. This check
+  does **not** apply to the audit log written in §6 step 8, which is
+  permitted to retain all of the above per §6.5 and OQ-4. **Gating in CI.**
 
 ## 10. Eval Mapping Table
 
@@ -701,13 +896,14 @@ the PR in CI if they regress.
 | AC-5 | `evals/ciam-response-generator/cases/ac-5.yaml` | structured-assertion | no |
 | AC-6 | `evals/ciam-response-generator/cases/ac-6.yaml` | failure-mode | no |
 | AC-7 | `evals/ciam-response-generator/cases/ac-7.yaml` | failure-mode | no |
-| AC-8 | `evals/ciam-response-generator/cases/ac-8.yaml` | structured-assertion | no |
+| AC-8 | _retired — see §9 AC-8 note_ | n/a | no |
 | AC-9 | `evals/ciam-response-generator/cases/ac-9.yaml` | synthesis-invariant | no |
 | AC-10 | `evals/ciam-response-generator/cases/ac-10.yaml` | posture-invariant | **yes** |
 | AC-11 | `evals/ciam-response-generator/cases/ac-11.yaml` | posture-invariant | **yes** |
 | AC-12 | `evals/ciam-response-generator/cases/ac-12.yaml` | schema-invariant | **yes** |
 | AC-13 | `evals/ciam-response-generator/cases/ac-13.yaml` | failure-mode | no |
 | AC-14 | `evals/ciam-response-generator/cases/ac-14.yaml` | synthesis-invariant | no |
+| AC-15 | `evals/ciam-response-generator/cases/ac-15.yaml` | posture-invariant | **yes** |
 
 ## 11. Open Questions
 

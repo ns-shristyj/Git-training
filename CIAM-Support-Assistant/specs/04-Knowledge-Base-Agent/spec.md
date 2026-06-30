@@ -4,12 +4,12 @@ capability: ciam-knowledge-base-agent
 status: Draft
 owner: Shristy Jaiswal
 reviewers: [Peer]
-approver: Rehman
+approver: Ritwik Mandal
 prd: https://confluence.netskope.example/display/GIS/ciam-knowledge-base-agent-prd  # placeholder — link to docs/confluence/ciam-knowledge-base-agent/prd.md until Phase 0 lands
 jira_epic: GIS-EPIC-CIAM  # placeholder — see docs/jira/ciam-knowledge-base-agent-epic.md until Phase 0 lands
-version: 0.1.0
+version: 0.2.0
 created: 2026-06-23
-last_updated: 2026-06-23
+last_updated: 2026-06-30
 ---
 
 # spec.md — CIAM Knowledge Base Agent (Agent 4)
@@ -36,6 +36,27 @@ Agent 5 (Response Generator). The agent **does not fetch data from Auth0 or
 DynamoDB**, **does not generate the final L1 response**, and **does not write
 to any system**. Its only external call is a read-only query to the Bedrock
 Knowledge Base.
+
+> **⚠ Provisional rule table — pending source verification.** The
+> persona-derivation and expected-birthright table in §4.1 Tool 1 is
+> **not yet confirmed against an authoritative source** and MUST be treated
+> as provisional, not normative, until one of the following is supplied and
+> reconciled against it:
+>
+> 1. The actual **Birthright & Entitlements Guide** (exported as a `.docx`
+>    so it can be attached to this spec and reviewed line-by-line), and/or
+> 2. The actual **sync function source code** that computes birthright in
+>    production — which, if supplied, is the higher-fidelity source of the
+>    two, since code defines real runtime behavior whereas documentation can
+>    drift out of date. Where the guide and the code disagree, the code wins
+>    unless a reviewer determines the code itself has a bug.
+>
+> The current table was drafted without either source and has already been
+> flagged as producing incorrect results (e.g. it previously listed a
+> `Prospect - Churned` account status that does not exist in the real data —
+> corrected in this revision, but this is exactly the class of error the
+> table is at risk of repeating elsewhere). Do not implement Tool 1 against
+> this table as-is; see OQ-6 and OQ-7.
 
 ## 2. Goals / Non-Goals
 
@@ -79,6 +100,12 @@ Knowledge Base.
   the platform team's Lambda ingestion pipeline — out of scope for this spec).
 - Evaluating Auth0 Action code correctness or diagnosing Auth0 configuration
   errors (ESCALATE_TO_L2 is the correct response in those cases).
+- **Treating the current §4.1 persona/expected-birthright table as
+  authoritative.** It is explicitly provisional pending verification against
+  the real Birthright & Entitlements Guide and, optionally, the sync function
+  source code — see §1 caveat, OQ-6, OQ-7. Implementing Tool 1 against this
+  table without that verification step is out of scope for a production
+  release.
 
 ## 3. Inputs
 
@@ -128,17 +155,27 @@ Applies the Birthright & Entitlements Guide rules to derive the expected
 birthright array for the user's persona, compares it against the actual
 birthright and entitlements arrays, and returns a complete gap analysis.
 
-**Persona derivation and expected birthright (normative):**
+**Persona derivation and expected birthright (PROVISIONAL — see the caveat in
+§1; not yet verified against the real Birthright & Entitlements Guide or sync
+function source):**
 
 | `account_status` | `active_tenant_count` | Persona | Expected birthright |
 | :--- | :---: | :--- | :--- |
 | `Customer` | any | `Customer` | `["Support", "Community", "Academy", "Notification", "Dashboard"]` |
 | `Prospect - Net New` | `>= 1` | `Prospect with Tenant` | `["Support", "Community", "Academy", "Notification", "Dashboard"]` |
 | `Prospect - Net New` | `0` | `Prospect without Tenant` | `["Community", "Academy", "Dashboard"]` |
-| `Prospect - Churned` | any | `Prospect without Tenant` | `["Community", "Academy", "Dashboard"]` |
 | `Partner` | any | `Partner` | `["Community", "Academy", "Dashboard"]` |
 | `Former Customer` | any | `Former Customer` | `["Community", "Academy", "Dashboard"]` |
 | any other / `null` | any | `UNKNOWN` | `[]` (cannot determine; escalate) |
+
+> **Note.** An earlier revision of this table included a row for
+> `account_status: "Prospect - Churned"`. This status **does not exist** in
+> the real account data and has been removed. This correction is itself
+> evidence that the rest of this table — including the four remaining named
+> statuses, the tenant-count branching, and the expected-birthright arrays —
+> has not been independently verified against the real Salesforce picklist
+> or the actual Birthright & Entitlements Guide, and should not be assumed
+> correct merely because this one error was caught. See OQ-6.
 
 **Comparison logic:**
 
@@ -677,3 +714,23 @@ the PR in CI if they regress.
   CIAM platform team whether any other block keyword patterns exist in the
   `nskp` tenant's `entitlements` data before finalising the pre-check regex
   in Tool 1.
+- **OQ-6.** Birthright & Entitlements Guide as source of truth: §4.1 Tool 1's
+  persona/expected-birthright table is currently **provisional** (see the
+  caveat in §1) and was not derived from the actual Birthright & Entitlements
+  Guide. The guide should be exported as a `.docx`, attached to this spec
+  (or linked from `docs/` per the placement-guide convention), and used to
+  re-derive the persona table line-by-line before Tool 1 is implemented. Any
+  discrepancy between the current provisional table and the real guide is
+  assumed to be a defect in the table, not the guide, until reviewed.
+- **OQ-7.** Sync function source code as a higher-fidelity reference: in
+  addition to the guide (OQ-6), the actual source code of the function that
+  computes/provisions birthright in production may be available to supply as
+  additional context. If supplied, it should be treated as the higher-
+  priority source of the two for resolving Tool 1's logic, since the guide
+  is documentation that can drift from what the code actually does, while the
+  code defines real runtime behavior directly. If the guide and the code
+  disagree on any point, default to the code's actual behavior unless a
+  reviewer identifies the code itself as buggy (in which case that
+  discrepancy is itself a finding worth raising with the platform team,
+  separate from this spec). This is an open option, not yet exercised — track
+  here so it isn't lost if the code is supplied in a future revision.

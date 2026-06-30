@@ -4,12 +4,12 @@ capability: ciam-auth0-agent
 status: Draft
 owner: Shristy Jaiswal
 reviewers: [Peer]
-approver: Rehman
+approver: Ritwik Mandal
 prd: https://confluence.netskope.example/display/GIS/ciam-auth0-agent-prd  # placeholder — link to docs/confluence/ciam-auth0-agent/prd.md until Phase 0 lands
 jira_epic: GIS-EPIC-CIAM  # placeholder — see docs/jira/ciam-auth0-agent-epic.md until Phase 0 lands
-version: 0.1.0
+version: 0.2.0
 created: 2026-06-23
-last_updated: 2026-06-23
+last_updated: 2026-06-30
 ---
 
 # spec.md — CIAM Auth0 Agent (Agent 3)
@@ -158,7 +158,7 @@ with `Authorization: Bearer <access_token>`.
 | :--- | :--- | :--- | :--- |
 | `user_id` | `user_id` | `str` | e.g. `"NetskopeID\|oscar.armbruster"` |
 | `email` | `email` | `str` | |
-| `identities[0].connection` | `connection` | `str` | e.g. `"NetskopeID"`, `"google-oauth2"` |
+| `identities[0].connection` | `connection` | `str` | e.g. `"NetskopeID"`, `"Netskope-Partners"`, or a federated connection name (often a random alphanumeric string, or `"Netskope"` for Netskope's own internal employee federation) — see §6.3 for priority ranking |
 | `created_at` | `created_at` | `datetime` (UTC) | |
 | `last_login` | `last_login` | `datetime \| None` | `null` if user has never logged in |
 | `logins_count` | `logins_count` | `int` | |
@@ -260,9 +260,9 @@ An invocation proceeds in the following deterministic steps:
    - On zero results → set `user_found: false`, all user fields `null`;
      skip step 4; proceed to step 5.
    - On multiple results → set `user_found: true`, populate `users` as a
-     typed array of all `Auth0UserRecord` objects, append
-     `"multiple_users_found"` to `auth0_warnings`; use the **first** user's
-     `user_id` for step 4.
+     typed array of all `Auth0UserRecord` objects with `connection_priority`
+     and `selected` set per §6.3, append `"multiple_users_found"` to
+     `auth0_warnings`; use the **selected** user's `user_id` for step 4.
    - On `HTTP 401` → attempt one token refresh (§4.1 step 5) and retry once.
      On repeated failure, return `error: "auth0_token_refresh_failed"`.
    - On `HTTP 429` → retry with exponential backoff, max 3 attempts. On max
@@ -305,23 +305,69 @@ After Tool 1 returns, the agent computes `sync_stale` as follows:
 The 7-day threshold is the Phase 1 default and is not configurable at
 runtime.
 
-### 6.3 Multiple Users Edge Case
+### 6.3 Connection Preference (Multi-User Resolution)
 
-Auth0 allows the same email address to exist across multiple connections (e.g.,
-`NetskopeID` and `google-oauth2`). When Tool 1 returns more than one
-`Auth0UserRecord`:
+Auth0 allows the same email address to exist across multiple connections —
+most commonly because a customer has enterprise SSO (a federated connection
+to their own IdP) in addition to a legacy or fallback account in one of
+Netskope's own database connections. When Tool 1 returns more than one
+`Auth0UserRecord` for the same email, the agent must decide which record is
+the user's **actual, currently-used** identity, since that is the record
+whose `birthright`/`entitlements`/login data is diagnostically relevant —
+picking the wrong one (e.g. a legacy fallback) risks Agent 5 diagnosing
+against stale or irrelevant data.
+
+**Connection priority order (confirmed with the CIAM platform team):**
+
+| Priority | Connection | Description |
+| :---: | :--- | :--- |
+| **1 (highest)** | **Federated** — any connection name that is *not* `NetskopeID` and *not* `Netskope-Partners`. In practice this is usually a random alphanumeric string (e.g. `con_aB3xY9kLm2pQ`) identifying the customer's own enterprise IdP (Okta, Azure AD, etc.) federated with Auth0. The connection literally named `"Netskope"` is also priority 1 — it is Netskope's own internal employee federation (Okta SAML), not a customer connection, but it is detected by the same exclusion rule below rather than as a separate case. | Enterprise SSO — the connection the user actually authenticates through day-to-day. |
+| **2** | `NetskopeID` | Primary Auth0 database connection used by the standard onboarding flow for portal users. Most users without enterprise SSO live here. |
+| **3 (lowest)** | `Netskope-Partners` | **Legacy** database connection predating the CIAM migration. This connection is being deprecated and users on it are expected to migrate to `NetskopeID`. Treat any record here as a strong signal of a stale/legacy identity rather than the user's active one. |
+
+**Detection logic is by exclusion, not by pattern-matching a federated name
+format** (there is no fixed or guessable format for federated connection
+names, so the agent does not attempt to recognize one):
+
+```python
+def get_connection_priority(connection_name: str) -> int:
+    """
+    Returns priority rank (lower = higher priority / more preferred).
+    Order: federated > NetskopeID > Netskope-Partners.
+    """
+    if connection_name == "NetskopeID":
+        return 2
+    elif connection_name == "Netskope-Partners":
+        return 3
+    else:
+        # Includes "Netskope" (internal employee federation) and any
+        # customer-specific federated connection name (typically a random
+        # alphanumeric string). Anything that is not one of the two named
+        # connections above is treated as federated — see OQ-3 for the
+        # known limitation of this exclusion-based rule.
+        return 1
+```
+
+When Tool 1 returns more than one `Auth0UserRecord`:
 
 - Set `user_found: true`.
-- Populate `users` as a typed array of all matching records (not a single
-  `Auth0UserRecord`).
+- Populate `users` as a typed array of **all** matching records — every
+  record found is returned, not just the preferred one, so L1 retains
+  visibility into legacy or fallback identities that exist for the user.
+- For each record, set `connection_priority` (1, 2, or 3, per the table
+  above) and `selected` (`true` for exactly one record — the
+  highest-priority/lowest-number match; `false` for all others). If multiple
+  records tie on priority (e.g. two distinct federated connections for the
+  same email, which would be unusual), the **first** such record returned by
+  Auth0 is marked `selected: true`.
+- Sort `users` so the `selected: true` record is **first** in the array.
 - Append `"multiple_users_found"` to `auth0_warnings`.
-- Use the **first** user's `user_id` for Tool 2.
-- Apply a **connection preference order** when selecting the primary record for
-  derived fields: `NetskopeID` > `Username-Password-Authentication` >
-  `google-oauth2` > any other. The preferred record is placed first in the
-  `users` array.
+- Use the **selected** (not merely first-returned) user's `user_id` for
+  Tool 2 (login history).
 - Do **not** attempt to merge or deduplicate the birthright or entitlements
-  arrays across records — that determination is deferred to Agent 5.
+  arrays across records — that determination is deferred to Agent 5. The
+  agent surfaces all records with their priority; it does not discard
+  non-selected records.
 
 ### 6.4 Failed Login Derivation
 
@@ -370,16 +416,18 @@ class Auth0Payload(BaseModel):
 
 
 class Auth0UserRecord(BaseModel):
-    user_id:       str
-    email:         str
-    connection:    str
-    created_at:    datetime
-    last_login:    datetime | None
-    logins_count:  int
-    birthright:    list[str]                    # [] if app_metadata absent
-    entitlements:  list[str]                    # [] if app_metadata absent
-    last_sync:     datetime | None
-    last_daily_sync: datetime | None
+    user_id:             str
+    email:               str
+    connection:          str
+    connection_priority: int                    # 1 (federated) | 2 (NetskopeID) | 3 (Netskope-Partners) — see §6.3
+    selected:            bool                    # true for exactly one record when multiple are returned — see §6.3
+    created_at:          datetime
+    last_login:          datetime | None
+    logins_count:        int
+    birthright:          list[str]               # [] if app_metadata absent
+    entitlements:        list[str]               # [] if app_metadata absent
+    last_sync:           datetime | None
+    last_daily_sync:     datetime | None
 
 
 class LoginEvent(BaseModel):
@@ -500,14 +548,31 @@ ACs marked **GATING** fail the PR in CI if they regress.
   `last_failed_login_reason: "Access Denied: missing 'Support' in birthright"`,
   and `login_history` contains all 5 events.
 
-### AC-6 — Multiple users for same email: preference order and warning set
+### AC-6 — Multiple users for same email: connection priority and selection
 
-- **Given** an Auth0 fixture returning two users for the same email — one with
-  `connection: "google-oauth2"` and one with `connection: "NetskopeID"`,
+- **Given** an Auth0 fixture returning three users for the same email — one
+  with `connection: "con_aB3xY9kLm2pQ"` (a federated SSO connection), one with
+  `connection: "NetskopeID"`, and one with `connection: "Netskope-Partners"`,
 - **When** the agent runs,
-- **Then** `user_found: true`, `users` has length 2, the `NetskopeID` user
-  appears first in the `users` array, `auth0_warnings` contains
-  `"multiple_users_found"`, and no exception is raised.
+- **Then** `user_found: true`, `users` has length 3, the federated-connection
+  user appears first in the `users` array with `connection_priority: 1` and
+  `selected: true`, the `NetskopeID` user has `connection_priority: 2` and
+  `selected: false`, the `Netskope-Partners` user has `connection_priority: 3`
+  and `selected: false`, `auth0_warnings` contains `"multiple_users_found"`,
+  and the federated user's `user_id` is used for the Tool 2 login-history
+  call.
+
+### AC-6b — Internal Netskope employee federation resolves to priority 1
+
+- **Given** an Auth0 fixture returning two users for the same email — one
+  with `connection: "Netskope"` (Netskope's internal employee federation) and
+  one with `connection: "NetskopeID"`,
+- **When** the agent runs,
+- **Then** the `"Netskope"` connection user has `connection_priority: 1` and
+  `selected: true`, and the `NetskopeID` user has `connection_priority: 2`
+  and `selected: false`, confirming the exclusion-based detection correctly
+  treats `"Netskope"` as federated rather than requiring a separate named
+  case.
 
 ### AC-7 — Tool 2 failure is non-fatal; payload still returned
 
@@ -582,6 +647,7 @@ ACs marked **GATING** fail the PR in CI if they regress.
 | AC-4 | `evals/ciam-auth0-agent/cases/ac-4.yaml` | structured-assertion | no |
 | AC-5 | `evals/ciam-auth0-agent/cases/ac-5.yaml` | structured-assertion | no |
 | AC-6 | `evals/ciam-auth0-agent/cases/ac-6.yaml` | structured-assertion | no |
+| AC-6b | `evals/ciam-auth0-agent/cases/ac-6b.yaml` | structured-assertion | no |
 | AC-7 | `evals/ciam-auth0-agent/cases/ac-7.yaml` | failure-mode | no |
 | AC-8 | `evals/ciam-auth0-agent/cases/ac-8.yaml` | posture-invariant | **yes** |
 | AC-9 | `evals/ciam-auth0-agent/cases/ac-9.yaml` | posture-invariant | **yes** |
@@ -603,11 +669,18 @@ ACs marked **GATING** fail the PR in CI if they regress.
   window, older events within the window are silently dropped. Confirm whether
   pagination (following Auth0's `next` link header) is required for Phase 1,
   or whether 50 events is an acceptable ceiling.
-- **OQ-3.** Connection preference order: §6.3 defines
-  `NetskopeID > Username-Password-Authentication > google-oauth2`. Confirm this
-  ranking is correct for the `nskp` tenant with the CIAM platform team;
-  other social or enterprise connections (SAML, ADFS) may need to be added to
-  the ranking before implementation.
+- **OQ-3.** Connection priority detection is exclusion-based (§6.3): any
+  connection name that is not exactly `NetskopeID` and not exactly
+  `Netskope-Partners` is treated as priority-1 federated, per the confirmed
+  CIAM platform guidance. This means any *unexpected* future connection (a
+  test connection, a typo'd name, a new connection type nobody has planned
+  for yet) would silently be treated as federated/highest-priority rather
+  than flagged as unrecognized. Should the agent additionally emit a
+  `routing_warning` (e.g. `"unrecognized_connection_name"`) whenever it
+  resolves priority 1 via the exclusion branch for a connection name that is
+  *not* `"Netskope"` and does not look like a typical federated connection
+  ID, so an unexpected connection type doesn't pass silently? Confirm with
+  the CIAM platform team before Phase 1 implementation.
 - **OQ-4.** Sync staleness threshold: 7 days is the Phase 1 default for
   `sync_stale`. Should this be made configurable via SSM Parameter Store (e.g.,
   `/ciam/auth0-agent/sync-stale-days`) to allow tuning without a deployment?
@@ -617,3 +690,10 @@ ACs marked **GATING** fail the PR in CI if they regress.
   pipeline. Confirm with the team that this boundary is correct for Phase 1
   and document the out-of-band entitlement modification procedure in
   `docs/adr/` before launch.
+- **OQ-6.** `Netskope-Partners` deprecation: this connection is confirmed
+  legacy and expected to be retired. No deprecation date has been
+  confirmed. When it is removed, §6.3's priority-3 tier becomes dead code
+  (no records will ever match it) rather than incorrect — but this spec
+  should be revisited at that time to confirm whether the tier should be
+  removed outright or left in place defensively. Tracked here so the removal
+  isn't missed.
