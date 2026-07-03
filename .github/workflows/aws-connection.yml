@@ -1,7 +1,10 @@
 name: AWS Connection Test
 
 on:
-  workflow_dispatch:
+    pull_request:
+      branches:
+        - develop
+    workflow_dispatch:
 
 permissions:
   id-token: write
