@@ -2,7 +2,6 @@ name: Generate Unit Test
 
 on:
   pull_request:
-    types: [opened]
     branches: [develop]
 
 permissions:
@@ -49,7 +48,7 @@ jobs:
             echo "AWS_DEFAULT_REGION: $AWS_DEFAULT_REGION"
             echo "AWS_REGION: $AWS_REGION"
             python3 -c "import boto3; print('boto3 default region:', boto3.session.Session().region_name)"
-            
+
       - name: Generate unit test via Bedrock
         if: steps.check_existing.outputs.exists == 'false'
         run: |
