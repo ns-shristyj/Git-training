@@ -44,6 +44,12 @@ jobs:
         if: steps.check_existing.outputs.exists == 'false'
         run: pip install boto3
 
+      - name: Verify AWS connection
+        run: |
+            echo "AWS_DEFAULT_REGION: $AWS_DEFAULT_REGION"
+            echo "AWS_REGION: $AWS_REGION"
+            python3 -c "import boto3; print('boto3 default region:', boto3.session.Session().region_name)"
+            
       - name: Generate unit test via Bedrock
         if: steps.check_existing.outputs.exists == 'false'
         run: |
