@@ -12,7 +12,7 @@ import sys
 
 import boto3
 
-MODEL_ID = "arn:aws:bedrock:ap-southeast-2::foundation-model/anthropic.claude-haiku-4-5-20251001-v1:0"
+MODEL_ID = "au.anthropic.claude-haiku-4-5-20251001-v1:0"
 REGION = "ap-southeast-2"
 
 SECURITY_CHECKLIST = """You are a security-focused test engineer writing pytest unit tests for one
