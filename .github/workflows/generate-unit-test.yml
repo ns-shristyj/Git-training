@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   generate-test:
-    runs-on: ns-sre-nonprod-arc-scale-set-small
+    runs-on: arc-default-basic-cheap-s-set
     steps:
       - name: Checkout PR branch
         uses: actions/checkout@v4
