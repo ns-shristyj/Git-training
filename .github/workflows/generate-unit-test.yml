@@ -49,3 +49,12 @@ jobs:
           python Agentic-Unit-Test-Generator/scripts/generate_unit_test.py \
             NIC-SecEng-Task/Calculator/calculator.py \
             Agentic-Unit-Test-Generator/tests/test_calculator.py
+            
+      - name: Commit and push generated test file
+        if: steps.check_existing.outputs.exists == 'false'
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add Agentic-Unit-Test-Generator/tests/test_calculator.py
+          git commit -m "Add generated unit test for calculator.py"
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
