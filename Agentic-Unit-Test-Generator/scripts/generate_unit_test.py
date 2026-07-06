@@ -12,7 +12,7 @@ import sys
 
 import boto3
 
-MODEL_ID = "global.anthropic.claude-haiku-4-5-20251001-v1:0"
+MODEL_ID = "amazon.nova-lite-v1:0"
 REGION = "ap-southeast-2"
 
 SECURITY_CHECKLIST = """You are a security-focused test engineer writing pytest unit tests for one
@@ -45,19 +45,26 @@ def main():
 
     module_path = source_path.replace("/", ".").removesuffix(".py")
 
-    client = boto3.client("bedrock-runtime", region_name="ap-southeast-2")
+    client = boto3.client("bedrock-runtime", region_name=REGION)
     print(f"DEBUG — using REGION: {REGION}")
     print(f"DEBUG — using MODEL_ID: {MODEL_ID}")
+
+    # Nova uses the Converse API body format (not Anthropic's format)
     body = {
-        "anthropic_version": "bedrock-2023-05-31",
-        "max_tokens": 4090,
-        "system": SECURITY_CHECKLIST,
+        "system": [
+            {"text": SECURITY_CHECKLIST}
+        ],
         "messages": [
             {
                 "role": "user",
-                "content": build_user_message(source_code, module_path)
+                "content": [
+                    {"text": build_user_message(source_code, module_path)}
+                ]
             }
         ],
+        "inferenceConfig": {
+            "max_new_tokens": 4090,
+        },
     }
 
     response = client.invoke_model(
@@ -69,12 +76,12 @@ def main():
 
     payload = json.loads(response["body"].read())
 
-    # check for truncation
-    stop_reason = payload.get("stop_reason")
+    # Nova response shape: output.message.content[0].text
+    stop_reason = payload.get("stopReason")
     if stop_reason == "max_tokens":
-        print("WARNING: output was truncated — raise max_tokens if tests are incomplete")
+        print("WARNING: output was truncated — raise max_new_tokens if tests are incomplete")
 
-    model_text = payload["content"][0]["text"]
+    model_text = payload["output"]["message"]["content"][0]["text"]
     test_code = extract_code_block(model_text)
 
     print("=" * 60)
@@ -82,14 +89,14 @@ def main():
     print("=" * 60)
     print(test_code)
     print("=" * 60)
-    
+
     with open(output_path, "w") as f:
         f.write(test_code)
 
     print(f"Wrote generated test to {output_path}")
     print(f"Stop reason: {stop_reason}")
-    print(f"Input tokens: {payload.get('usage', {}).get('input_tokens')}")
-    print(f"Output tokens: {payload.get('usage', {}).get('output_tokens')}")
+    print(f"Input tokens:  {payload.get('usage', {}).get('inputTokens')}")
+    print(f"Output tokens: {payload.get('usage', {}).get('outputTokens')}")
 
 
 if __name__ == "__main__":
