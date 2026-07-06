@@ -45,7 +45,7 @@ def main():
 
     module_path = source_path.replace("/", ".").removesuffix(".py")
 
-    client = boto3.client("bedrock-runtime", region_name=REGION)
+    client = boto3.client("bedrock-runtime", region_name="ap-southeast-2")
     print(f"DEBUG — using REGION: {REGION}")
     print(f"DEBUG — using MODEL_ID: {MODEL_ID}")
     body = {
