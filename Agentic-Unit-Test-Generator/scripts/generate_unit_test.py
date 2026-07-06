@@ -90,8 +90,8 @@ def main():
     print(test_code)
     print("=" * 60)
 
-    with open(output_path, "w") as f:
-        f.write(test_code)
+    # with open(output_path, "w") as f:
+    #     f.write(test_code)
 
     print(f"Wrote generated test to {output_path}")
     print(f"Stop reason: {stop_reason}")
