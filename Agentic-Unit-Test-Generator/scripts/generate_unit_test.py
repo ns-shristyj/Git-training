@@ -50,7 +50,7 @@ def main():
     print(f"DEBUG — using MODEL_ID: {MODEL_ID}")
     body = {
         "anthropic_version": "bedrock-2023-05-31",
-        "max_tokens": 4096,
+        "max_tokens": 4090,
         "system": SECURITY_CHECKLIST,
         "messages": [
             {
