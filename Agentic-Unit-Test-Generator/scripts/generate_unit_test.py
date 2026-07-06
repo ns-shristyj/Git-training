@@ -46,7 +46,8 @@ def main():
     module_path = source_path.replace("/", ".").removesuffix(".py")
 
     client = boto3.client("bedrock-runtime", region_name=REGION)
-
+    print(f"DEBUG — using REGION: {REGION}")
+    print(f"DEBUG — using MODEL_ID: {MODEL_ID}")
     body = {
         "anthropic_version": "bedrock-2023-05-31",
         "max_tokens": 4096,

@@ -45,9 +45,13 @@ jobs:
 
       - name: Verify AWS connection
         run: |
-            echo "AWS_DEFAULT_REGION: $AWS_DEFAULT_REGION"
-            echo "AWS_REGION: $AWS_REGION"
-            python3 -c "import boto3; print('boto3 default region:', boto3.session.Session().region_name)"
+          echo "AWS_DEFAULT_REGION: $AWS_DEFAULT_REGION"
+          echo "AWS_REGION: $AWS_REGION"
+          python3 -c "import boto3; print('boto3 default region:', boto3.session.Session().region_name)"
+
+      - name: Show actual script content
+        run: |
+          grep -n "REGION\|MODEL_ID" Agentic-Unit-Test-Generator/scripts/generate_unit_test.py
 
       - name: Generate unit test via Bedrock
         if: steps.check_existing.outputs.exists == 'false'
