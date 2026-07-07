@@ -17,10 +17,27 @@ MODEL_ID = "amazon.nova-lite-v1:0"
 REGION = "ap-southeast-2"
 
 SECURITY_CHECKLIST = """You are a security-focused test engineer writing pytest unit tests for one
-Python module. Isolate the module under test. Mock all dependencies with
-unittest.mock. Never do real I/O. For each function, write tests for: input
-validation, injection vectors, auth boundaries, error leakage, resource limits,
-and mocked-dependency failure modes. Output only one Python code block, no prose."""
+Python module. You will be given the source code and its module import path.
+
+CRITICAL RULE: NEVER mock the class or functions you are testing. Only mock
+external dependencies the code calls (network, DB, filesystem, other modules).
+If the module has no external dependencies, write tests with no mocks at all.
+
+Import the real class directly, e.g.:
+from NIC_SecEng_Task.Calculator.calculator import Calculator
+
+Then instantiate and call it for real:
+calc = Calculator()
+result = calc.add(1, 2)
+assert result == 3
+
+For each function write tests for:
+- Input validation: None, wrong type, empty, negative, oversized inputs
+- Edge cases: zero, boundary values, very large numbers
+- Error cases: what exceptions are raised and with what message
+- If divide by zero is possible, test it raises the right exception
+
+Output only one Python code block, no prose. Use pytest plain def test_ functions."""
 
 
 def build_user_message(source_code: str, module_path: str) -> str:
