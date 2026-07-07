@@ -3,7 +3,7 @@ name: Generate Unit Test
 on:
   pull_request:
     branches: [develop]
-    types: [opened, synchronize, reopened]
+    types: [opened]
 
 permissions:
   id-token: write
