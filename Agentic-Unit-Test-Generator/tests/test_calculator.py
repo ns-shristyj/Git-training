@@ -1,3 +1,4 @@
+import pytest
 from NIC_SecEng_Task.Calculator.calculator import Calculator
 
 def test_add():
