@@ -1,8 +1,8 @@
 import pytest
-from Agentic_Unit_Test_Generator.scripts import calculator
+from Agentic_Unit_Test_Generator.scripts.calculator import calculator
 
 def test_add():
-    calc = calculator.Calculator()
+    calc = Calculator()
     
     # Input validation
     assert calc.add(None, 1) is None
@@ -28,7 +28,7 @@ def test_add():
         calc.add(1, 'b')
 
 def test_subtract():
-    calc = calculator.Calculator()
+    calc = Calculator()
     
     # Input validation
     assert calc.subtract(None, 1) is None
@@ -54,7 +54,7 @@ def test_subtract():
         calc.subtract(1, 'b')
 
 def test_multiply():
-    calc = calculator.Calculator()
+    calc = Calculator()
     
     # Input validation
     assert calc.multiply(None, 1) is None
@@ -80,7 +80,7 @@ def test_multiply():
         calc.multiply(1, 'b')
 
 def test_divide():
-    calc = calculator.Calculator()
+    calc = Calculator()
     
     # Input validation
     assert calc.divide(None, 1) is None
