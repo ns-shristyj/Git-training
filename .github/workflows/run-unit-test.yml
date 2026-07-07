@@ -4,8 +4,8 @@ on:
   pull_request:
     branches: [develop]
     types: [synchronize, opened, reopened, edited]
-    # paths:
-    #   - 'Agentic_Unit_Test_Generator/tests/**'
+    paths:
+      - 'Agentic_Unit_Test_Generator/tests/**'
 
 permissions:
   contents: read
