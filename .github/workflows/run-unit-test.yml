@@ -1,9 +1,9 @@
 name: Run Automated Unit Tests
 
 on:
-  # This bypasses the bot restriction by listening directly to the completion of your generator workflow
+  # This bypasses the bot restriction by listening directly to the completion of generator workflow
   workflow_run:
-    workflows: ["Generate Unit Test"] # Must exactly match the 'name:' string of your generator workflow file
+    workflows: ["Generate Unit Test"] # Must exactly match the 'name:' string of generator workflow file
     types:
       - completed
   pull_request:
