@@ -15,11 +15,10 @@ jobs:
     steps:
 
       - name: Checkout PR branch
-        if: steps.check_existing.outputs.exists == 'false'
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.ref }}
-          
+
       - name: Check if a test file already exists
         id: check_existing
         run: |
