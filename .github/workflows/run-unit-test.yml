@@ -5,7 +5,7 @@ on:
     branches: [develop]
     types: [synchronize]
     paths:
-      - 'Agentic_Unit_Test_Generator/tests/**'
+      - 'Agentic_Unit_Test_Generator/**'
 
 permissions:
   contents: read
