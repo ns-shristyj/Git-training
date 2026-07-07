@@ -27,7 +27,7 @@ jobs:
       - name: Check if a test file already exists
         id: check_existing
         run: |
-          if [ -f "Agentic-Unit-Test-Generator/tests/test_calculator.py" ]; then
+          if [ -f "Agentic_Unit_Test_Generator/tests/test_calculator.py" ]; then
             echo "exists=true" >> "$GITHUB_OUTPUT"
             echo "Test file already exists — skipping generation."
           else
@@ -47,15 +47,15 @@ jobs:
       - name: Generate unit test via Bedrock
         if: steps.check_existing.outputs.exists == 'false'
         run: |
-          python Agentic-Unit-Test-Generator/scripts/generate_unit_test.py \
-            Agentic-Unit-Test-Generator/scripts/calculator.py \
-            Agentic-Unit-Test-Generator/tests/test_calculator.py
+          python Agentic_Unit_Test_Generator/scripts/generate_unit_test.py \
+            Agentic_Unit_Test_Generator/scripts/calculator.py \
+            Agentic_Unit_Test_Generator/tests/test_calculator.py
             
       - name: Commit and push generated test file
         if: steps.check_existing.outputs.exists == 'false'
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add Agentic-Unit-Test-Generator/tests/test_calculator.py
+          git add Agentic_Unit_Test_Generator/tests/test_calculator.py
           git commit -m "Add Generated Unit Test For calculator.py"
           git push origin HEAD:${{ github.event.pull_request.head.ref }}
