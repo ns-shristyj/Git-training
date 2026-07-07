@@ -3,7 +3,7 @@ name: Run Automated Unit Tests
 on:
   pull_request:
     branches: [develop]
-    types: [opened, synchronize]
+    # types: [opened, synchronize]
     # paths:
     #   - 'Agentic_Unit_Test_Generator/tests/**'
 
