@@ -1,14 +1,14 @@
 import pytest
-from NIC_SecEng_Task.Calculator.calculator import Calculator
+from Agentic_Unit_Test_Generator.scripts import calculator
 
 def test_add():
-    calc = Calculator()
+    calc = calculator.Calculator()
     
     # Input validation
     assert calc.add(None, 1) is None
     assert calc.add(1, None) is None
     assert calc.add('', 1) is None
-    assert calc.add(1, '') is None
+    assert calc.add(1, '') is Nonee
     assert calc.add(1.5, 2) == 3.5
     assert calc.add(1, 2.5) == 3.5
     assert calc.add(-1, 1) == 0
@@ -28,7 +28,7 @@ def test_add():
         calc.add(1, 'b')
 
 def test_subtract():
-    calc = Calculator()
+    calc = calculator.Calculator()
     
     # Input validation
     assert calc.subtract(None, 1) is None
@@ -54,7 +54,7 @@ def test_subtract():
         calc.subtract(1, 'b')
 
 def test_multiply():
-    calc = Calculator()
+    calc = calculator.Calculator()
     
     # Input validation
     assert calc.multiply(None, 1) is None
@@ -80,7 +80,7 @@ def test_multiply():
         calc.multiply(1, 'b')
 
 def test_divide():
-    calc = Calculator()
+    calc = calculator.Calculator()
     
     # Input validation
     assert calc.divide(None, 1) is None
