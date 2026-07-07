@@ -1,16 +1,11 @@
 name: Run Automated Unit Tests
 
 on:
-  # This bypasses the bot restriction by listening directly to the completion of your generator workflow
-  workflow_run:
-    workflows: ["Generate Unit Test"] # Must exactly match the 'name:' string of your generator workflow file
-    types:
-      - completed
   pull_request:
     branches: [develop]
-    types: [opened, synchronize]
-    # paths:
-    #   - 'Agentic_Unit_Test_Generator/tests/**'
+    types: [synchronize, opened, reopened, edited]
+    paths:
+      - 'Agentic_Unit_Test_Generator/tests/**'
 
 permissions:
   contents: read
@@ -24,25 +19,15 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Check if a test file already exists
-        id: check_existing
-        run: |
-          if [ -f "Agentic_Unit_Test_Generator/tests/test_calculator.py" ]; then
-            echo "exists=true" >> "$GITHUB_OUTPUT"
-            echo "Test file already exists — skipping generation."
-          else
-            echo "exists=false" >> "$GITHUB_OUTPUT"
-          fi
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
 
       - name: Set up Python
-        if: steps.check_existing.outputs.exists == 'true'
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
       - name: Install dependencies
-        if: steps.check_existing.outputs.exists == 'true'
         run: |
           python -m pip install --upgrade pip
           # Add any dependencies your calculator application requires here
