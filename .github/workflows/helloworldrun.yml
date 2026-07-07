@@ -1,12 +1,6 @@
 name: Run Hello World
 
 on:
-  push:
-    branches:
-      - develop
-  pull_request:
-    branches:
-      - develop
   workflow_dispatch: # Correctly standalone to enable the manual run button
 
 jobs:

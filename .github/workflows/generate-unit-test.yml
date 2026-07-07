@@ -1,0 +1,64 @@
+name: Generate Unit Test
+
+on:
+  pull_request:
+    branches: [develop]
+    types: [opened]
+
+permissions:
+  id-token: write
+  contents: write
+
+jobs:
+  generate-test:
+    runs-on: arc-default-basic-cheap-s-set
+    steps:
+
+      - name: Check if a test file already exists
+        id: check_existing
+        run: |
+          if [ -f "Agentic_Unit_Test_Generator/tests/test_calculator.py" ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "Test file already exists — skipping generation."
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout PR branch
+        if: steps.check_existing.outputs.exists == 'false'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+
+      - name: Configure AWS credentials via OIDC
+        if: steps.check_existing.outputs.exists == 'false'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ap-southeast-2
+
+      - name: Set up Python
+        if: steps.check_existing.outputs.exists == 'false'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        if: steps.check_existing.outputs.exists == 'false'
+        run: pip install boto3
+        
+      - name: Generate unit test via Bedrock
+        if: steps.check_existing.outputs.exists == 'false'
+        run: |
+          python Agentic_Unit_Test_Generator/scripts/generate_unit_test.py \
+            Agentic_Unit_Test_Generator/scripts/calculator.py \
+            Agentic_Unit_Test_Generator/tests/test_calculator.py
+            
+      - name: Commit and push generated test file
+        if: steps.check_existing.outputs.exists == 'false'
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add Agentic_Unit_Test_Generator/tests/test_calculator.py
+          git commit -m "Add Generated Unit Test For calculator.py"
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
