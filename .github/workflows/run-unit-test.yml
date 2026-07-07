@@ -3,13 +3,14 @@ name: Run Automated Unit Tests
 on:
   pull_request:
     branches: [develop]
-    types: [synchronize, opened, reopened, edited]
+    types: [synchronize]
     paths:
       - 'Agentic_Unit_Test_Generator/tests/**'
 
 permissions:
   contents: read
   pull-requests: write
+  checks: write
 
 jobs:
   run-tests:
@@ -51,21 +52,20 @@ jobs:
           fi
 
       - name: Parse and Decorate Test Results
-        # if: always() ensures the decoration runs whether tests pass or fail
-        if: always() 
+        if: always()
         run: |
           if [ -s "${{ github.workspace }}/test_calculator_report.xml" ]; then
-            echo "📊 Parsing test results..."
-            python Agentic_Unit_Test_Generator/scripts/parse.py "${{ github.workspace }}/test_calculator_report.xml" "python"
+            echo "Parsing test results..."
+            python Agentic_Unit_Test_Generator/scripts/parse.py \
+              "${{ github.workspace }}/test_calculator_report.xml" "python"
           else
-            echo "No test_calculator_report.xml found to parse."
-            echo "### ❌ Test Suite Error" > pr_comment.md
-            echo "The automated test suite execution crashed completely, and no valid JUnit test report was generated." >> pr_comment.md
+            echo "No report found to parse."
           fi
 
-      - name: Post Results to PR Conversation
+      - name: Post Results to PR
         if: always()
-        uses: marocchino/sticky-pull-request-comment@v2
+        uses: EnricoMi/publish-unit-test-result-action@v2
         with:
-          header: unit-test-results
-          path: pr_comment.md
+          files: "${{ github.workspace }}/test_calculator_report.xml"
+          comment_title: "Unit Test Results"
+          check_name: "Unit Test Results"

@@ -3,7 +3,7 @@ name: Generate Unit Test
 on:
   pull_request:
     branches: [develop]
-    types: [opened, synchronize]
+    types: [opened]
 
 permissions:
   id-token: write
@@ -18,7 +18,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.ref }}
-
+          
       - name: Check if a test file already exists
         id: check_existing
         run: |
@@ -61,46 +61,3 @@ jobs:
           git add Agentic_Unit_Test_Generator/tests/test_calculator.py
           git commit -m "Add Generated Unit Test For calculator.py"
           git push origin HEAD:${{ github.event.pull_request.head.ref }}
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          # Add any dependencies your calculator application requires here
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-          pip install pytest  # Ensures pytest is available to run the tests
-      
-      - name: Run Test Suite and Generate JUnit XML
-        env:
-          PYTHONPATH: ${{ github.workspace }}
-        run: |
-          TARGET_TEST="Agentic_Unit_Test_Generator/tests/test_calculator.py"
-          
-          if [ -f "$TARGET_TEST" ]; then
-            echo "✅ Test file found. Running pytest..."
-            # Generates the XML report. The '|| true' ensures the pipeline doesn't 
-            # instantly crash on failed tests before your parser can read them.
-            pytest "$TARGET_TEST" --junitxml=${{ github.workspace }}/test_calculator_report.xml -v || true
-          else
-            echo "⚠️ Expected test file at $TARGET_TEST was not found."
-            exit 0
-          fi
-
-      - name: Parse and Decorate Test Results
-        # if: always() ensures the decoration runs whether tests pass or fail
-        if: always() 
-        run: |
-          if [ -s "${{ github.workspace }}/test_calculator_report.xml" ]; then
-            echo "📊 Parsing test results..."
-            python Agentic_Unit_Test_Generator/scripts/parse.py "${{ github.workspace }}/test_calculator_report.xml" "python"
-          else
-            echo "No test_calculator_report.xml found to parse."
-            echo "### ❌ Test Suite Error" > pr_comment.md
-            echo "The automated test suite execution crashed completely, and no valid JUnit test report was generated." >> pr_comment.md
-          fi
-
-      - name: Post Results to PR Conversation
-        if: always()
-        uses: marocchino/sticky-pull-request-comment@v2
-        with:
-          header: unit-test-results
-          path: pr_comment.md
