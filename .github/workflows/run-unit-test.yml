@@ -68,7 +68,7 @@ jobs:
             echo "📊 Parsing test results..."
             python Agentic_Unit_Test_Generator/scripts/parse.py "${{ github.workspace }}/test_calculator_report.xml" "python"
           else
-            echo "❌ No test_calculator_report.xml found to parse."
+            echo "No test_calculator_report.xml found to parse."
             echo "### ❌ Test Suite Error" > pr_comment.md
             echo "The automated test suite execution crashed completely, and no valid JUnit test report was generated." >> pr_comment.md
           fi
