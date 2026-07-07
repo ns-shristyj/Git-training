@@ -45,7 +45,7 @@ jobs:
             # instantly crash on failed tests before your parser can read them.
             pytest "$TARGET_TEST" --junitxml=${{ github.workspace }}/test_calculator_report.xml -v || true
           else
-            echo "⚠️ Expected test file at $TARGET_TEST was not found."
+            echo "⚠️Expected test file at $TARGET_TEST was not found."
             exit 0
           fi
 
