@@ -13,13 +13,7 @@ def strip_ansi_codes(text):
     return ansi_regex.sub('', text)
 
 def generate_github_summary(report):
-    """Generates a highly presentable Markdown UI summary for GitHub Actions."""
-    summary_env = os.environ.get('GITHUB_STEP_SUMMARY')
-    if not summary_env:
-        # Fallback to console print if not running inside GitHub Actions
-        print("\n[INFO] GITHUB_STEP_SUMMARY not detected. Skipping Markdown UI generation.")
-        return
-
+    """Generates a highly presentable Markdown UI summary and saves it to a file for PR comments."""
     lang = report["language"].upper()
     total = report["summary"]["total"]
     passed = report["summary"]["passed"]
@@ -28,16 +22,15 @@ def generate_github_summary(report):
     # Select banner status emoji
     status_emoji = "✅" if failed == 0 else "❌"
     
-    markdown = f"""
-# {status_emoji} Test Execution Summary ({lang})
+    markdown = f"""### {status_emoji} Automated Test Execution Summary ({lang})
 
 | Total Tests | Passed ✅ | Failed ❌ | Pass Rate |
 | :--- | :--- | :--- | :--- |
-| **{total}** | <font color="green">**{passed}**</font> | <font color="red">**{failed}**</font> | **{int((passed/total)*100) if total > 0 else 0}%** |
+| **{total}** | **{passed}** | **{failed}** | **{int((passed/total)*100) if total > 0 else 0}%** |
 
 ---
 
-## Detailed Test Breakdown
+#### Detailed Test Breakdown
 | Test Case Name | Status | Error Details |
 | :--- | :---: | :--- |
 """
@@ -54,11 +47,11 @@ def generate_github_summary(report):
         
         markdown += f"| {test['name']} | {status_tag} | {error_detail} |\n"
 
-    # Write out directly to GitHub's UI rendering pipeline
-    with open(summary_env, 'a') as f:
+    # Save to a dedicated markdown file for the PR workflow to capture
+    output_comment_file = 'pr_comment.md'
+    with open(output_comment_file, 'w') as f:
         f.write(markdown)
-    print("[PARSER] Beautiful Markdown dashboard appended to GitHub Summary.")
-
+    print(f"[PARSER] Markdown dashboard successfully saved to {output_comment_file} for PR delivery.")
 
 def parse_junit_xml(xml_file_path, language_name):
     """Parses standard JUnit XML files."""
