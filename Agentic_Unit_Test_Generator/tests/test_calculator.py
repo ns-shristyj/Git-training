@@ -1,5 +1,10 @@
 import pytest
-from Agentic_Unit_Test_Generator.scripts.calculator import calculator
+import sys
+import os
+# This dynamically finds the root repository folder and adds it to Python's path register
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+from Agentic_Unit_Test_Generator.scripts.calculator import Calculator
+
 
 def test_add():
     calc = Calculator()
@@ -8,7 +13,7 @@ def test_add():
     assert calc.add(None, 1) is None
     assert calc.add(1, None) is None
     assert calc.add('', 1) is None
-    assert calc.add(1, '') is Nonee
+    assert calc.add(1, '') is None
     assert calc.add(1.5, 2) == 3.5
     assert calc.add(1, 2.5) == 3.5
     assert calc.add(-1, 1) == 0
