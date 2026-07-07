@@ -14,6 +14,12 @@ jobs:
     runs-on: arc-default-basic-cheap-s-set
     steps:
 
+      - name: Checkout PR branch
+        if: steps.check_existing.outputs.exists == 'false'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          
       - name: Check if a test file already exists
         id: check_existing
         run: |
@@ -23,12 +29,6 @@ jobs:
           else
             echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
-
-      - name: Checkout PR branch
-        if: steps.check_existing.outputs.exists == 'false'
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.ref }}
 
       - name: Configure AWS credentials via OIDC
         if: steps.check_existing.outputs.exists == 'false'
