@@ -24,7 +24,7 @@ class TestCalculator(unittest.TestCase):
         
         # Test that dividing by zero raises the correct error
         with self.assertRaises(ValueError):
-            self.calc.divide(1, 0)
+            self.calc.divide(9, 0)
 
 if __name__ == '__main__':
     unittest.main()
