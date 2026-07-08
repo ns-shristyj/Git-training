@@ -145,6 +145,12 @@ def main():
             skipped.append((path, f"only {lines} lines — below MIN_LINES={MIN_LINES}"))
             continue
 
+        # ── NEW CHECK: Check if a corresponding test file already exists ─────
+        expected_test_path = derive_test_path(path)
+        if os.path.exists(expected_test_path):
+            skipped.append((path, f"test file already exists at '{expected_test_path}'"))
+            continue
+
         eligible.append(path)
 
     # log decisions to stderr (visible in Actions logs, not captured as output)
