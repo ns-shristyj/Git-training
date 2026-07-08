@@ -28,7 +28,7 @@ jobs:
         id: detect_tests
         run: |
           # Find any Python files added, copied, or modified in the tests/ folder
-          CHANGED_TESTS=$(git diff --name-only --diff-filter=A origin/${{ github.event.pull_request.base.ref }} HEAD | grep -E '^Agentic_Unit_Test_Generator/tests/tests_[^/]+\.py$' | xargs)  
+          CHANGED_TESTS=$(git diff --name-only --diff-filter=A origin/${{ github.event.pull_request.base.ref }} HEAD | grep -E '^Agentic_Unit_Test_Generator/tests/test_[^/]+\.py$' | xargs)  
           echo "$CHANGED_TESTS"        
           if [ -z "$CHANGED_TESTS" ]; then
             echo "No test files were added or modified in this commit."
