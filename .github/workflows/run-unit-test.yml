@@ -40,7 +40,7 @@ jobs:
           fi
 
       - name: Set up Python
-      if: steps.detect_tests.outputs.run_tests == 'true'
+        if: steps.detect_tests.outputs.run_tests == 'true'
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -54,7 +54,7 @@ jobs:
           pip install pytest  # Ensures pytest is available to run the tests
       
       - name: Run Test Suite and Generate JUnit XML
-      if: steps.detect_tests.outputs.run_tests == 'true'
+        if: steps.detect_tests.outputs.run_tests == 'true'
         env:
           PYTHONPATH: ${{ github.workspace }}
           TARGET_TESTS: ${{ steps.detect_tests.outputs.test_files }}
