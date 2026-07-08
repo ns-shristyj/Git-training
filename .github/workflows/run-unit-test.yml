@@ -20,13 +20,33 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+      - name: Fetch base branch for Diffing
+        run: git fetch origin ${{ github.event.pull_request.base.ref }} --depth=1
+
+      - name: Detect New or Modified Test Files
+        id: detect_tests
+        run: |
+          # Find any Python files added, copied, or modified in the tests/ folder
+          CHANGED_TESTS=$(git diff --name-only --diff-filter=ACM origin/${{ github.event.pull_request.base.ref }} HEAD | grep '^Agentic_Unit_Test_Generator/tests/.*\.py$' | xargs)
+          
+          if [ -z "$CHANGED_TESTS" ]; then
+            echo "No test files were added or modified in this commit."
+            echo "run_tests=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Detected test files to run: $CHANGED_TESTS"
+            echo "test_files=$CHANGED_TESTS" >> "$GITHUB_OUTPUT"
+            echo "run_tests=true" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Set up Python
+      if: steps.detect_tests.outputs.run_tests == 'true'
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
       - name: Install dependencies
+        if: steps.detect_tests.outputs.run_tests == 'true'
         run: |
           python -m pip install --upgrade pip
           # Add any dependencies your calculator application requires here
@@ -34,28 +54,26 @@ jobs:
           pip install pytest  # Ensures pytest is available to run the tests
       
       - name: Run Test Suite and Generate JUnit XML
+      if: steps.detect_tests.outputs.run_tests == 'true'
         env:
           PYTHONPATH: ${{ github.workspace }}
+          TARGET_TESTS: ${{ steps.detect_tests.outputs.test_files }}
         run: |
-          TARGET_TEST="Agentic_Unit_Test_Generator/tests/test_calculator.py"
-          
-          if [ -f "$TARGET_TEST" ]; then
-            echo "✅ Test file found. Running pytest..."
-            # Generates the XML report. The '|| true' ensures the pipeline doesn't 
-            # instantly crash on failed tests before your parser can read them.
-            pytest "$TARGET_TEST" --junitxml=${{ github.workspace }}/test_calculator_report.xml -v || true
-          else
-            echo "⚠️Expected test file at $TARGET_TEST was not found."
-            exit 0
-          fi
+          echo "🚀 Executing pytest on: $TARGET_TESTS"
+          # Run only the detected test files. '|| true' ensures we still parse results if tests fail.
+          pytest $TARGET_TESTS --junitxml=${{ github.workspace }}/dynamic_test_report.xml -v || true
 
       - name: Parse Test Results
         if: always()
         run: |
-              if [ -s "${{ github.workspace }}/test_calculator_report.xml" ]; then
+              if [ "${{ steps.detect_tests.outputs.run_tests }}" = "false" ]; then
+                # Clean skip notice if no tests were touched
+                echo "### No Test Execution Required" > pr_comment.md
+                echo "This PR update did not contain new or modified test files inside the test suite directory." >> pr_comment.md
+              elif [ -s "${{ github.workspace }}/dynamic_test_report.xml" ]; then
                 echo "Parsing test results..."
                 python Agentic_Unit_Test_Generator/scripts/parse.py \
-                  "${{ github.workspace }}/test_calculator_report.xml" "python"
+                  "${{ github.workspace }}/dynamic_test_report.xml" "python"
               else
                 echo "No report found."
                 echo "### ⏳ No test results yet" > pr_comment.md
