@@ -57,12 +57,25 @@ jobs:
         run: pip install boto3
         
       - name: Generate unit test via Bedrock
+        id: generate
         if: steps.filter_engine.outputs.run_generation == 'true' && steps.check_existing.outputs.exists == 'false'
+        env:
+          UNIT_TEST_GEN_BUCKET: netskope-unit-test-gen-786063285476-ap-southeast-2
         run: |
+          S3_OUTPUT_KEY="generated-tests/${{ github.run_id }}/${{ steps.filter_engine.outputs.filename_raw }}"
           python Agentic_Unit_Test_Generator/scripts/generate_unit_test.py \
             "${{ steps.filter_engine.outputs.source_file }}" \
+            "$S3_OUTPUT_KEY"
+          echo "s3_output_key=$S3_OUTPUT_KEY" >> "$GITHUB_OUTPUT"
+
+      - name: Download generated test file from S3
+        if: steps.filter_engine.outputs.run_generation == 'true' && steps.check_existing.outputs.exists == 'false'
+        run: |
+          mkdir -p "$(dirname "${{ steps.filter_engine.outputs.test_file }}")"
+          aws s3 cp \
+            "s3://netskope-unit-test-gen-786063285476-ap-southeast-2/${{ steps.generate.outputs.s3_output_key }}" \
             "${{ steps.filter_engine.outputs.test_file }}"
- 
+
       - name: Commit and push generated test file
         if: steps.filter_engine.outputs.run_generation == 'true' && steps.check_existing.outputs.exists == 'false'
         run: |
