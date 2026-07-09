@@ -54,13 +54,14 @@ jobs:
 
       - name: Install dependencies
         if: steps.filter_engine.outputs.run_generation == 'true' && steps.check_existing.outputs.exists == 'false'
-        run: pip install boto3
-        
-      - name: Generate unit test via Bedrock
+        run: pip install "boto3>=1.40"
+
+      - name: Generate unit test via Unit Test Generator Agent
         id: generate
         if: steps.filter_engine.outputs.run_generation == 'true' && steps.check_existing.outputs.exists == 'false'
         env:
           UNIT_TEST_GEN_BUCKET: netskope-unit-test-gen-786063285476-ap-southeast-2
+          AGENT_RUNTIME_ARN: ${{ vars.AGENT_RUNTIME_ARN }}
         run: |
           S3_OUTPUT_KEY="generated-tests/${{ github.run_id }}/${{ steps.filter_engine.outputs.filename_raw }}"
           python Agentic_Unit_Test_Generator/scripts/generate_unit_test.py \
