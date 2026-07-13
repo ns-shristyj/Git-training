@@ -24,7 +24,7 @@ def _render_test_table(tests):
             clean_error = test["error_message"].replace('\n', '<br>') if test["error_message"] else "Unknown Error"
             error_detail = f"<details><summary>View Error Trace</summary><code style='white-space: pre-wrap;'>{clean_error}</code></details>"
 
-        rows += f"| {test['name']} | {status_tag} | {error_detail} |\n"
+        rows += f"| `{test['short_name']}` | {status_tag} | {error_detail} |\n"
     return rows
 
 
@@ -119,6 +119,7 @@ def parse_junit_xml(xml_file_path, language_name):
 
             test_entry = {
                 "name": full_name,
+                "short_name": test_name,
                 "status": status,
                 "error_message": strip_ansi_codes(error_message)
             }
