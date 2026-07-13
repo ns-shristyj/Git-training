@@ -69,16 +69,20 @@ def generate_github_summary(report):
         g_failed = group["summary"]["failed"]
         g_emoji = "✅" if g_failed == 0 else "❌"
 
+        open_attr = " open" if g_failed > 0 else ""
         markdown += f"""
 ---
 
-#### {g_emoji} {_shorten_group_name(group_name)}
+<details{open_attr}>
+<summary>{g_emoji} <b>{_shorten_group_name(group_name)}</b> — {g_passed}/{g_total} passed</summary>
+
 | Tests | Passed ✅ | Failed ❌ | Pass Rate |
 | :--- | :--- | :--- | :--- |
 | **{g_total}** | **{g_passed}** | **{g_failed}** | **{int((g_passed/g_total)*100) if g_total > 0 else 0}%** |
 
 """
         markdown += _render_test_table(group["tests"])
+        markdown += "\n</details>\n"
 
     # Save to a dedicated markdown file for the PR workflow to capture
     output_comment_file = 'pr_comment.md'
