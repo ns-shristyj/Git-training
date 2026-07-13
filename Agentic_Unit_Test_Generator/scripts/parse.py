@@ -41,8 +41,31 @@ def _render_test_table(tests):
         rows += f"| `{test['short_name']}` | {status_tag} | {error_detail} |\n"
     return rows
 
+def parse_coverage_xml(coverage_file_path):
+    """Parses standard Cobertura XML coverage reports."""
+    if not coverage_file_path or not os.path.exists(coverage_file_path):
+        return None
+    try:
+        tree = ET.parse(coverage_file_path)
+        root = tree.getroot()
+        line_rate = float(root.get("line-rate", 0)) * 100
+        lines_valid = int(root.get("lines-valid", 0))
+        lines_covered = int(root.get("lines-covered", 0))
+        
+        file_breakdown = []
+        for package in root.findall(".//package"):
+            for clazz in package.findall(".//class"):
+                c_name = clazz.get("name", "Unknown Module")
+                c_line_rate = float(clazz.get("line-rate", 0)) * 100
+                if "test" in c_name.lower() or "parse" in c_name.lower():
+                    continue
+                file_breakdown.append({"name": c_name, "rate": f"{c_line_rate:.1f}%"})
+        return {"total_rate": f"{line_rate:.1f}%", "lines_valid": lines_valid, "lines_covered": lines_covered, "files": file_breakdown}
+    except Exception as e:
+        print(f"[COVERAGE] Warning: Failed parsing coverage XML metadata: {e}", file=sys.stderr)
+        return None
 
-def generate_github_summary(report):
+def generate_github_summary(report, coverage_data):
     """Generates a highly presentable Markdown UI summary and saves it to a file for PR comments.
 
     Renders one summary + detail table per source test file (grouped by JUnit
@@ -62,6 +85,25 @@ def generate_github_summary(report):
 | :--- | :--- | :--- | :--- |
 | **{total}** | **{passed}** | **{failed}** | **{int((passed/total)*100) if total > 0 else 0}%** |
 """
+
+# Append coverage details block if valid data exists
+    if coverage_data:
+        markdown += f"""
+### 📊 Code Coverage Summary
+
+| Overall Line Coverage | Covered Lines | Total Executable Lines |
+| :---: | :---: | :---: |
+| 🛡️ **{coverage_data['total_rate']}** | **{coverage_data['lines_covered']}** | **{coverage_data['lines_valid']}** |
+
+<details>
+<summary>📂 View Coverage Breakdown Per Module</summary>
+
+| Module Path / Name | Coverage Rate |
+| :--- | :---: |
+"""
+        for f in coverage_data["files"]:
+            markdown += f"| `{f['name']}` | **{f['rate']}** |\n"
+        markdown += "</details>\n"
 
     for group_name, group in report["groups"].items():
         g_total = group["summary"]["total"]
@@ -163,18 +205,20 @@ def parse_junit_xml(xml_file_path, language_name):
 
 if __name__ == "__main__":
     if len(sys.argv) < 3:
-        print("Usage: python parse.py <xml_file_path> <language>", file=sys.stderr)
+        print("Usage: python parse.py <xml_file_path> <language> [coverage_file_path]", file=sys.stderr)
         sys.exit(1)
 
     file_path = sys.argv[1]
     language = sys.argv[2]
-    
+    coverage_path = sys.argv[3] if len(sys.argv) > 3 else None
+
     # Process
     report = parse_junit_xml(file_path, language)
+    coverage_data = parse_coverage_xml(coverage_path)
         
     # Save raw JSON backup artifact
     with open('unified_results.json', 'w') as f:
         json.dump(report, f, indent=2)
 
     # Render interactive UI
-    generate_github_summary(report)
+    generate_github_summary(report, coverage_data)
