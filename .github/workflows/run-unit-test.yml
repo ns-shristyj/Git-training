@@ -62,7 +62,7 @@ jobs:
         run: |
           echo "🚀 Executing pytest on: $TARGET_TESTS"
           # Run only the detected test files. '|| true' ensures we still parse results if tests fail.
-          pytest $TARGET_TESTS --cov=. --cov-report=xml:${{ github.workspace }}/coverage.xml --junitxml=${{ github.workspace }}/dynamic_test_report.xml -v || true
+          pytest $TARGET_TESTS --cov=. --cov-report=term --cov-report=xml:${{ github.workspace }}/coverage.xml --junitxml=${{ github.workspace }}/dynamic_test_report.xml -v || true
 
       - name: Parse Test Results
         if: always()
