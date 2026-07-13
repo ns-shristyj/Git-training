@@ -25,54 +25,82 @@ jobs:
         run: |
           git diff --name-only origin/${{ github.event.pull_request.base.ref }} HEAD | \
           python Agentic_Unit_Test_Generator/scripts/filter_source_files.py >> "$GITHUB_OUTPUT"
- 
-      - name: Check if test already exists for this file
-        id: check_existing
-        if: steps.filter_engine.outputs.run_generation == 'true'
-        run: |
-          TEST_FILE="${{ steps.filter_engine.outputs.test_file }}"
-          if [ -f "$TEST_FILE" ]; then
-            echo "exists=true" >> "$GITHUB_OUTPUT"
-            echo "[check] Test already exists at $TEST_FILE — skipping generation."
-          else
-            echo "exists=false" >> "$GITHUB_OUTPUT"
-            echo "[check] No existing test at $TEST_FILE — proceeding."
-          fi
 
       - name: Configure AWS credentials via OIDC
-        if: steps.filter_engine.outputs.run_generation == 'true' && steps.check_existing.outputs.exists == 'false'
+        if: steps.filter_engine.outputs.run_generation == 'true'
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ap-southeast-2
 
       - name: Set up Python
-        if: steps.filter_engine.outputs.run_generation == 'true' && steps.check_existing.outputs.exists == 'false'
+        if: steps.filter_engine.outputs.run_generation == 'true'
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
       - name: Install dependencies
-        if: steps.filter_engine.outputs.run_generation == 'true' && steps.check_existing.outputs.exists == 'false'
+        if: steps.filter_engine.outputs.run_generation == 'true'
         run: pip install "boto3>=1.40"
 
-      - name: Generate unit test via Unit Test Generator Agent
+      - name: Generate unit tests via Unit Test Generator Agent
         id: generate
-        if: steps.filter_engine.outputs.run_generation == 'true' && steps.check_existing.outputs.exists == 'false'
+        if: steps.filter_engine.outputs.run_generation == 'true'
         env:
           AGENT_RUNTIME_ARN: ${{ vars.AGENT_RUNTIME_ARN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           SOURCE_COMMIT_SHA: ${{ github.event.pull_request.head.sha }}
+          SOURCE_FILES_JSON: ${{ steps.filter_engine.outputs.source_files }}
         run: |
-          python Agentic_Unit_Test_Generator/scripts/generate_unit_test.py \
-            "${{ steps.filter_engine.outputs.source_file }}" \
-            "${{ steps.filter_engine.outputs.test_file }}"
+          GENERATED_FILES=()
+          FAILED_FILES=()
 
-      - name: Commit and push generated test file
-        if: steps.filter_engine.outputs.run_generation == 'true' && steps.check_existing.outputs.exists == 'false'
+          while IFS=$'\t' read -r source_file test_file; do
+            echo "=== Generating test for $source_file -> $test_file ==="
+            if python Agentic_Unit_Test_Generator/scripts/generate_unit_test.py "$source_file" "$test_file"; then
+              GENERATED_FILES+=("$test_file")
+            else
+              echo "::warning::Generation failed for $source_file — skipping, continuing with remaining files."
+              FAILED_FILES+=("$source_file")
+            fi
+          done < <(python3 -c "
+          import json, os
+          pairs = json.loads(os.environ['SOURCE_FILES_JSON'])
+          for p in pairs:
+              print(f\"{p['source_file']}\t{p['test_file']}\")
+          ")
+
+          printf '%s\n' "${GENERATED_FILES[@]}" > "$GITHUB_WORKSPACE/.generated_test_files.txt"
+
+          echo "generated_count=${#GENERATED_FILES[@]}" >> "$GITHUB_OUTPUT"
+          echo "failed_count=${#FAILED_FILES[@]}" >> "$GITHUB_OUTPUT"
+
+          if [ ${#GENERATED_FILES[@]} -eq 0 ]; then
+            echo "has_generated_files=false" >> "$GITHUB_OUTPUT"
+            if [ ${#FAILED_FILES[@]} -gt 0 ]; then
+              echo "::error::All ${#FAILED_FILES[@]} eligible file(s) failed generation. Failing the job."
+              exit 1
+            fi
+          else
+            echo "has_generated_files=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Commit and push generated test files
+        if: steps.filter_engine.outputs.run_generation == 'true' && steps.generate.outputs.has_generated_files == 'true'
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add "${{ steps.filter_engine.outputs.test_file }}"
-          git commit -m "Add Generated Unit Test For ${{ steps.filter_engine.outputs.filename_raw }}"
+
+          while IFS= read -r test_file; do
+            [ -n "$test_file" ] && git add "$test_file"
+          done < "$GITHUB_WORKSPACE/.generated_test_files.txt"
+
+          COUNT="${{ steps.generate.outputs.generated_count }}"
+          if [ "$COUNT" -eq 1 ]; then
+            FILE=$(head -n1 "$GITHUB_WORKSPACE/.generated_test_files.txt")
+            git commit -m "Add Generated Unit Test For $(basename "$FILE")"
+          else
+            git commit -m "Add Generated Unit Tests For $COUNT Files" -m "$(cat "$GITHUB_WORKSPACE/.generated_test_files.txt")"
+          fi
+
           git push origin HEAD:${{ github.event.pull_request.head.ref }}

@@ -6,9 +6,7 @@ Reads a list of changed file paths from stdin (one per line, from git diff),
 filters out non-testable files, and writes GitHub Actions outputs:
 
   run_generation=true/false
-  source_file=<path>
-  test_file=<path>
-  filename_raw=<basename>
+  source_files=<JSON array of {"source_file": ..., "test_file": ...}>
 
 Usage (in workflow):
     git diff --name-only origin/base HEAD | python filter_source_files.py >> "$GITHUB_OUTPUT"
@@ -17,10 +15,12 @@ Selection logic:
   - Only .py files (hardcoded for prototype, extend ALLOWED_EXTENSIONS for multi-language)
   - Skip files matching SKIP_PATTERNS (tests, migrations, boilerplate, UI, config, etc.)
   - Skip files smaller than MIN_LINES (stubs, __init__.py, etc.)
-  - Pick the first eligible file found (prototype scope: one file per PR)
+  - Skip files that already have a generated test
+  - Emit every remaining eligible file — the workflow loops over all of them
   - If no eligible file found, output run_generation=false
 """
 
+import json
 import sys
 import os
 
@@ -109,6 +109,13 @@ def count_lines(path: str) -> int:
 
 
 def derive_test_path(source_path: str) -> str:
+    """Flat basename-only naming, matching the convention of the test files
+    already committed under TEST_OUTPUT_DIR. NOTE: this means two source
+    files with the same basename in different directories (e.g.
+    moduleA/utils.py and moduleB/utils.py) collide on the same output path —
+    a known limitation, accepted for now rather than changing the naming
+    convention and breaking the "test already exists" check against the
+    already-committed flat-named test files."""
     basename = os.path.basename(source_path)
     stem = os.path.splitext(basename)[0]
     return os.path.join(TEST_OUTPUT_DIR, f"test_{stem}.py")
@@ -145,7 +152,6 @@ def main():
             skipped.append((path, f"only {lines} lines — below MIN_LINES={MIN_LINES}"))
             continue
 
-        # ── NEW CHECK: Check if a corresponding test file already exists ─────
         expected_test_path = derive_test_path(path)
         if os.path.exists(expected_test_path):
             skipped.append((path, f"test file already exists at '{expected_test_path}'"))
@@ -165,24 +171,16 @@ def main():
         print("[filter] No eligible source files found — skipping generation.", file=sys.stderr)
         return
 
-    # prototype: take the first eligible file
-    # production: loop over all eligible and generate per file
-    source_file = eligible[0]
-    test_file = derive_test_path(source_file)
-    filename_raw = os.path.basename(source_file)
+    source_files = [
+        {"source_file": path, "test_file": derive_test_path(path)}
+        for path in eligible
+    ]
 
-    if len(eligible) > 1:
-        print(
-            f"[filter] WARNING: {len(eligible)} eligible files found. "
-            f"Prototype only processes the first: {source_file}",
-            file=sys.stderr,
-        )
+    print(f"[filter] {len(source_files)} eligible file(s) queued for generation.", file=sys.stderr)
 
     # write GitHub Actions outputs
-    print(f"run_generation=true")
-    print(f"source_file={source_file}")
-    print(f"test_file={test_file}")
-    print(f"filename_raw={filename_raw}")
+    print("run_generation=true")
+    print(f"source_files={json.dumps(source_files)}")
 
 
 if __name__ == "__main__":
