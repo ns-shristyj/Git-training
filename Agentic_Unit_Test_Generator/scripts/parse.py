@@ -8,26 +8,41 @@ import ast
 
 def _clean_group_heading(group_name):
     """
-    Extracts the final file/class name from a dotted path 
-    and turns 'test_api_client' into 'Api client'.
+    Extracts the file name and the test class name from a dotted path 
+    and turns 'Agentic_Unit_Test_Generator.tests.test_complex_service.TestProcessUserData'
+    into 'Complex service - Process user data'.
     """
-    # Grab only the last part of the dot-separated string (the actual file/module name)
-    last_component = group_name.split('.')[-1]
+    parts = group_name.split('.')
     
-    # Remove "test_" or "Test_" prefixes safely
-    cleaned = re.sub(r'^[Tt]est_?', '', last_component)
+    # If it's a full path, isolate just the last two components (file name and class/function)
+    if len(parts) >= 2:
+        target_parts = parts[-2:]
+    else:
+        target_parts = parts
+
+    cleaned_components = []
+    for part in target_parts:
+        # Skip generic grouping folders if they accidentally leak into the last two parts
+        if part.lower() in ["tests", "test"]:
+            continue
+            
+        # Remove "test_" or "Test_" prefixes safely
+        p = re.sub(r'^[Tt]est_?', '', part)
+        # Add spaces before capital letters (handles CamelCase class names)
+        p = re.sub(r'(?<!^)(?=[A-Z])', ' ', p)
+        # Convert underscores and hyphens to spaces
+        p = p.replace("_", " ").replace("-", " ")
+        # Clean up double spaces
+        p = " ".join(p.split())
+        
+        if p:
+            cleaned_components.append(p)
+            
+    # Join the file name and class name with a clean dash space
+    final_heading = " - ".join(cleaned_components)
     
-    # Add spaces before capital letters (handles CamelCase class names)
-    cleaned = re.sub(r'(?<!^)(?=[A-Z])', ' ', cleaned)
-    
-    # Convert underscores and hyphens to spaces
-    cleaned = cleaned.replace("_", " ").replace("-", " ")
-    
-    # Clean up double spaces
-    cleaned = " ".join(cleaned.split())
-    
-    # Capitalize the final readable string
-    return cleaned.capitalize()
+    # Capitalize only the very first letter of the combined heading string
+    return final_heading.capitalize()
 
 def _extract_test_docstrings(group_name):
     """Parses a test file using AST to map test function names to their docstrings."""
