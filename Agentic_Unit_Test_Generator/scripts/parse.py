@@ -4,6 +4,34 @@ import json
 import os
 import re
 import sys
+import ast
+
+def _extract_test_docstrings(group_name):
+    """Parses a test file using AST to map test function names to their docstrings."""
+    # Convert package path back to a real file path
+    # e.g., 'Agentic_Unit_Test_Generator.tests.test_complex_service' -> 'Agentic_Unit_Test_Generator/tests/test_complex_service.py'
+    file_path = group_name.replace('.', '/') + '.py'
+    
+    docstrings = {}
+    if not os.path.exists(file_path):
+        return docstrings
+
+    try:
+        with open(file_path, "r", encoding="utf-8") as f:
+            node = ast.parse(f.read(), filename=file_path)
+        
+        # Walk through the file and look for function/method definitions
+        for item in ast.walk(node):
+            if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                if item.name.startswith("test_"):
+                    doc = ast.get_docstring(item)
+                    if doc:
+                        # Clean up formatting whitespace/newlines from docstrings
+                        docstrings[item.name] = " ".join(doc.split())
+    except Exception as e:
+        print(f"[PARSER] Warning: Could not parse docstrings from {file_path}: {e}", file=sys.stderr)
+        
+    return docstrings
 
 def strip_ansi_codes(text):
     """Removes ANSI escape codes (terminal styling/colors) from strings."""
@@ -26,7 +54,7 @@ def _shorten_group_name(group_name):
     return last
 
 
-def _render_test_table(tests):
+def _render_test_table(tests, docstrings):
     rows = "| Test Case Name | Description | Status | Error Details |\n| :--- | :--- | :---: | :--- |\n"
     for test in tests:
         if test["status"] == "passed":
@@ -38,8 +66,10 @@ def _render_test_table(tests):
             clean_error = test["error_message"].replace('\n', '<br>') if test["error_message"] else "Unknown Error"
             error_detail = f"<details><summary>View Error Trace</summary><code style='white-space: pre-wrap;'>{clean_error}</code></details>"
 
-        generated_desc = test['short_name'].replace("test_", "").replace("_", " ").capitalize()
-        rows += f"| `{test['short_name']}` | {generated_desc} | {status_tag} | {error_detail} |\n"
+        description = docstrings.get(test['short_name'])
+        if not description:
+            description = test['short_name'].replace("test_", "").replace("_", " ").capitalize()
+        rows += f"| `{test['short_name']}` | {description} | {status_tag} | {error_detail} |\n"
     return rows
 
 def parse_coverage_xml(coverage_file_path):
@@ -124,7 +154,8 @@ def generate_github_summary(report, coverage_data):
 | **{g_total}** | **{g_passed}** | **{g_failed}** | **{int((g_passed/g_total)*100) if g_total > 0 else 0}%** |
 
 """
-        markdown += _render_test_table(group["tests"])
+        docstrings = _extract_test_docstrings(group_name)
+        markdown += _render_test_table(group["tests"], docstrings)
         markdown += "\n</details>\n"
 
     # Save to a dedicated markdown file for the PR workflow to capture
