@@ -7,25 +7,34 @@ import sys
 import ast
 
 def _clean_group_heading(group_name):
-    """Converts test_complex_service.TestProcessUserData into 'Complex service - Process user data'."""
-    # Split by module dot if it exists
-    parts = group_name.split('.')
-    cleaned_parts = []
+    """
+    Converts paths like 'Agentic_Unit_Test_Generator.tests.test_api_client' 
+    into 'Agentic unit test generator - Api client'.
+    """
+    # Replace package dots with clean dashes
+    normalized = group_name.replace('.', ' - ')
     
-    for part in parts:
-        # Strip "test" prefixes safely
-        p = re.sub(r'^[Tt]est_?', '', part)
-        # Add spaces before capital letters (for CamelCase class names)
-        p = re.sub(r'(?<!^)(?=[A-Z])', ' ', p)
-        # Convert underscores to spaces (for snake_case modules)
-        p = p.replace("_", " ")
-        # Clean up double spaces
-        p = " ".join(p.split())
-        if p:
-            cleaned_parts.append(p)
-            
-    # Join parts with a dash and apply global capitalization rules
-    return " - ".join(cleaned_parts).capitalize()
+    # Remove "test_" or "Test_" prefixes anywhere in the string
+    normalized = re.sub(r'\b[Tt]est_?\b', '', normalized)
+    
+    # Add spaces before capital letters (handles CamelCase class names)
+    normalized = re.sub(r'(?<!^)(?=[A-Z])', ' ', normalized)
+    
+    # Convert all underscores and hyphens into clean spaces
+    normalized = normalized.replace("_", " ").replace("-", " ")
+    
+    # Clean up any residual single letters like " s " left over from "tests"
+    normalized = re.sub(r'\b[sS]\b', '', normalized)
+    
+    # Clean up double spaces and collapse spaces around dashes
+    normalized = " ".join(normalized.split())
+    normalized = normalized.replace(" - - ", " - ").replace(" - ", " - ")
+    
+    # Strip trailing/leading dashes if any components were entirely removed
+    normalized = normalized.strip(" - ")
+    
+    # Capitalize only the very first letter of the total heading string
+    return normalized.capitalize()
 
 def _extract_test_docstrings(group_name):
     """Parses a test file using AST to map test function names to their docstrings."""
