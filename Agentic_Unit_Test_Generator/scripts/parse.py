@@ -6,6 +6,27 @@ import re
 import sys
 import ast
 
+def _clean_group_heading(group_name):
+    """Converts test_complex_service.TestProcessUserData into 'Complex service - Process user data'."""
+    # Split by module dot if it exists
+    parts = group_name.split('.')
+    cleaned_parts = []
+    
+    for part in parts:
+        # Strip "test" prefixes safely
+        p = re.sub(r'^[Tt]est_?', '', part)
+        # Add spaces before capital letters (for CamelCase class names)
+        p = re.sub(r'(?<!^)(?=[A-Z])', ' ', p)
+        # Convert underscores to spaces (for snake_case modules)
+        p = p.replace("_", " ")
+        # Clean up double spaces
+        p = " ".join(p.split())
+        if p:
+            cleaned_parts.append(p)
+            
+    # Join parts with a dash and apply global capitalization rules
+    return " - ".join(cleaned_parts).capitalize()
+
 def _extract_test_docstrings(group_name):
     """Parses a test file using AST to map test function names to their docstrings."""
     # Convert package path back to a real file path
@@ -55,7 +76,7 @@ def _shorten_group_name(group_name):
 
 
 def _render_test_table(tests, docstrings):
-    rows = "| Test Case Name | Description | Status | Error Details |\n| :--- | :--- | :---: | :--- |\n"
+    rows = "| Test Case | Description | Status | Error Details |\n| :--- | :--- | :---: | :--- |\n"
     for test in tests:
         if test["status"] == "passed":
             status_tag = "🟢 **PASSED**"
@@ -66,10 +87,11 @@ def _render_test_table(tests, docstrings):
             clean_error = test["error_message"].replace('\n', '<br>') if test["error_message"] else "Unknown Error"
             error_detail = f"<details><summary>View Error Trace</summary><code style='white-space: pre-wrap;'>{clean_error}</code></details>"
 
+        clean_name = test['short_name'].replace("test_", "").replace("_", " ").capitalize()
         description = docstrings.get(test['short_name'])
         if not description:
-            description = test['short_name'].replace("test_", "").replace("_", " ").capitalize()
-        rows += f"| `{test['short_name']}` | {description} | {status_tag} | {error_detail} |\n"
+            description = clean_name
+        rows += f"| `{clean_name}` | {description} | {status_tag} | {error_detail} |\n"
     return rows
 
 def parse_coverage_xml(coverage_file_path):
@@ -147,7 +169,7 @@ def generate_github_summary(report, coverage_data):
 ---
 
 <details{open_attr}>
-<summary>{g_emoji} <b>{_shorten_group_name(group_name)}</b> — {g_passed}/{g_total} passed</summary>
+<summary>{g_emoji} <b>{_clean_group_heading(group_name)}</b> — {g_passed}/{g_total} passed</summary>
 
 | Tests | Passed ✅ | Failed ❌ | Pass Rate |
 | :--- | :--- | :--- | :--- |
