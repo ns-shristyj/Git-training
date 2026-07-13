@@ -12,30 +12,9 @@ def strip_ansi_codes(text):
     ansi_regex = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
     return ansi_regex.sub('', text)
 
-def generate_github_summary(report):
-    """Generates a highly presentable Markdown UI summary and saves it to a file for PR comments."""
-    lang = report["language"].upper()
-    total = report["summary"]["total"]
-    passed = report["summary"]["passed"]
-    failed = report["summary"]["failed"]
-
-    # Select banner status emoji
-    status_emoji = "✅" if failed == 0 else "❌"
-    
-    markdown = f"""### {status_emoji} Automated Test Execution Summary ({lang})
-
-| Total Tests | Passed ✅ | Failed ❌ | Pass Rate |
-| :--- | :--- | :--- | :--- |
-| **{total}** | **{passed}** | **{failed}** | **{int((passed/total)*100) if total > 0 else 0}%** |
-
----
-
-#### Detailed Test Breakdown
-| Test Case Name | Status | Error Details |
-| :--- | :---: | :--- |
-"""
-
-    for test in report["tests"]:
+def _render_test_table(tests):
+    rows = "| Test Case Name | Status | Error Details |\n| :--- | :---: | :--- |\n"
+    for test in tests:
         if test["status"] == "passed":
             status_tag = "🟢 **PASSED**"
             error_detail = "*-*"
@@ -44,8 +23,48 @@ def generate_github_summary(report):
             # Format error details cleanly into a collapsible block to prevent clutter
             clean_error = test["error_message"].replace('\n', '<br>') if test["error_message"] else "Unknown Error"
             error_detail = f"<details><summary>View Error Trace</summary><code style='white-space: pre-wrap;'>{clean_error}</code></details>"
-        
-        markdown += f"| {test['name']} | {status_tag} | {error_detail} |\n"
+
+        rows += f"| {test['name']} | {status_tag} | {error_detail} |\n"
+    return rows
+
+
+def generate_github_summary(report):
+    """Generates a highly presentable Markdown UI summary and saves it to a file for PR comments.
+
+    Renders one summary + detail table per source test file (grouped by JUnit
+    classname), instead of merging every file's tests into a single table.
+    """
+    lang = report["language"].upper()
+    total = report["summary"]["total"]
+    passed = report["summary"]["passed"]
+    failed = report["summary"]["failed"]
+
+    # Select banner status emoji
+    status_emoji = "✅" if failed == 0 else "❌"
+
+    markdown = f"""### {status_emoji} Automated Test Execution Summary ({lang})
+
+| Total Tests | Passed ✅ | Failed ❌ | Pass Rate |
+| :--- | :--- | :--- | :--- |
+| **{total}** | **{passed}** | **{failed}** | **{int((passed/total)*100) if total > 0 else 0}%** |
+"""
+
+    for group_name, group in report["groups"].items():
+        g_total = group["summary"]["total"]
+        g_passed = group["summary"]["passed"]
+        g_failed = group["summary"]["failed"]
+        g_emoji = "✅" if g_failed == 0 else "❌"
+
+        markdown += f"""
+---
+
+#### {g_emoji} {group_name}
+| Tests | Passed ✅ | Failed ❌ | Pass Rate |
+| :--- | :--- | :--- | :--- |
+| **{g_total}** | **{g_passed}** | **{g_failed}** | **{int((g_passed/g_total)*100) if g_total > 0 else 0}%** |
+
+"""
+        markdown += _render_test_table(group["tests"])
 
     # Save to a dedicated markdown file for the PR workflow to capture
     output_comment_file = 'pr_comment.md'
@@ -69,7 +88,8 @@ def parse_junit_xml(xml_file_path, language_name):
     unified_report = {
         "language": language_name,
         "summary": {"total": 0, "passed": 0, "failed": 0},
-        "tests": []
+        "tests": [],
+        "groups": {}
     }
 
     testsuites = [root] if root.tag == 'testsuite' else root.findall('testsuite')
@@ -77,18 +97,19 @@ def parse_junit_xml(xml_file_path, language_name):
     for suite in testsuites:
         unified_report["summary"]["total"] += int(suite.get('tests', 0))
         unified_report["summary"]["failed"] += int(suite.get('failures', 0)) + int(suite.get('errors', 0))
-        
+
         for testcase in suite.findall('testcase'):
             test_name = testcase.get('name')
             classname = testcase.get('classname')
             full_name = f"{classname} -> {test_name}" if classname else test_name
+            group_name = classname or suite.get('name') or "Tests"
 
             status = "passed"
             error_message = None
 
             failure = testcase.find('failure')
             error = testcase.find('error')
-            
+
             if failure is not None:
                 status = "failed"
                 error_message = failure.text or failure.get('message')
@@ -96,15 +117,28 @@ def parse_junit_xml(xml_file_path, language_name):
                 status = "failed"
                 error_message = error.text or error.get('message')
 
-            unified_report["tests"].append({
+            test_entry = {
                 "name": full_name,
                 "status": status,
-                "error_message": strip_ansi_codes(error_message) 
-            })
+                "error_message": strip_ansi_codes(error_message)
+            }
+            unified_report["tests"].append(test_entry)
+
+            group = unified_report["groups"].setdefault(
+                group_name,
+                {"summary": {"total": 0, "passed": 0, "failed": 0}, "tests": []}
+            )
+            group["tests"].append(test_entry)
+            group["summary"]["total"] += 1
+            if status == "failed":
+                group["summary"]["failed"] += 1
 
     unified_report["summary"]["passed"] = (
         unified_report["summary"]["total"] - unified_report["summary"]["failed"]
     )
+    for group in unified_report["groups"].values():
+        group["summary"]["passed"] = group["summary"]["total"] - group["summary"]["failed"]
+
     return unified_report
 
 
