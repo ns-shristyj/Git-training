@@ -27,7 +27,7 @@ def _shorten_group_name(group_name):
 
 
 def _render_test_table(tests):
-    rows = "| Test Case Name | Status | Error Details |\n| :--- | :---: | :--- |\n"
+    rows = "| Test Case Name | Description | Status | Error Details |\n| :--- | :--- | :---: | :--- |\n"
     for test in tests:
         if test["status"] == "passed":
             status_tag = "🟢 **PASSED**"
@@ -38,7 +38,8 @@ def _render_test_table(tests):
             clean_error = test["error_message"].replace('\n', '<br>') if test["error_message"] else "Unknown Error"
             error_detail = f"<details><summary>View Error Trace</summary><code style='white-space: pre-wrap;'>{clean_error}</code></details>"
 
-        rows += f"| `{test['short_name']}` | {status_tag} | {error_detail} |\n"
+        generated_desc = test['short_name'].replace("test_", "").replace("_", " ").capitalize()
+        rows += f"| `{test['short_name']}` | {generated_desc} | {status_tag} | {error_detail} |\n"
     return rows
 
 def parse_coverage_xml(coverage_file_path):
