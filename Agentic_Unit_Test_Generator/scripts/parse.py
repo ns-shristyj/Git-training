@@ -57,7 +57,7 @@ def parse_coverage_xml(coverage_file_path):
             for clazz in package.findall(".//class"):
                 c_name = clazz.get("name", "Unknown Module")
                 c_line_rate = float(clazz.get("line-rate", 0)) * 100
-                if "test" in c_name.lower() or "parse" in c_name.lower():
+                if "agentic_unit_test_generator" in c_name.lower() or "test_" in c_name.lower() or "parse" in c_name.lower():
                     continue
                 file_breakdown.append({"name": c_name, "rate": f"{c_line_rate:.1f}%"})
         return {"total_rate": f"{line_rate:.1f}%", "lines_valid": lines_valid, "lines_covered": lines_covered, "files": file_breakdown}
