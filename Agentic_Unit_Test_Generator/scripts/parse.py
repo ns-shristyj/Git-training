@@ -12,6 +12,20 @@ def strip_ansi_codes(text):
     ansi_regex = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
     return ansi_regex.sub('', text)
 
+def _shorten_group_name(group_name):
+    """Drops the package-path prefix, keeping only the module (and class, if
+    any) — e.g. 'Agentic_Unit_Test_Generator.tests.test_api_client.TestFoo'
+    becomes 'test_api_client.TestFoo'; a plain module with no class becomes
+    just 'test_string_func'."""
+    parts = group_name.split(".")
+    if len(parts) < 2:
+        return group_name
+    last = parts[-1]
+    if last[:1].isupper():
+        return f"{parts[-2]}.{last}"
+    return last
+
+
 def _render_test_table(tests):
     rows = "| Test Case Name | Status | Error Details |\n| :--- | :---: | :--- |\n"
     for test in tests:
@@ -58,7 +72,7 @@ def generate_github_summary(report):
         markdown += f"""
 ---
 
-#### {g_emoji} {group_name}
+#### {g_emoji} {_shorten_group_name(group_name)}
 | Tests | Passed ✅ | Failed ❌ | Pass Rate |
 | :--- | :--- | :--- | :--- |
 | **{g_total}** | **{g_passed}** | **{g_failed}** | **{int((g_passed/g_total)*100) if g_total > 0 else 0}%** |
