@@ -8,33 +8,26 @@ import ast
 
 def _clean_group_heading(group_name):
     """
-    Converts paths like 'Agentic_Unit_Test_Generator.tests.test_api_client' 
-    into 'Agentic unit test generator - Api client'.
+    Extracts the final file/class name from a dotted path 
+    and turns 'test_api_client' into 'Api client'.
     """
-    # Replace package dots with clean dashes
-    normalized = group_name.replace('.', ' - ')
+    # Grab only the last part of the dot-separated string (the actual file/module name)
+    last_component = group_name.split('.')[-1]
     
-    # Remove "test_" or "Test_" prefixes anywhere in the string
-    normalized = re.sub(r'\b[Tt]est_?\b', '', normalized)
+    # Remove "test_" or "Test_" prefixes safely
+    cleaned = re.sub(r'^[Tt]est_?', '', last_component)
     
     # Add spaces before capital letters (handles CamelCase class names)
-    normalized = re.sub(r'(?<!^)(?=[A-Z])', ' ', normalized)
+    cleaned = re.sub(r'(?<!^)(?=[A-Z])', ' ', cleaned)
     
-    # Convert all underscores and hyphens into clean spaces
-    normalized = normalized.replace("_", " ").replace("-", " ")
+    # Convert underscores and hyphens to spaces
+    cleaned = cleaned.replace("_", " ").replace("-", " ")
     
-    # Clean up any residual single letters like " s " left over from "tests"
-    normalized = re.sub(r'\b[sS]\b', '', normalized)
+    # Clean up double spaces
+    cleaned = " ".join(cleaned.split())
     
-    # Clean up double spaces and collapse spaces around dashes
-    normalized = " ".join(normalized.split())
-    normalized = normalized.replace(" - - ", " - ").replace(" - ", " - ")
-    
-    # Strip trailing/leading dashes if any components were entirely removed
-    normalized = normalized.strip(" - ")
-    
-    # Capitalize only the very first letter of the total heading string
-    return normalized.capitalize()
+    # Capitalize the final readable string
+    return cleaned.capitalize()
 
 def _extract_test_docstrings(group_name):
     """Parses a test file using AST to map test function names to their docstrings."""
