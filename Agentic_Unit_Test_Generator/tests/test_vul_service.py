@@ -10,7 +10,7 @@ from NIC_SecEng_Task.vul_service import (
 
 
 class FakeDBClient:
-    """A minimal in memory fake standing in for the external db dependency (not the code under test)."""
+    """A minimal in memory fake standing in for the external DB dependency (not the code under test)."""
 
     def __init__(self, return_value=None):
         self.return_value = return_value if return_value is not None else []
