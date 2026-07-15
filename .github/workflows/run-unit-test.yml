@@ -1,9 +1,9 @@
 name: Run Automated Unit Tests
 
 on:
-  pull_request:
-    branches: [develop]
-    types: [synchronize, opened, reopened]
+  push:
+    branches:
+      - 'ns-apanikar/project/**'
     paths:
       - 'Agentic_Unit_Test_Generator/tests/test_**.py'
 
@@ -21,14 +21,17 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 2
-      - name: Fetch base branch for Diffing
-        run: git fetch origin ${{ github.event.pull_request.base.ref }} --depth=1
 
       - name: Detect New or Modified Test Files
         id: detect_tests
         run: |
+          # Since we checked out the head SHA directly with depth=2,
+          # HEAD is the current push, and HEAD^ is the state immediately before it.
+          COMPARE_REF="HEAD^"
+
+          echo "Evaluating changes between $COMPARE_REF and HEAD..."
+
           # Find any Python files added, copied, or modified in the tests/ folder
           CHANGED_TESTS=$(git diff --name-only --diff-filter=AM $COMPARE_REF HEAD | grep -E '^Agentic_Unit_Test_Generator/tests/test_[^/]+\.py$' | xargs)  
           echo "$CHANGED_TESTS"        
@@ -96,6 +99,23 @@ jobs:
                   console.log('No pr_comment.md found — skipping comment.');
                   return;
                 }
+                // DYNAMIC PR LOOKUP: Find open PRs containing this commit SHA
+                const prList = await github.rest.repos.listPullRequestsAssociatedWithCommit({
+                              owner: context.repo.owner,
+                              repo: context.repo.repo,
+                              commit_sha: context.sha
+                            });
+
+                // Find an open PR that targets the develop branch
+                const openPR = prList.data.find(pr => pr.state === 'open' && pr.base.ref === 'develop');
+
+                if (!openPR) {
+                  console.log('No active open Pull Request targeting develop found for this commit SHA. Skipping comment phase.');
+                  return;
+                }
+
+                const prNumber = openPR.number;
+                console.log(`Found active PR #${prNumber}. Proceeding to post test results.`);
 
                 const body = fs.readFileSync(commentFile, 'utf8');
                 const marker = '<!-- unit-test-results -->';
@@ -104,7 +124,7 @@ jobs:
                 const comments = await github.rest.issues.listComments({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
-                  issue_number: context.issue.number,
+                  issue_number: prNumber,
                 });
 
                 const existing = comments.data.find(c => c.body.includes(marker));
@@ -121,7 +141,7 @@ jobs:
                   await github.rest.issues.createComment({
                     owner: context.repo.owner,
                     repo: context.repo.repo,
-                    issue_number: context.issue.number,
+                    issue_number: prNumber,
                     body: markedBody,
                   });
                   console.log('Created new comment.');
