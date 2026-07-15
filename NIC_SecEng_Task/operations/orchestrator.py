@@ -39,5 +39,5 @@ class UserOperationsOrchestrator:
             return {
                 "success": False,
                 "stage": "log_reading",
-                "error": f"Failed to retrieve logs safely: {str(e)}"
+                "error": f"Failed to retrieve logs safe: {str(e)}"
             }
