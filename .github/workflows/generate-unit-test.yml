@@ -126,16 +126,31 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            // Find the actual branch name being targeted
+            // 1. Resolve the correct git head SHA being evaluated
+            let targetSha = context.sha;
             let targetRef = context.ref;
             
-            // If this step is executing on a PR event structure, extract the direct head branch
             if (context.payload.pull_request) {
+              targetSha = context.payload.pull_request.head.sha;
               targetRef = context.payload.pull_request.head.ref;
             }
 
-            console.log(`Dispatching 'run-unit-test.yml' to target ref: ${targetRef}`);
+            console.log(`Target Commit SHA for Status Check: ${targetSha}`);
 
+            // 2. 🛠️ CREATE PENDING STATUS CHECK: This puts the spinning "In Progress" badge on the PR UI instantly
+            const checkRun = await github.rest.checks.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              name: 'Execute Unit Tests', // ⚠️ Needs to match the 'name:' property of the job in your test runner file
+              head_sha: targetSha,
+              status: 'in_progress',
+              started_at: new Date().toISOString(),
+              description: 'Agentic test runner suite is spinning up...'
+            });
+
+            console.log(`Created pending check run ID: ${checkRun.data.id}`);
+
+            // 3. Trigger the actual testing workflow execution block
             await github.rest.actions.createWorkflowDispatch({
               owner: context.repo.owner,
               repo: context.repo.repo,
