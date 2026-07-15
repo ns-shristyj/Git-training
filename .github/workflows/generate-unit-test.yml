@@ -103,4 +103,21 @@ jobs:
             git commit -m "Add Generated Unit Tests For $COUNT Files" -m "$(cat "$GITHUB_WORKSPACE/.generated_test_files.txt")"
           fi
 
-          git push origin HEAD:${{ github.event.pull_request.head.ref }}
+          TARGET_BRANCH="${{ github.event.pull_request.head.ref }}"
+          
+          for i in {1..3}; do
+            echo "Syncing remote changes via rebase (Attempt $i)..."
+            # Pull the absolute latest history before pushing
+            if git pull --rebase origin "$TARGET_BRANCH"; then
+              echo "Pushing generated tests..."
+              if git push origin HEAD:"$TARGET_BRANCH"; then
+                echo "Successfully pushed generated tests!"
+                exit 0
+              fi
+            fi
+            echo "Branch state diverged mid-flight. Retrying in 5 seconds..."
+            sleep 5
+          done
+
+          echo "Error: Failed to push generated tests after 3 attempts due to branch activity."
+          exit 1
