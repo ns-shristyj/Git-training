@@ -88,7 +88,6 @@ jobs:
           fi
 
       - name: Commit and push generated test files
-        id: git_push
         if: steps.filter_engine.outputs.run_generation == 'true' && steps.generate.outputs.has_generated_files == 'true'
         run: |
           git config --global user.name "github-actions[bot]"
@@ -115,9 +114,6 @@ jobs:
               echo "Pushing generated tests..."
               if git push origin HEAD:"$TARGET_BRANCH"; then
                 echo "Successfully pushed generated tests!"
-                NEW_COMMIT_SHA=$(git rev-parse HEAD)
-                echo "new_sha=$NEW_COMMIT_SHA" >> "$GITHUB_OUTPUT"
-                echo "Captured new remote SHA: $NEW_COMMIT_SHA"
                 exit 0
               fi
             fi
@@ -127,42 +123,3 @@ jobs:
 
           echo "Error: Failed to push generated tests after 3 attempts due to branch activity."
           exit 1
-      - name: Trigger Automated Unit Tests Workflow
-        if: steps.filter_engine.outputs.run_generation == 'true' && steps.generate.outputs.has_generated_files == 'true' && steps.git_push.outputs.new_sha != ''
-        uses: actions/github-script@v7
-        with:
-          script: |
-            // 1. 🛠️ USE THE FRESH BOT COMMIT SHA: Read the output variable directly
-            const targetSha = '${{ steps.git_push.outputs.new_sha }}';
-            
-            // 🛠️ FIX 1: Cleanly extract the raw branch name (avoids the refs/pull/ merge ref crash)
-            let targetRef = '';
-            if (context.payload.pull_request) {
-              targetRef = context.payload.pull_request.head.ref;
-            } else {
-              targetRef = context.ref.replace('refs/heads/', '');
-            }
-
-            console.log(`Target Commit SHA for Status Check: ${targetSha}`);
-            console.log(`Target Branch Ref for Workflow Dispatch: ${targetRef}`);
-
-            // 🛠️ FIX 2: Removed 'target_url' so it doesn't link to the bot workflow.
-            // GitHub will automatically link this status to the incoming run once it initializes!
-            await github.rest.repos.createCommitStatus({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              sha: targetSha,
-              state: 'pending', 
-              context: 'Execute Unit Tests', 
-              description: 'Agentic test runner suite is spinning up...'
-            });
-
-            console.log(`Successfully registered pending commit status check on ${targetSha}.`);
-
-            // 3. Trigger the actual testing workflow execution block
-            await github.rest.actions.createWorkflowDispatch({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              workflow_id: 'run-unit-test.yml', 
-              ref: targetRef
-            });
