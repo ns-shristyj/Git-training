@@ -135,24 +135,26 @@ jobs:
             // 1. 🛠️ USE THE FRESH BOT COMMIT SHA: Read the output variable directly
             const targetSha = '${{ steps.git_push.outputs.new_sha }}';
             
-            // Resolve the target branch reference safely
-            let targetRef = context.ref;
+            // 🛠️ FIX 1: Cleanly extract the raw branch name (avoids the refs/pull/ merge ref crash)
+            let targetRef = '';
             if (context.payload.pull_request) {
               targetRef = context.payload.pull_request.head.ref;
+            } else {
+              targetRef = context.ref.replace('refs/heads/', '');
             }
 
             console.log(`Target Commit SHA for Status Check: ${targetSha}`);
             console.log(`Target Branch Ref for Workflow Dispatch: ${targetRef}`);
 
-            // 2. CREATE PENDING STATUS: Links the spinning circle to the new commit hash
+            // 🛠️ FIX 2: Removed 'target_url' so it doesn't link to the bot workflow.
+            // GitHub will automatically link this status to the incoming run once it initializes!
             await github.rest.repos.createCommitStatus({
               owner: context.repo.owner,
               repo: context.repo.repo,
               sha: targetSha,
               state: 'pending', 
               context: 'Execute Unit Tests', 
-              description: 'Agentic test runner suite is spinning up...',
-              target_url: `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`
+              description: 'Agentic test runner suite is spinning up...'
             });
 
             console.log(`Successfully registered pending commit status check on ${targetSha}.`);
