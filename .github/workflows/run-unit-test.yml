@@ -19,28 +19,22 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.ref }}
-          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 2
       - name: Fetch base branch for Diffing
         run: git fetch origin ${{ github.event.pull_request.base.ref }} --depth=1
 
       - name: Detect New or Modified Test Files
         id: detect_tests
         run: |
-         # 1. Get the list of files changed in the absolute latest commit/push
-          # GitHub provides github.event.before, but if it's empty (like a fresh PR), 
-          # we fall back to comparing against the merge-base of the target branch.
-          BEFORE_SHA="${{ github.event.before }}"
-          if [ -z "$BEFORE_SHA" ] || [ "$BEFORE_SHA" = "0000000000000000000000000000000000000000" ]; then
-            COMPARE_REF=$(git merge-base origin/${{ github.event.pull_request.base.ref }} HEAD)
-          else
-            COMPARE_REF="$BEFORE_SHA"
-          fi
+          # Since we checked out the head SHA directly with depth=2,
+          # HEAD is the current push, and HEAD^ is the state immediately before it.
+          COMPARE_REF="HEAD^"
 
           echo "Evaluating changes between $COMPARE_REF and HEAD..."
-          
+
           # Find any Python files added, copied, or modified in the tests/ folder
-          CHANGED_TESTS=$(git diff --name-only --diff-filter=A origin/${{ github.event.pull_request.base.ref }} HEAD | grep -E '^Agentic_Unit_Test_Generator/tests/test_[^/]+\.py$' | xargs)  
+          CHANGED_TESTS=$(git diff --name-only --diff-filter=A $COMPARE_REF HEAD | grep -E '^Agentic_Unit_Test_Generator/tests/test_[^/]+\.py$' | xargs)  
           echo "$CHANGED_TESTS"        
           if [ -z "$CHANGED_TESTS" ]; then
             echo "No test files were added or modified in this commit."
