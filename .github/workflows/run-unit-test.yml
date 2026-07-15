@@ -34,7 +34,7 @@ jobs:
           echo "Evaluating changes between $COMPARE_REF and HEAD..."
 
           # Find any Python files added, copied, or modified in the tests/ folder
-          CHANGED_TESTS=$(git diff --name-only --diff-filter=A $COMPARE_REF HEAD | grep -E '^Agentic_Unit_Test_Generator/tests/test_[^/]+\.py$' | xargs)  
+          CHANGED_TESTS=$(git diff --name-only --diff-filter=AM $COMPARE_REF HEAD | grep -E '^Agentic_Unit_Test_Generator/tests/test_[^/]+\.py$' | xargs)  
           echo "$CHANGED_TESTS"        
           if [ -z "$CHANGED_TESTS" ]; then
             echo "No test files were added or modified in this commit."
