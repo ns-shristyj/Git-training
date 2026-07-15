@@ -8,6 +8,7 @@ on:
 permissions:
   id-token: write
   contents: write
+  actions: write
 
 jobs:
   generate-test:
@@ -125,9 +126,19 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
+            // Find the actual branch name being targeted
+            let targetRef = context.ref;
+            
+            // If this step is executing on a PR event structure, extract the direct head branch
+            if (context.payload.pull_request) {
+              targetRef = context.payload.pull_request.head.ref;
+            }
+
+            console.log(`Dispatching 'run-unit-test.yml' to target ref: ${targetRef}`);
+
             await github.rest.actions.createWorkflowDispatch({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              workflow_id: 'run-unit-test.yml',
-              ref: context.ref // Tells it to run on the exact branch the bot just pushed to
+              workflow_id: 'run-unit-test.yml', 
+              ref: targetRef
             });
