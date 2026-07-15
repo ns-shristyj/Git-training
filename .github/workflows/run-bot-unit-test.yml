@@ -15,7 +15,10 @@ permissions:
 jobs:
   run-tests:
     name: Execute Unit Tests
-    if: github.actor == 'github-actions[bot]'
+    if: |
+      github.actor == 'github-actions[bot]' || 
+      github.event.pull_request.head.repo.owner.login == 'github-actions[bot]' ||
+      contains(github.event.sender.login, 'github-actions[bot]')
     runs-on: arc-default-basic-cheap-s-set
     
     steps:
