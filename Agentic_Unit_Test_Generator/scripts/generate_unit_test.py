@@ -26,6 +26,7 @@ import sys
 import uuid
 
 import boto3
+from botocore.config import Config
 
 REGION = "ap-southeast-2"
 AGENT_RUNTIME_ARN = os.environ.get("AGENT_RUNTIME_ARN")
@@ -53,7 +54,12 @@ def main():
 
     source_path, output_path = sys.argv[1], sys.argv[2]
 
-    agentcore = boto3.client("bedrock-agentcore", region_name=REGION)
+    custom_config = Config(
+        read_timeout=900,
+        connect_timeout=900,
+        retries={'max_attempts': 0}
+    )
+    agentcore = boto3.client("bedrock-agentcore", region_name=REGION, config=custom_config)
 
     payload = json.dumps({
         "repo": GITHUB_REPOSITORY,
