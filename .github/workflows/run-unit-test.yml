@@ -6,6 +6,7 @@ on:
       - 'ns-apanikar/project/**'
     paths:
       - 'Agentic_Unit_Test_Generator/tests/test_**.py'
+  workflow_dispatch:
 
 permissions:
   contents: read
