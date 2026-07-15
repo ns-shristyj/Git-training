@@ -88,6 +88,7 @@ jobs:
           fi
 
       - name: Commit and push generated test files
+        id: git_push
         if: steps.filter_engine.outputs.run_generation == 'true' && steps.generate.outputs.has_generated_files == 'true'
         run: |
           git config --global user.name "github-actions[bot]"
@@ -114,6 +115,9 @@ jobs:
               echo "Pushing generated tests..."
               if git push origin HEAD:"$TARGET_BRANCH"; then
                 echo "Successfully pushed generated tests!"
+                NEW_COMMIT_SHA=$(git rev-parse HEAD)
+                echo "new_sha=$NEW_COMMIT_SHA" >> "$GITHUB_OUTPUT"
+                echo "Captured new remote SHA: $NEW_COMMIT_SHA"
                 exit 0
               fi
             fi
@@ -124,32 +128,34 @@ jobs:
           echo "Error: Failed to push generated tests after 3 attempts due to branch activity."
           exit 1
       - name: Trigger Automated Unit Tests Workflow
+        if: steps.filter_engine.outputs.run_generation == 'true' && steps.generate.outputs.has_generated_files == 'true' && steps.git_push.outputs.new_sha != ''
         uses: actions/github-script@v7
         with:
           script: |
-            // 1. Resolve the correct git head SHA being evaluated
-            let targetSha = context.sha;
-            let targetRef = context.ref;
+            // 1. 🛠️ USE THE FRESH BOT COMMIT SHA: Read the output variable directly
+            const targetSha = '${{ steps.git_push.outputs.new_sha }}';
             
+            // Resolve the target branch reference safely
+            let targetRef = context.ref;
             if (context.payload.pull_request) {
-              targetSha = context.payload.pull_request.head.sha;
               targetRef = context.payload.pull_request.head.ref;
             }
 
             console.log(`Target Commit SHA for Status Check: ${targetSha}`);
+            console.log(`Target Branch Ref for Workflow Dispatch: ${targetRef}`);
 
-            // 2. 🛠️ CREATE PENDING STATUS: Puts a spinning yellow indicator on the PR interface
+            // 2. CREATE PENDING STATUS: Links the spinning circle to the new commit hash
             await github.rest.repos.createCommitStatus({
               owner: context.repo.owner,
               repo: context.repo.repo,
               sha: targetSha,
               state: 'pending', 
-              context: 'Execute Unit Tests', // This is the exact check name displayed in the PR UI
+              context: 'Execute Unit Tests', 
               description: 'Agentic test runner suite is spinning up...',
               target_url: `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`
             });
 
-            console.log(`Successfully registered pending commit status check.`);
+            console.log(`Successfully registered pending commit status check on ${targetSha}.`);
 
             // 3. Trigger the actual testing workflow execution block
             await github.rest.actions.createWorkflowDispatch({
