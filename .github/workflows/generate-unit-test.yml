@@ -9,6 +9,7 @@ permissions:
   id-token: write
   contents: write
   actions: write
+  statuses: write
 
 jobs:
   generate-test:
@@ -137,18 +138,18 @@ jobs:
 
             console.log(`Target Commit SHA for Status Check: ${targetSha}`);
 
-            // 2. 🛠️ CREATE PENDING STATUS CHECK: This puts the spinning "In Progress" badge on the PR UI instantly
-            const checkRun = await github.rest.checks.create({
+            // 2. 🛠️ CREATE PENDING STATUS: Puts a spinning yellow indicator on the PR interface
+            await github.rest.repos.createCommitStatus({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              name: 'Execute Unit Tests', // ⚠️ Needs to match the 'name:' property of the job in your test runner file
-              head_sha: targetSha,
-              status: 'in_progress',
-              started_at: new Date().toISOString(),
-              description: 'Agentic test runner suite is spinning up...'
+              sha: targetSha,
+              state: 'pending', 
+              context: 'Execute Unit Tests', // This is the exact check name displayed in the PR UI
+              description: 'Agentic test runner suite is spinning up...',
+              target_url: `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`
             });
 
-            console.log(`Created pending check run ID: ${checkRun.data.id}`);
+            console.log(`Successfully registered pending commit status check.`);
 
             // 3. Trigger the actual testing workflow execution block
             await github.rest.actions.createWorkflowDispatch({
