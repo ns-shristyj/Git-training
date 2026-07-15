@@ -21,14 +21,20 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 2
+          fetch-depth: 0
+      - name: Fetch base branch for Diffing
+        run: |
+          git remote set-branches origin develop
+          git fetch origin develop
 
       - name: Detect New or Modified Test Files
         id: detect_tests
         run: |
-          # Since we checked out the head SHA directly with depth=2,
-          # HEAD is the current push, and HEAD^ is the state immediately before it.
-          COMPARE_REF="HEAD^"
+          # Dynamically discover the merge-base where this branch split from origin/develop
+          if ! COMPARE_REF=$(git merge-base origin/develop HEAD 2>/dev/null); then
+            echo "⚠️ Could not find merge-base with origin/develop. Falling back to parent commit."
+            COMPARE_REF="HEAD^"
+          fi
 
           echo "Evaluating changes between $COMPARE_REF and HEAD..."
 
