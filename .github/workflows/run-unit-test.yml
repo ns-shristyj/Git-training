@@ -4,6 +4,8 @@ on:
   pull_request:
     branches: [develop]
     types: [synchronize, opened, reopened]
+    paths:
+      - 'Agentic_Unit_Test_Generator/tests/test_**.py'
 
 permissions:
   contents: read
@@ -27,12 +29,6 @@ jobs:
       - name: Detect New or Modified Test Files
         id: detect_tests
         run: |
-          # Since we checked out the head SHA directly with depth=2,
-          # HEAD is the current push, and HEAD^ is the state immediately before it.
-          COMPARE_REF="HEAD^"
-
-          echo "Evaluating changes between $COMPARE_REF and HEAD..."
-
           # Find any Python files added, copied, or modified in the tests/ folder
           CHANGED_TESTS=$(git diff --name-only --diff-filter=AM $COMPARE_REF HEAD | grep -E '^Agentic_Unit_Test_Generator/tests/test_[^/]+\.py$' | xargs)  
           echo "$CHANGED_TESTS"        
