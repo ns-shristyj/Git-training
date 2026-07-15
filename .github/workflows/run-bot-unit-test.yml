@@ -1,0 +1,135 @@
+name: Run Bot Unit Tests
+
+on:
+  pull_request:
+    branches: [develop]
+    types: [synchronize, opened, reopened]
+    paths:
+      - 'Agentic_Unit_Test_Generator/tests/test_**.py'
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write
+
+jobs:
+  run-tests:
+    name: Execute Unit Tests
+    if: github.actor == 'github-actions[bot]'
+    runs-on: arc-default-basic-cheap-s-set
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 2
+      - name: Fetch base branch for Diffing
+        run: git fetch origin ${{ github.event.pull_request.base.ref }} --depth=1
+
+      - name: Detect New or Modified Test Files
+        id: detect_tests
+        run: |
+          # Since we checked out the head SHA directly with depth=2,
+          # HEAD is the current push, and HEAD^ is the state immediately before it.
+          COMPARE_REF="HEAD^"
+
+          echo "Evaluating changes between $COMPARE_REF and HEAD..."
+
+          # Find any Python files added, copied, or modified in the tests/ folder
+          CHANGED_TESTS=$(git diff --name-only --diff-filter=AM $COMPARE_REF HEAD | grep -E '^Agentic_Unit_Test_Generator/tests/test_[^/]+\.py$' | xargs)  
+          echo "$CHANGED_TESTS"        
+          if [ -z "$CHANGED_TESTS" ]; then
+            echo "No test files were added or modified in this commit."
+            echo "run_tests=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Detected test files to run: $CHANGED_TESTS"
+            echo "test_files=$CHANGED_TESTS" >> "$GITHUB_OUTPUT"
+            echo "run_tests=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up Python
+        if: steps.detect_tests.outputs.run_tests == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        if: steps.detect_tests.outputs.run_tests == 'true'
+        run: |
+          python -m pip install --upgrade pip
+          # Add any dependencies your calculator application requires here
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          pip install pytest pytest-cov # Ensures pytest is available to run the tests
+          pip install requests  # Ensures requests is available for Mocking API calls
+      
+      - name: Run Test Suite and Generate JUnit XML
+        if: steps.detect_tests.outputs.run_tests == 'true'
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+          TARGET_TESTS: ${{ steps.detect_tests.outputs.test_files }}
+        run: |
+          echo "🚀 Executing pytest on: $TARGET_TESTS"
+          # Run only the detected test files. '|| true' ensures we still parse results if tests fail.
+          pytest $TARGET_TESTS --cov=. --cov-report=term --cov-report=xml:${{ github.workspace }}/coverage.xml --junitxml=${{ github.workspace }}/dynamic_test_report.xml -v || true
+
+      - name: Parse Test Results
+        if: always() && steps.detect_tests.outputs.run_tests == 'true'
+        run: |
+              if [ "${{ steps.detect_tests.outputs.run_tests }}" = "false" ]; then
+                # Clean skip notice if no tests were touched
+                echo "### No Test Execution Required" > pr_comment.md
+                echo "This PR update did not contain new or modified test files inside the test suite directory." >> pr_comment.md
+              elif [ -s "${{ github.workspace }}/dynamic_test_report.xml" ]; then
+                echo "Parsing test and coverage results..."
+                # Passed coverage.xml as an extra positional parameter argument
+                python Agentic_Unit_Test_Generator/scripts/parse.py \
+                  "${{ github.workspace }}/dynamic_test_report.xml" "python" "${{ github.workspace }}/coverage.xml"
+              else
+                echo "No report found."
+                echo "### ⏳ No test results yet" > pr_comment.md
+                echo "The test suite did not produce a report. Check the run logs." >> pr_comment.md
+              fi
+
+      - name: Post Results to PR
+        if: always() && steps.detect_tests.outputs.run_tests == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+                const fs = require('fs');
+                const commentFile = 'pr_comment.md';
+
+                if (!fs.existsSync(commentFile)) {
+                  console.log('No pr_comment.md found — skipping comment.');
+                  return;
+                }
+
+                const body = fs.readFileSync(commentFile, 'utf8');
+                const marker = '<!-- unit-test-results -->';
+                const markedBody = marker + '\n' + body;
+
+                const comments = await github.rest.issues.listComments({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.issue.number,
+                });
+
+                const existing = comments.data.find(c => c.body.includes(marker));
+
+                if (existing) {
+                  await github.rest.issues.updateComment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    comment_id: existing.id,
+                    body: markedBody,
+                  });
+                  console.log('Updated existing comment.');
+                } else {
+                  await github.rest.issues.createComment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: context.issue.number,
+                    body: markedBody,
+                  });
+                  console.log('Created new comment.');
+                }
