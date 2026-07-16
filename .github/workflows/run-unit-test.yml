@@ -19,8 +19,7 @@ jobs:
     if: |
       github.event_name == 'push' && 
       (
-        toJson(github.event.head_commit.added) != '[]' && contains(toJson(github.event.head_commit.added), 'Agentic_Unit_Test_Generator/tests/') ||
-        toJson(github.event.head_commit.modified) != '[]' && contains(toJson(github.event.head_commit.modified), 'Agentic_Unit_Test_Generator/tests/')
+        contains(toJson(github.event.commits), 'Agentic_Unit_Test_Generator/tests/')
       )
     runs-on: arc-default-basic-cheap-s-set
     
