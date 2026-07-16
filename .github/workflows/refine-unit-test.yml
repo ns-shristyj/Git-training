@@ -157,3 +157,29 @@ jobs:
 
           echo "Error: Failed to push refined tests after 3 attempts due to branch activity."
           exit 1
+      - name: Post Refinement Results to PR
+        if: always() && steps.collect_feedback.outputs.has_feedback == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Retrieve the output variable from the refine step
+            const refinedCount = parseInt('${{ steps.refine.outputs.refined_count }}') || 0;
+            
+            // For a pull_request_review event, the PR number is nested in the payload
+            const prNumber = context.payload.pull_request.number;
+
+            if (!prNumber) {
+              console.log('No PR number found in context. Skipping comment.');
+              return;
+            }
+
+            const body = `### 🛠️ Unit Test Refinement Complete\n\n` +
+                         `- **Successfully refined:** ${refinedCount} file(s) based on your feedback. ✅\n\n` +
+                         `*Then Refined Unit Tests are being run & will be updated in the PR comment once done.*`;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: body
+            });
