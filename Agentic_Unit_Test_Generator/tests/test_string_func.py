@@ -31,18 +31,35 @@ class TestReverseString:
         """Verify reversal works correctly on unicode characters."""
         assert reverse_string("héllo") == "olléh"
 
+    def test_reverse_numeric_string(self):
+        """Verify reversal works correctly on strings composed of digits."""
+        assert reverse_string("12345") == "54321"
+
     def test_reverse_string_with_special_chars(self):
         """Verify reversal handles special/injection-like characters without executing or altering them."""
         payload = "<script>alert(1)</script>"
         result = reverse_string(payload)
         assert result == payload[::-1]
-        # ensure the payload is not executed or interpreted, just reversed text
         assert isinstance(result, str)
+
+    def test_reverse_string_with_sql_injection_payload(self):
+        """Verify reversal treats SQL-injection-like text as inert data and merely reverses it."""
+        payload = "'; DROP TABLE users; --"
+        result = reverse_string(payload)
+        assert result == payload[::-1]
+        assert "DROP TABLE" not in result  # confirms text was reversed, not left intact/executed
 
     def test_reverse_string_with_newlines(self):
         """Verify reversal handles strings containing newlines and tabs."""
         text = "line1\nline2\t"
         assert reverse_string(text) == text[::-1]
+
+    def test_reverse_long_string_does_not_crash(self):
+        """Verify reversal handles very long input strings without error (DoS/edge-case resilience)."""
+        long_text = "x" * 100000
+        result = reverse_string(long_text)
+        assert result == long_text  # all same character, reversal is identical
+        assert len(result) == 100000
 
 
 class TestCapitalizeWords:
@@ -82,12 +99,27 @@ class TestCapitalizeWords:
         """Verify words containing numbers are not corrupted by capitalization."""
         assert capitalize_words("123abc test") == "123abc Test"
 
+    def test_capitalize_words_with_tabs_and_newlines(self):
+        """Verify tabs and newlines are treated as whitespace separators and collapsed like spaces."""
+        assert capitalize_words("hello\tworld\nfoo") == "Hello World Foo"
+
     def test_capitalize_words_with_special_chars(self):
         """Verify special characters embedded in words are preserved safely."""
         text = "<script> alert"
         result = capitalize_words(text)
         assert result == "<script> Alert"
-        assert "<script>" in result  # confirms no execution/sanitization side effects, just capitalization
+        assert "<script>" in result
+
+    def test_capitalize_words_with_path_traversal_payload(self):
+        """Verify path-traversal-like text is treated as inert string data, not interpreted as a path."""
+        payload = "../../etc/passwd danger"
+        result = capitalize_words(payload)
+        assert result == "../../etc/passwd Danger"
+        assert isinstance(result, str)
+
+    def test_capitalize_unicode_word(self):
+        """Verify unicode characters are handled correctly during capitalization."""
+        assert capitalize_words("héllo wörld") == "Héllo Wörld"
 
 
 class TestTruncate:
@@ -132,3 +164,20 @@ class TestTruncate:
         """Verify a very large negative max_length still raises ValueError instead of crashing or misbehaving."""
         with pytest.raises(ValueError):
             truncate("some text", -999999)
+
+    def test_truncate_with_unicode_text(self):
+        """Verify truncation counts unicode characters correctly and appends ellipsis appropriately."""
+        text = "héllo wörld"
+        result = truncate(text, 5)
+        assert result == text[:5] + "..."
+
+    def test_truncate_max_length_larger_than_text_returns_original(self):
+        """Verify a max_length far larger than the text length returns the text unchanged (no ellipsis added)."""
+        assert truncate("hi", 1000) == "hi"
+
+    def test_truncate_null_byte_payload_handled_safely(self):
+        """Verify truncation of a null-byte injection payload does not crash and produces a plain truncated string."""
+        payload = "safe\x00malicious"
+        result = truncate(payload, 4)
+        assert result == "safe..."
+        assert isinstance(result, str)
