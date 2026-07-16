@@ -12,7 +12,7 @@ jobs:
   on-changes-requested:
     name: Reviewer Requested Changes
     # Only run when the reviewer explicitly selected "Changes requested"
-    if: github.event.review.state == 'changes_requested'
+    if: contains(fromJSON('["changes_requested", "commented"]'), github.event.review.state)
     runs-on: arc-default-basic-cheap-s-set
 
     steps:
