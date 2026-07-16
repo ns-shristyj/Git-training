@@ -1,11 +1,9 @@
 name: Run Bot Unit Tests
 
 on:
-  pull_request:
-    branches: [develop]
-    types: [synchronize]
-    paths:
-      - 'Agentic_Unit_Test_Generator/tests/test_**.py'
+  workflow_run:
+    workflows: ["Generate Unit Tests"]
+    types: [completed]
 
 permissions:
   contents: read
@@ -15,20 +13,17 @@ permissions:
 jobs:
   run-tests:
     name: Execute Unit Tests
-    if: |
-      github.actor == 'github-actions[bot]' || 
-      github.event.pull_request.head.repo.owner.login == 'github-actions[bot]' ||
-      contains(github.event.sender.login, 'github-actions[bot]')
+    if: github.event.workflow_run.conclusion == 'success'
     runs-on: arc-default-basic-cheap-s-set
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ github.event.workflow_run.head_sha }}
           fetch-depth: 2
       - name: Fetch base branch for Diffing
-        run: git fetch origin ${{ github.event.pull_request.base.ref }} --depth=1
+        run: git fetch origin develop --depth=1
 
       - name: Detect New or Modified Test Files
         id: detect_tests
@@ -111,10 +106,28 @@ jobs:
                 const marker = '<!-- bot-unit-test-results -->';
                 const markedBody = marker + '\n' + body;
 
+                // Find PRs associated with this commit
+                const prList = await github.rest.repos.listPullRequestsAssociatedWithCommit({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  commit_sha: '${{ github.event.workflow_run.head_sha }}'
+                });
+
+                // Find an open PR that targets the develop branch
+                const openPR = prList.data.find(pr => pr.state === 'open' && pr.base.ref === 'develop');
+
+                if (!openPR) {
+                  console.log('No active PR found. Skipping comment.');
+                  return;
+                }
+
+                const prNumber = openPR.number;
+                console.log(`Found PR #${prNumber}. Posting test results.`);
+
                 const comments = await github.rest.issues.listComments({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
-                  issue_number: context.issue.number,
+                  issue_number: prNumber,
                 });
 
                 const existing = comments.data.find(c => c.body.includes(marker));
@@ -131,7 +144,7 @@ jobs:
                   await github.rest.issues.createComment({
                     owner: context.repo.owner,
                     repo: context.repo.repo,
-                    issue_number: context.issue.number,
+                    issue_number: prNumber,
                     body: markedBody,
                   });
                   console.log('Created new comment.');
