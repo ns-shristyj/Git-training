@@ -132,6 +132,12 @@ jobs:
             [ -n "$test_file" ] && git add "$test_file"
           done < "$GITHUB_WORKSPACE/.refined_test_files.txt"
 
+          # 🛑 ADD THIS CHECK: Verify if there are actually changes to commit
+            #   if git diff --staged --quiet; then
+            #     echo "No modifications were made to the test files during refinement. Skipping commit."
+            #     exit 0
+            #   fi
+
           COUNT="${{ steps.refine.outputs.refined_count }}"
           if [ "$COUNT" -eq 1 ]; then
             FILE=$(head -n1 "$GITHUB_WORKSPACE/.refined_test_files.txt")
@@ -204,7 +210,7 @@ jobs:
               body: markedBody,
             });
             console.log('Created new comment.');
-            
+
       - name: Resolve PR Conversations
         # Only run if refinement was actually successful and pushed
         if: success() && steps.refine.outputs.has_refined_files == 'true'
