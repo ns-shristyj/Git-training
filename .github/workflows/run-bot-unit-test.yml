@@ -19,17 +19,37 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
-          fetch-depth: 2
+          ref: ${{ github.event.workflow_run.head_branch }}
+          fetch-depth: 0
       - name: Fetch base branch for Diffing
         run: git fetch origin develop --depth=1
+
+      - name: Capture current HEAD SHA
+        id: head_sha
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Create Check Run
+        id: create_check
+        uses: actions/github-script@v7
+        with:
+          script: |
+                const { data: check } = await github.rest.checks.create({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  name: 'Bot Unit Tests',
+                  head_sha: '${{ steps.head_sha.outputs.sha }}',
+                  status: 'in_progress',
+                });
+                core.setOutput('check_id', check.id);
 
       - name: Detect New or Modified Test Files
         id: detect_tests
         run: |
-          # Since we checked out the head SHA directly with depth=2,
-          # HEAD is the current push, and HEAD^ is the state immediately before it.
-          COMPARE_REF="HEAD^"
+          # workflow_run.head_sha is pinned to the commit that TRIGGERED the
+          # generate workflow, which is BEFORE it pushes the generated test
+          # file commit. Checkout head_branch (moving ref) instead, and diff
+          # against the pre-trigger SHA so the generated commit is included.
+          COMPARE_REF="${{ github.event.workflow_run.head_sha }}"
 
           echo "Evaluating changes between $COMPARE_REF and HEAD..."
 
@@ -148,3 +168,42 @@ jobs:
                   });
                   console.log('Created new comment.');
                 }
+
+      - name: Complete Check Run
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+                const fs = require('fs');
+                const checkId = '${{ steps.create_check.outputs.check_id }}';
+                if (!checkId) {
+                  console.log('No check run was created — skipping.');
+                  return;
+                }
+
+                const runTests = '${{ steps.detect_tests.outputs.run_tests }}' === 'true';
+                let conclusion = 'neutral';
+                let summary = 'No new or modified test files were detected in this push.';
+
+                if (runTests && fs.existsSync('unified_results.json')) {
+                  const report = JSON.parse(fs.readFileSync('unified_results.json', 'utf8'));
+                  const { total, passed, failed } = report.summary;
+                  conclusion = failed === 0 ? 'success' : 'failure';
+                  summary = `${passed}/${total} tests passed, ${failed} failed.`;
+                } else if (runTests) {
+                  conclusion = 'failure';
+                  summary = 'Test suite did not produce a report.';
+                }
+
+                await github.rest.checks.update({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  check_run_id: checkId,
+                  status: 'completed',
+                  conclusion,
+                  output: {
+                    title: 'Bot Unit Tests',
+                    summary,
+                  },
+                });
+                console.log(`Check run completed with conclusion: ${conclusion}`);
