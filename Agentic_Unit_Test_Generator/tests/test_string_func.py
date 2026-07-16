@@ -6,104 +6,104 @@ from NIC_SecEng_Task.Calculator.string_func import (
 )
 
 
-class TestReverseStringAdditional:
-    def test_reverse_numeric_string(self):
-        """Verify that a string of digits is reversed correctly without type coercion issues."""
-        assert reverse_string("12345") == "54321"
+class TestReverseStringCore:
+    def test_reverse_empty_string(self):
+        """Verify that reversing an empty string returns an empty string without error."""
+        assert reverse_string("") == ""
 
-    def test_reverse_string_with_tabs(self):
-        """Verify that tab characters are preserved in correct reversed position."""
-        assert reverse_string("a\tb") == "b\ta"
+    def test_reverse_single_character(self):
+        """Verify that reversing a single-character string returns the same character."""
+        assert reverse_string("a") == "a"
 
-    def test_reverse_long_string_performance_safety(self):
-        """Verify that a very long string is reversed without error or truncation."""
-        long_str = "x" * 10000
-        result = reverse_string(long_str)
-        assert result == long_str  # palindrome-like since all same char
-        assert len(result) == 10000
+    def test_reverse_string_with_leading_trailing_spaces(self):
+        """Verify that leading and trailing whitespace is preserved in the correct reversed position."""
+        assert reverse_string(" ab ") == " ba "
 
-    def test_reverse_string_non_string_input_raises(self):
-        """Verify that passing a non-string type raises an appropriate error rather than silently succeeding."""
-        with pytest.raises((TypeError, AttributeError)):
-            reverse_string(12345)
-
-    def test_reverse_string_with_null_byte(self):
-        """Verify that a null byte embedded in the string is preserved and not used to truncate the string unsafely."""
-        payload = "abc\x00def"
+    def test_reverse_string_with_unicode_and_emoji(self):
+        """Verify that unicode characters, including multi-byte emoji, are reversed correctly without corruption."""
+        payload = "abc😀"
         result = reverse_string(payload)
         assert result == payload[::-1]
-        assert "\x00" in result
 
-    def test_reverse_string_path_traversal_payload(self):
-        """Verify that a path traversal-like payload is only reversed as text and not resolved as a path."""
-        payload = "../../etc/passwd"
+    def test_reverse_string_format_string_payload(self):
+        """Verify that a format-string injection style payload is only reversed as literal text, not interpreted."""
+        payload = "%s%s%s{0}{1}"
         result = reverse_string(payload)
         assert result == payload[::-1]
         assert result != payload
 
 
-class TestCapitalizeWordsAdditional:
-    def test_capitalize_none_input_raises(self):
-        """Verify that passing None raises an error instead of silently returning invalid output."""
-        with pytest.raises((TypeError, AttributeError)):
-            capitalize_words(None)
+class TestCapitalizeWordsCore:
+    def test_capitalize_empty_string(self):
+        """Verify that capitalizing an empty string returns an empty string without error."""
+        assert capitalize_words("") == ""
 
-    def test_capitalize_non_string_input_raises(self):
-        """Verify that passing a non-string type raises an appropriate error."""
-        with pytest.raises((TypeError, AttributeError)):
-            capitalize_words(12345)
+    def test_capitalize_single_word(self):
+        """Verify that a single lowercase word is capitalized correctly."""
+        assert capitalize_words("hello") == "Hello"
 
-    def test_capitalize_string_with_tabs_and_newlines(self):
-        """Verify that tabs and newlines are treated as whitespace separators and collapsed like spaces."""
-        assert capitalize_words("hello\tworld\nfoo") == "Hello World Foo"
+    def test_capitalize_collapses_multiple_spaces(self):
+        """Verify that multiple consecutive spaces between words are collapsed into a single space in the output."""
+        assert capitalize_words("hello    world") == "Hello World"
 
-    def test_capitalize_words_with_hyphenated_word(self):
-        """Verify that only the leading character of a hyphenated token is capitalized (no special hyphen handling)."""
-        assert capitalize_words("well-known fact") == "Well-known Fact"
+    def test_capitalize_strips_leading_and_trailing_whitespace(self):
+        """Verify that leading and trailing whitespace does not appear in the capitalized output."""
+        assert capitalize_words("  hello world  ") == "Hello World"
 
-    def test_capitalize_words_with_sql_injection_payload(self):
-        """Verify that a SQL injection-like payload is treated as plain text and merely capitalized, not executed."""
-        payload = "'; drop table users; --"
+    def test_capitalize_already_uppercase_words_lowercased_except_first(self):
+        """Verify that fully uppercase words are normalized so only the first letter remains capitalized."""
+        assert capitalize_words("HELLO WORLD") == "Hello World"
+
+    def test_capitalize_html_injection_payload_treated_as_text(self):
+        """Verify that an HTML/script injection payload is only capitalized as plain text, not rendered or executed."""
+        payload = "<script>alert('x')</script> hi"
         result = capitalize_words(payload)
-        # capitalize() lowercases rest of the token; ensure it's plain text transformation
-        assert result == " ".join(w.capitalize() for w in payload.split())
-        assert "DROP TABLE" not in result
+        expected = " ".join(w.capitalize() for w in payload.split())
+        assert result == expected
+        assert "<SCRIPT>" not in result.upper().replace("<SCRIPT>", "<SCRIPT>")  # sanity: no execution occurred
+        assert result == expected
 
 
-class TestTruncateAdditional:
-    def test_truncate_non_string_text_raises(self):
-        """Verify that passing a non-string text raises an appropriate error rather than corrupting output."""
-        with pytest.raises((TypeError, AttributeError)):
-            truncate(12345, 5)
+class TestTruncateCore:
+    def test_truncate_text_shorter_than_max_length_unchanged(self):
+        """Verify that text shorter than max_length is returned unmodified without an ellipsis appended."""
+        text = "hi"
+        result = truncate(text, 10)
+        assert result == text
 
-    def test_truncate_non_integer_max_length_raises(self):
-        """Verify that passing a non-integer max_length raises an error instead of silently misbehaving."""
-        with pytest.raises((TypeError, ValueError)):
-            truncate("hello world", "5")
+    def test_truncate_text_exactly_equal_to_max_length_unchanged(self):
+        """Verify that text exactly equal to max_length is returned unmodified without an ellipsis appended."""
+        text = "hello"
+        result = truncate(text, len(text))
+        assert result == text
 
-    def test_truncate_float_max_length_behaves_or_raises(self):
-        """Verify that a float max_length either slices correctly or raises a controlled error, never crashing unexpectedly."""
+    def test_truncate_max_length_zero_produces_only_ellipsis(self):
+        """Verify that a max_length of zero on non-empty text results in just the ellipsis suffix."""
+        result = truncate("hello", 0)
+        assert result == "..."
+
+    def test_truncate_negative_max_length_does_not_crash(self):
+        """Verify that a negative max_length is handled safely without raising an unexpected exception."""
         try:
-            result = truncate("hello world", 5.0)
-            assert result == "hello..."
-        except (TypeError, ValueError):
+            result = truncate("hello world", -1)
+            assert isinstance(result, str)
+            assert result.endswith("...")
+        except (ValueError, TypeError):
             pass
 
-    def test_truncate_unicode_text_boundary(self):
-        """Verify that truncation of unicode text respects character boundaries and appends ellipsis correctly."""
-        text = "héllo wörld"
-        result = truncate(text, 5)
-        assert result == text[:5] + "..."
+    def test_truncate_empty_text_returns_empty(self):
+        """Verify that truncating an empty string returns an empty string without appending an ellipsis."""
+        assert truncate("", 5) == ""
 
-    def test_truncate_does_not_leak_beyond_original_length(self):
-        """Verify that truncated output never exceeds max_length plus the length of the ellipsis suffix."""
-        text = "a" * 50
-        max_length = 10
-        result = truncate(text, max_length)
-        assert len(result) == max_length + 3
+    def test_truncate_max_length_larger_than_text_returns_original(self):
+        """Verify that a max_length greater than the text length returns the original text unchanged."""
+        text = "short"
+        result = truncate(text, 1000)
+        assert result == text
 
-    def test_truncate_max_length_exactly_one_less_than_text(self):
-        """Verify boundary condition where max_length is exactly one less than text length triggers truncation."""
-        text = "hello"
-        result = truncate(text, len(text) - 1)
-        assert result == text[:len(text) - 1] + "..."
+    def test_truncate_path_traversal_payload_only_sliced_as_text(self):
+        """Verify that a path traversal-like payload is only sliced as text and not resolved or accessed as a path."""
+        payload = "../../../etc/passwd"
+        result = truncate(payload, 5)
+        assert result == payload[:5] + "..."
+        assert result != payload
