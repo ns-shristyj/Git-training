@@ -15,11 +15,13 @@ permissions:
 jobs:
   run-tests:
     name: Execute Unit Tests
-    # NATIVE GATING EXPRESSION: Blocks runner provisioning if the push ONLY consists of deletions
+    # NATIVE GATING EXPRESSION: Blocks runner provisioning if push ONLY consists of deletions
+    # (checks added/modified file lists only; 'removed' is deliberately excluded)
     if: |
-      github.event_name == 'push' && 
+      github.event_name == 'push' &&
       (
-        contains(toJson(github.event.commits), 'Agentic_Unit_Test_Generator/tests/')
+        contains(join(github.event.commits.*.added, ','), 'Agentic_Unit_Test_Generator/tests/') ||
+        contains(join(github.event.commits.*.modified, ','), 'Agentic_Unit_Test_Generator/tests/')
       )
     runs-on: arc-default-basic-cheap-s-set
     
