@@ -2,7 +2,7 @@ name: Run Bot Unit Tests
 
 on:
   workflow_run:
-    workflows: ["Generate Unit Test"]
+    workflows: ["Generate Unit Test", "Refine Unit Test"]
     types: [completed]
 
 permissions:
