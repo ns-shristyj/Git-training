@@ -13,7 +13,6 @@ permissions:
 jobs:
   run-tests:
     name: Execute Unit Tests
-    if: github.event.workflow_run.conclusion == 'success'
     runs-on: arc-default-basic-cheap-s-set
 
     steps:
