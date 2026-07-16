@@ -5,6 +5,7 @@ on:
     types: [submitted]
 
 permissions:
+  id-token: write
   contents: write
   pull-requests: read
 
