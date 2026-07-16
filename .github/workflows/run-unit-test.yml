@@ -20,8 +20,8 @@ jobs:
     if: |
       github.event_name == 'push' &&
       (
-        contains(join(github.event.commits.*.added, ','), 'Agentic_Unit_Test_Generator/tests/') ||
-        contains(join(github.event.commits.*.modified, ','), 'Agentic_Unit_Test_Generator/tests/')
+        contains(toJson(github.event.commits.*.added), 'Agentic_Unit_Test_Generator/tests/') ||
+        contains(toJson(github.event.commits.*.modified), 'Agentic_Unit_Test_Generator/tests/')
       )
     runs-on: arc-default-basic-cheap-s-set
     
