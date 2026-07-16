@@ -8,7 +8,7 @@ from NIC_SecEng_Task.operations.orchestrator import UserOperationsOrchestrator
 
 @pytest.fixture
 def mock_db_client():
-    """Provides mock external database client (external dependency)."""
+    """Provides a mock external database client (external dependency)."""
     return MagicMock(name="db_client")
 
 
