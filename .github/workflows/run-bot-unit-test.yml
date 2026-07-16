@@ -1,11 +1,9 @@
-name: Run Automated Unit Tests
+name: Run Bot Unit Tests
 
 on:
-  push:
-    branches:
-      - 'ns-apanikar/project/**'
-    paths:
-      - 'Agentic_Unit_Test_Generator/tests/test_**.py'
+  workflow_run:
+    workflows: ["Generate Unit Test"]
+    types: [completed]
 
 permissions:
   contents: read
@@ -16,29 +14,22 @@ jobs:
   run-tests:
     name: Execute Unit Tests
     runs-on: arc-default-basic-cheap-s-set
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 2
       - name: Fetch base branch for Diffing
-        run: |
-          git remote set-branches origin develop
-          git fetch origin develop
+        run: git fetch origin develop --depth=1
 
       - name: Detect New or Modified Test Files
         id: detect_tests
         run: |
-          # If it's a direct push, use github.event.before. If it's manual dispatch, fall back to HEAD^
-          BEFORE_SHA="${{ github.event.before }}"
-          
-          if [ -z "$BEFORE_SHA" ] || [ "$BEFORE_SHA" = "0000000000000000000000000000000000000000" ]; then
-            echo "No valid previous commit SHA found in event payload. Defaulting comparison to parent commit (HEAD^)."
-            COMPARE_REF="HEAD^"
-          else
-            COMPARE_REF="$BEFORE_SHA"
-          fi
+          # Since we checked out the head SHA directly with depth=2,
+          # HEAD is the current push, and HEAD^ is the state immediately before it.
+          COMPARE_REF="HEAD^"
 
           echo "Evaluating changes between $COMPARE_REF and HEAD..."
 
@@ -111,30 +102,26 @@ jobs:
                 }
 
                 const body = fs.readFileSync(commentFile, 'utf8');
-                // DYNAMIC PR LOOKUP: Find open PRs containing this commit SHA
+                const marker = '<!-- bot-unit-test-results -->';
+                const markedBody = marker + '\n' + body;
+
+                // Find PRs associated with this commit
                 const prList = await github.rest.repos.listPullRequestsAssociatedWithCommit({
-                              owner: context.repo.owner,
-                              repo: context.repo.repo,
-                              commit_sha: context.sha
-                            });
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  commit_sha: '${{ github.event.workflow_run.head_sha }}'
+                });
 
                 // Find an open PR that targets the develop branch
                 const openPR = prList.data.find(pr => pr.state === 'open' && pr.base.ref === 'develop');
 
                 if (!openPR) {
-                // 🛠️ FALLBACK PATH: Write directly to the GitHub Actions Job Summary Page
-                console.log('No active PR found. Printing metrics directly to the Action Summary console.');
-              
-                // Append to the special environment file GitHub uses to populate the dashboard summary
-                fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `## Automated Unit Test Metrics\n\n${body}`);
-                return;
+                  console.log('No active PR found. Skipping comment.');
+                  return;
                 }
 
                 const prNumber = openPR.number;
-                console.log(`Found active PR #${prNumber}. Proceeding to post test results.`);
-
-                const marker = '<!-- automated-unit-test-results -->';
-                const markedBody = marker + '\n' + body;
+                console.log(`Found PR #${prNumber}. Posting test results.`);
 
                 const comments = await github.rest.issues.listComments({
                   owner: context.repo.owner,
