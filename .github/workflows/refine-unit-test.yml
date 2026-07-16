@@ -184,23 +184,23 @@ jobs:
                   repo: context.repo.repo,
                   issue_number: prNumber,
                 });
-                
+
             const existing = comments.data.find(c => c.body.includes(marker));
 
             if (existing) {
-              await github.rest.issues.updateComment({
+              await github.rest.issues.deleteComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 comment_id: existing.id,
-                body: markedBody,
               });
-              console.log('Updated existing comment.');
-            } else {
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: prNumber,
-                body: markedBody,
-              });
-              console.log('Created new comment.');
-            }
+              console.log('Deleted old comment.');
+            } 
+            
+            //Create the brand new comment
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: markedBody,
+            });
+            console.log('Created new comment.');
