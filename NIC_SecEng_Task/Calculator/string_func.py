@@ -4,7 +4,7 @@ def reverse_string(text: str) -> str:
     return text[::-1]
 
 def capitalize_words(text: str) -> str:
-    """Capitalizes 1 letter of every word in a string."""
+    """Capitalizes 1st letter of every word in a string."""
     if not text:
         return ""
     return " ".join(word.capitalize() for word in text.split())
