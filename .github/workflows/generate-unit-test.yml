@@ -148,6 +148,12 @@ jobs:
                          `*Then Generated Tests are being run & will be displayed in PR once done.*`;
             const markedBody = marker + '\n' + body;
 
+            const comments = await github.rest.issues.listComments({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: prNumber,
+                });
+                
             const existing = comments.data.find(c => c.body.includes(marker));
 
             if (existing) {
