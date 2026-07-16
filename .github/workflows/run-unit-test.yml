@@ -6,7 +6,6 @@ on:
       - 'ns-apanikar/project/**'
     paths:
       - 'Agentic_Unit_Test_Generator/tests/test_**.py'
-  workflow_dispatch:
 
 permissions:
   contents: read
@@ -31,10 +30,14 @@ jobs:
       - name: Detect New or Modified Test Files
         id: detect_tests
         run: |
-          # Dynamically discover the merge-base where this branch split from origin/develop
-          if ! COMPARE_REF=$(git merge-base origin/develop HEAD 2>/dev/null); then
-            echo "⚠️ Could not find merge-base with origin/develop. Falling back to parent commit."
+          # If it's a direct push, use github.event.before. If it's manual dispatch, fall back to HEAD^
+          BEFORE_SHA="${{ github.event.before }}"
+          
+          if [ -z "$BEFORE_SHA" ] || [ "$BEFORE_SHA" = "0000000000000000000000000000000000000000" ]; then
+            echo "No valid previous commit SHA found in event payload. Defaulting comparison to parent commit (HEAD^)."
             COMPARE_REF="HEAD^"
+          else
+            COMPARE_REF="$BEFORE_SHA"
           fi
 
           echo "Evaluating changes between $COMPARE_REF and HEAD..."
