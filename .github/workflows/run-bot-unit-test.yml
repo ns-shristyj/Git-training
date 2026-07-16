@@ -108,7 +108,7 @@ jobs:
                 }
 
                 const body = fs.readFileSync(commentFile, 'utf8');
-                const marker = '<!-- unit-test-results -->';
+                const marker = '<!-- bot-unit-test-results -->';
                 const markedBody = marker + '\n' + body;
 
                 const comments = await github.rest.issues.listComments({

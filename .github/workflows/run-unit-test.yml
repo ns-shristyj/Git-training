@@ -133,7 +133,7 @@ jobs:
                 const prNumber = openPR.number;
                 console.log(`Found active PR #${prNumber}. Proceeding to post test results.`);
 
-                const marker = '<!-- unit-test-results -->';
+                const marker = '<!-- automated-unit-test-results -->';
                 const markedBody = marker + '\n' + body;
 
                 const comments = await github.rest.issues.listComments({
