@@ -1,0 +1,158 @@
+name: Refine Unit Test
+
+on:
+  pull_request_review:
+    types: [submitted]
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  on-changes-requested:
+    name: Reviewer Requested Changes
+    # Only run when the reviewer explicitly selected "Changes requested"
+    if: github.event.review.state == 'changes_requested'
+    runs-on: arc-default-basic-cheap-s-set
+
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+
+      - name: Collect inline review comments targeting the tests folder
+        id: collect_feedback
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = context.payload.pull_request.number;
+            const reviewId = context.payload.review.id;
+
+            // Inline comments left as part of THIS review only.
+            const { data: comments } = await github.rest.pulls.listCommentsForReview({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber,
+              review_id: reviewId,
+            });
+
+            const targeted = comments.filter(c =>
+              c.path.startsWith('Agentic_Unit_Test_Generator/tests/')
+            );
+
+            if (targeted.length === 0) {
+              console.log('No inline comments target the tests folder — skipping.');
+              core.setOutput('has_feedback', 'false');
+              return;
+            }
+
+            // Group comments by file so each file gets refined once with all its feedback.
+            const byFile = {};
+            for (const c of targeted) {
+              const entry = {
+                line: c.line ?? c.original_line,
+                diff_hunk: c.diff_hunk,
+                comment: c.body,
+              };
+              (byFile[c.path] ??= []).push(entry);
+            }
+
+            const fs = require('fs');
+            fs.mkdirSync('.review_feedback', { recursive: true });
+            const files = [];
+            for (const [path, entries] of Object.entries(byFile)) {
+              const feedbackFile = `.review_feedback/${path.replace(/\//g, '__')}.json`;
+              fs.writeFileSync(feedbackFile, JSON.stringify(entries, null, 2));
+              files.push({ test_file: path, feedback_file: feedbackFile });
+            }
+
+            core.setOutput('has_feedback', 'true');
+            core.setOutput('files', JSON.stringify(files));
+            console.log(`Collected feedback for ${files.length} file(s): ${files.map(f => f.test_file).join(', ')}`);
+
+      - name: Configure AWS credentials via OIDC
+        if: steps.collect_feedback.outputs.has_feedback == 'true'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ap-southeast-2
+
+      - name: Set up Python
+        if: steps.collect_feedback.outputs.has_feedback == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        if: steps.collect_feedback.outputs.has_feedback == 'true'
+        run: pip install "boto3>=1.40"
+
+      - name: Refine flagged test files
+        id: refine
+        if: steps.collect_feedback.outputs.has_feedback == 'true'
+        env:
+          FILES_JSON: ${{ steps.collect_feedback.outputs.files }}
+          AGENT_RUNTIME_ARN: ${{ vars.AGENT_RUNTIME_ARN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          SOURCE_COMMIT_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          REFINED_FILES=()
+
+          while IFS=$'\t' read -r test_file feedback_file; do
+            echo "=== Refining $test_file from $feedback_file ==="
+            if python Agentic_Unit_Test_Generator/scripts/refine_unit_test.py "$test_file" "$test_file" "$feedback_file"; then
+              REFINED_FILES+=("$test_file")
+            else
+              echo "::warning::Refinement failed for $test_file — skipping."
+            fi
+          done < <(python3 -c "
+          import json, os
+          for f in json.loads(os.environ['FILES_JSON']):
+              print(f\"{f['test_file']}\t{f['feedback_file']}\")
+          ")
+
+          printf '%s\n' "${REFINED_FILES[@]}" > "$GITHUB_WORKSPACE/.refined_test_files.txt"
+          echo "refined_count=${#REFINED_FILES[@]}" >> "$GITHUB_OUTPUT"
+          if [ ${#REFINED_FILES[@]} -eq 0 ]; then
+            echo "has_refined_files=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_refined_files=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Commit and push refined test files
+        if: steps.collect_feedback.outputs.has_feedback == 'true' && steps.refine.outputs.has_refined_files == 'true'
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+          while IFS= read -r test_file; do
+            [ -n "$test_file" ] && git add "$test_file"
+          done < "$GITHUB_WORKSPACE/.refined_test_files.txt"
+
+          COUNT="${{ steps.refine.outputs.refined_count }}"
+          if [ "$COUNT" -eq 1 ]; then
+            FILE=$(head -n1 "$GITHUB_WORKSPACE/.refined_test_files.txt")
+            git commit -m "Refine Generated Unit Test For $(basename "$FILE") Per Review Feedback"
+          else
+            git commit -m "Refine $COUNT Generated Unit Tests Per Review Feedback" -m "$(cat "$GITHUB_WORKSPACE/.refined_test_files.txt")"
+          fi
+
+          TARGET_BRANCH="${{ github.event.pull_request.head.ref }}"
+
+          for i in {1..3}; do
+            echo "Syncing remote changes via rebase (Attempt $i)..."
+            if git pull --rebase origin "$TARGET_BRANCH"; then
+              echo "Pushing refined tests..."
+              if git push origin HEAD:"$TARGET_BRANCH"; then
+                echo "Successfully pushed refined tests!"
+                exit 0
+              fi
+            fi
+            echo "Branch state diverged mid-flight. Retrying in 5 seconds..."
+            sleep 5
+          done
+
+          echo "Error: Failed to push refined tests after 3 attempts due to branch activity."
+          exit 1
