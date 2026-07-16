@@ -45,10 +45,21 @@ class TestReverseString:
         result = reverse_string(payload)
         assert result == payload[::-1]
 
+    def test_reverse_sql_injection_payload(self):
+        """Verifies reversal safely treats SQL injection-like strings as plain data."""
+        payload = "'; DROP TABLE users; --"
+        result = reverse_string(payload)
+        assert result == payload[::-1]
+
     def test_reverse_non_string_raises(self):
         """Verifies that passing a non-string type raises a TypeError."""
         with pytest.raises(TypeError):
             reverse_string(12345)
+
+    def test_reverse_none_raises(self):
+        """Verifies that passing None raises a TypeError instead of silently failing."""
+        with pytest.raises(TypeError):
+            reverse_string(None)
 
 
 class TestCapitalizeWords:
@@ -104,6 +115,10 @@ class TestCapitalizeWords:
         assert result.startswith("<script>alert(1)</script>".capitalize())
         assert "Hello" in result
 
+    def test_capitalize_tab_and_newline_whitespace(self):
+        """Verifies capitalization correctly handles tab/newline whitespace as separators."""
+        assert capitalize_words("hello\tworld\nfoo") == "Hello World Foo"
+
 
 class TestTruncate:
     def test_no_truncation_needed(self):
@@ -147,9 +162,20 @@ class TestTruncate:
         with pytest.raises(TypeError):
             truncate("hello world", "5")
 
+    def test_truncate_non_string_text_raises(self):
+        """Verifies passing a non-string text argument raises a TypeError instead of silently succeeding."""
+        with pytest.raises(TypeError):
+            truncate(12345, 5)
+
     def test_truncate_injection_payload(self):
         """Verifies injection-like payload text is truncated as plain data without execution."""
         payload = "<script>alert('xss')</script>"
         result = truncate(payload, 8)
         assert result == payload[:8] + "..."
         assert "alert(" not in result or result.endswith("...")
+
+    def test_truncate_path_traversal_payload(self):
+        """Verifies path traversal-like text is truncated safely as plain data without filesystem access."""
+        payload = "../../../../etc/passwd"
+        result = truncate(payload, 6)
+        assert result == payload[:6] + "..."
