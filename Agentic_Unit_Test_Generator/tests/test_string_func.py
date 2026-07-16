@@ -39,10 +39,27 @@ class TestReverseString:
         # ensure no execution/interpretation occurs, just data reversal
         assert result[::-1] == text
 
+    def test_reverse_string_with_path_traversal_payload(self):
+        """Verify a path-traversal-like payload is treated purely as reversible text data."""
+        payload = "../../../../etc/passwd"
+        result = reverse_string(payload)
+        assert result == payload[::-1]
+        assert result[::-1] == payload
+
     def test_reverse_string_type_error_on_non_string(self):
         """Verify passing a non-string type raises a TypeError instead of silently succeeding."""
         with pytest.raises(TypeError):
             reverse_string(12345)
+
+    def test_reverse_string_type_error_on_none(self):
+        """Verify passing None raises a TypeError instead of returning an unexpected value."""
+        with pytest.raises(TypeError):
+            reverse_string(None)
+
+    def test_reverse_string_type_error_on_list(self):
+        """Verify passing a list raises a TypeError rather than silently reversing the list."""
+        with pytest.raises(TypeError):
+            reverse_string(["h", "i"])
 
 
 class TestCapitalizeWords:
@@ -93,10 +110,19 @@ class TestCapitalizeWords:
         assert "Drop" in result
         assert "Table" in result
 
+    def test_capitalize_zero_value_is_falsy_returns_empty(self):
+        """Verify falsy integer 0 short-circuits the truthy check and returns an empty string."""
+        assert capitalize_words(0) == ""
+
     def test_capitalize_words_type_error_on_non_string(self):
         """Verify passing a non-string, non-None truthy type raises AttributeError/TypeError."""
         with pytest.raises((TypeError, AttributeError)):
             capitalize_words(12345)
+
+    def test_capitalize_words_type_error_on_list(self):
+        """Verify passing a truthy list raises AttributeError/TypeError rather than mis-processing."""
+        with pytest.raises((TypeError, AttributeError)):
+            capitalize_words(["hello", "world"])
 
 
 class TestTruncate:
@@ -142,7 +168,23 @@ class TestTruncate:
         assert result == payload[:10] + "..."
         assert result.endswith("...")
 
+    def test_truncate_path_traversal_payload_is_only_sliced_data(self):
+        """Verify a path traversal payload is safely truncated as plain text without filesystem access."""
+        payload = "../../../../../../etc/passwd"
+        result = truncate(payload, 5)
+        assert result == payload[:5] + "..."
+
     def test_truncate_max_length_type_error_on_non_int(self):
         """Verify passing a non-integer max_length raises TypeError instead of unsafe comparison."""
         with pytest.raises(TypeError):
             truncate("hello", "5")
+
+    def test_truncate_max_length_type_error_on_none(self):
+        """Verify passing None as max_length raises TypeError instead of an unhandled crash."""
+        with pytest.raises(TypeError):
+            truncate("hello", None)
+
+    def test_truncate_text_type_error_on_non_string(self):
+        """Verify passing a non-string text raises TypeError instead of silently mis-slicing."""
+        with pytest.raises(TypeError):
+            truncate(12345, 5)
