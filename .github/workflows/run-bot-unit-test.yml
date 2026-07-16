@@ -3,7 +3,7 @@ name: Run Bot Unit Tests
 on:
   pull_request:
     branches: [develop]
-    types: [synchronize, opened, reopened]
+    types: [synchronize]
     paths:
       - 'Agentic_Unit_Test_Generator/tests/test_**.py'
 
