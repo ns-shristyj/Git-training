@@ -152,14 +152,13 @@ jobs:
                 const existing = comments.data.find(c => c.body.includes(marker));
 
                 if (existing) {
-                  await github.rest.issues.updateComment({
+                  await github.rest.issues.deleteComment({
                     owner: context.repo.owner,
                     repo: context.repo.repo,
                     comment_id: existing.id,
-                    body: markedBody,
                   });
-                  console.log('Updated existing comment.');
-                } else {
+                  console.log('Deleted old comment.');
+                }
                   await github.rest.issues.createComment({
                     owner: context.repo.owner,
                     repo: context.repo.repo,
@@ -167,7 +166,7 @@ jobs:
                     body: markedBody,
                   });
                   console.log('Created new comment.');
-                }
+                
 
       - name: Complete Check Run
         if: always()
