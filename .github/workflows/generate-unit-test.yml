@@ -141,14 +141,29 @@ jobs:
               return;
             }
 
+            const marker = '<!-- gen-unit-test-status -->';
             const body = `### 🤖 Unit Test Generation Complete\n\n` +
                          `- **Successfully generated:** ${generatedCount} file(s) 🎉\n` +
                          `- **Failed to generate:** ${failedCount} file(s) ❌\n\n` +
                          `*Then Generated Tests are being run & will be displayed in PR once done.*`;
+            const markedBody = marker + '\n' + body;
 
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: issueNumber,
-              body: body
-            });
+            const existing = comments.data.find(c => c.body.includes(marker));
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body: markedBody,
+              });
+              console.log('Updated existing comment.');
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+                body: markedBody,
+              });
+              console.log('Created new comment.');
+            }

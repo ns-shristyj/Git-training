@@ -7,7 +7,7 @@ on:
 permissions:
   id-token: write
   contents: write
-  pull-requests: read
+  pull-requests: write
 
 jobs:
   on-changes-requested:
@@ -173,13 +173,28 @@ jobs:
               return;
             }
 
+            const marker = '<!-- refine-unit-test-status -->';
             const body = `### 🛠️ Unit Test Refinement Complete\n\n` +
                          `- **Successfully refined:** ${refinedCount} file(s) based on your feedback. ✅\n\n` +
                          `*Then Refined Unit Tests are being run & will be updated in the PR comment once done.*`;
+            const markedBody = marker + '\n' + body;
 
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: prNumber,
-              body: body
-            });
+            const existing = comments.data.find(c => c.body.includes(marker));
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body: markedBody,
+              });
+              console.log('Updated existing comment.');
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                body: markedBody,
+              });
+              console.log('Created new comment.');
+            }
