@@ -15,15 +15,16 @@ permissions:
 jobs:
   run-tests:
     name: Execute Unit Tests
-    if: |
-      github.event_name == 'push' &&
-      (
-        contains(toJson(github.event.commits[0].added), 'Agentic_Unit_Test_Generator/tests/') ||
-        contains(toJson(github.event.commits[0].modified), 'Agentic_Unit_Test_Generator/tests/')
-      )
     runs-on: arc-default-basic-cheap-s-set
     
     steps:
+      - name: Debug Event Data
+        run: |
+          echo "commits[0].added: ${{ toJson(github.event.commits[0].added) }}"
+          echo "commits[0].modified: ${{ toJson(github.event.commits[0].modified) }}"
+          echo "head_commit.added: ${{ toJson(github.event.head_commit.added) }}"
+          echo "head_commit.modified: ${{ toJson(github.event.head_commit.modified) }}"
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
