@@ -8,6 +8,7 @@ permissions:
   id-token: write
   contents: write
   pull-requests: write
+  checks: write
 
 jobs:
   on-changes-requested:
@@ -163,6 +164,7 @@ jobs:
 
           echo "Error: Failed to push refined tests after 3 attempts due to branch activity."
           exit 1
+      
       - name: Post Refinement Results to PR
         if: always() && steps.collect_feedback.outputs.has_feedback == 'true'
         uses: actions/github-script@v7
@@ -210,6 +212,28 @@ jobs:
               body: markedBody,
             });
             console.log('Created new comment.');
+
+      - name: Capture New Commit SHA
+        id: new_sha
+        if: always() && steps.collect_feedback.outputs.has_feedback == 'true' && steps.refine.outputs.has_refined_files == 'true'
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Create Queued Check Run
+        if: always() && steps.collect_feedback.outputs.has_feedback == 'true' && steps.refine.outputs.has_refined_files == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.checks.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              name: 'Bot Unit Tests',
+              head_sha: '${{ steps.new_sha.outputs.sha }}',
+              status: 'queued',
+              output: {
+                title: 'Pending Bot Unit Tests',
+                summary: 'The bot has pushed refined tests. Waiting for the test runner to spin up...'
+              }
+            });
 
       - name: Resolve PR Conversations
         # Only run if refinement was actually successful and pushed
