@@ -4,8 +4,6 @@ on:
   push:
     branches:
       - 'ns-apanikar/project/**'
-    paths:
-      - 'Agentic_Unit_Test_Generator/tests/test_**.py'
 
 permissions:
   contents: read
