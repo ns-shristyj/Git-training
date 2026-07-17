@@ -30,27 +30,58 @@ jobs:
       - name: Detect New or Modified Test Files
         id: detect_tests
         run: |
-          # If it's a direct push, use github.event.before. If it's manual dispatch, fall back to HEAD^
+          # 1. DETERMINE WHAT CHANGED IN THIS EXACT PUSH
           BEFORE_SHA="${{ github.event.before }}"
           
           if [ -z "$BEFORE_SHA" ] || [ "$BEFORE_SHA" = "0000000000000000000000000000000000000000" ]; then
-            echo "No valid previous commit SHA found in event payload. Defaulting comparison to parent commit (HEAD^)."
+            echo "No valid previous commit SHA found in event payload. Defaulting to HEAD^."
             COMPARE_REF="HEAD^"
           else
             COMPARE_REF="$BEFORE_SHA"
           fi
 
-          echo "Evaluating changes between $COMPARE_REF and HEAD..."
+          echo "Evaluating changes in this specific push ($COMPARE_REF to HEAD)..."
+          PUSH_CHANGED_FILES=$(git diff --name-only --diff-filter=AM $COMPARE_REF HEAD | grep -E '\.py$' || true)
 
-          # Find any Python files added, copied, or modified in the tests/ folder
-          CHANGED_TESTS=$(git diff --name-only --diff-filter=AM $COMPARE_REF HEAD | grep -E '^Agentic_Unit_Test_Generator/tests/test_[^/]+\.py$' | xargs)  
-          echo "$CHANGED_TESTS"        
-          if [ -z "$CHANGED_TESTS" ]; then
-            echo "No test files were added or modified in this commit."
+          # 2. DETERMINE WHAT WAS NEWLY CREATED IN THIS PR (Branch lifespan)
+          MERGE_BASE=$(git merge-base origin/develop HEAD)
+          echo "Evaluating files newly added in this PR (since branch off $MERGE_BASE)..."
+          # Diff-filter 'A' specifically looks for (A)dded files
+          PR_ADDED_FILES=$(git diff --name-only --diff-filter=A $MERGE_BASE HEAD || true)
+
+          TESTS_TO_RUN=""
+
+          for file in $PUSH_CHANGED_FILES; do
+            # Condition A: If the file updated in this push is ALREADY a test file, run it
+            if [[ "$file" == Agentic_Unit_Test_Generator/tests/test_*.py ]]; then
+              echo "✅ Test file directly updated: $file"
+              TESTS_TO_RUN="$TESTS_TO_RUN $file"
+            else
+              # Condition B: A source file was updated. Let's find its matching test file.
+              BASENAME=$(basename "$file" .py)
+              EXPECTED_TEST_FILE="Agentic_Unit_Test_Generator/tests/test_${BASENAME}.py"
+              
+              if [ -f "$EXPECTED_TEST_FILE" ]; then
+                # Condition C (The New Rule): Check if this test file was generated/added in THIS PR
+                if echo "$PR_ADDED_FILES" | grep -Fxq "$EXPECTED_TEST_FILE"; then
+                  echo "✅ Source file modified AND its test was newly generated in this PR: $EXPECTED_TEST_FILE"
+                  TESTS_TO_RUN="$TESTS_TO_RUN $EXPECTED_TEST_FILE"
+                else
+                  echo "⏭️ Source file modified, but its test ($EXPECTED_TEST_FILE) was NOT generated in this PR. Skipping."
+                fi
+              fi
+            fi
+          done
+
+          # Deduplicate the list
+          FINAL_TESTS=$(echo "$TESTS_TO_RUN" | tr ' ' '\n' | sort -u | xargs)
+
+          if [ -z "$FINAL_TESTS" ]; then
+            echo "No eligible test files or new PR-generated tests were detected for this push."
             echo "run_tests=false" >> "$GITHUB_OUTPUT"
           else
-            echo "Detected test files to run: $CHANGED_TESTS"
-            echo "test_files=$CHANGED_TESTS" >> "$GITHUB_OUTPUT"
+            echo "Detected eligible test files to run: $FINAL_TESTS"
+            echo "test_files=$FINAL_TESTS" >> "$GITHUB_OUTPUT"
             echo "run_tests=true" >> "$GITHUB_OUTPUT"
           fi
 
