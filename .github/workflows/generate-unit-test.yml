@@ -15,7 +15,7 @@ permissions:
 
 jobs:
   generate-test:
-    runs-on: arc-default-basic-cheap-s-set
+    runs-on: arc-default-ub24-m-set
     steps:
 
       - name: Checkout PR branch
@@ -130,7 +130,7 @@ jobs:
         id: new_sha
         if: always() && steps.filter_engine.outputs.run_generation == 'true' && steps.generate.outputs.has_generated_files == 'true'
         run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-        
+
       - name: Create Queued Check Run
         if: always() && steps.filter_engine.outputs.run_generation == 'true' && steps.generate.outputs.has_generated_files == 'true'
         uses: actions/github-script@v7

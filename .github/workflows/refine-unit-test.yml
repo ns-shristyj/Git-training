@@ -15,7 +15,7 @@ jobs:
     name: Reviewer Requested Changes
     # Only run when the reviewer explicitly selected "Changes requested"
     if: contains(fromJSON('["changes_requested", "commented"]'), github.event.review.state)
-    runs-on: arc-default-basic-cheap-s-set
+    runs-on: arc-default-ub24-m-set
 
     steps:
       - name: Checkout PR branch
