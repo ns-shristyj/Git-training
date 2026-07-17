@@ -4,7 +4,7 @@ def reverse_string(text: str) -> str:
     return text[::-1]
 
 def capitalize_words(text: str) -> str:
-    """Capitalizes first letter of every word in a string."""
+    """Capitalizes 1st letter of every word in a string."""
     if not text:
         return ""
     return " ".join(word.capitalize() for word in text.split())
@@ -17,3 +17,4 @@ def truncate(text: str, max_length: int) -> str:
     if len(text) <= max_length:
         return text
     return text[:max_length] + "..." 
+ 

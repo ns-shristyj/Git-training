@@ -1,315 +1,209 @@
-"""Meta-level pytest tests for Agentic_Unit_Test_Generator.tests.test_string_func.
-
-This test module treats the provided test file as the unit under test.
-Each function defined in ``test_string_func`` is itself a pytest test case
-that already exercises reverse_string, capitalize_words, and truncate from
-NIC_SecEng_Task.Calculator.string_func (including security-relevant edge
-cases like injection payloads, path traversal strings, and boundary
-values). Here we invoke each of those functions directly to confirm they
-execute and assert successfully, AND we independently re-verify the
-underlying behavior with explicit assertions against the functions the
-module imports, so every test carries a real, meaningful assertion rather
-than a bare no-op call.
-"""
-import inspect
-
 import pytest
-
-from Agentic_Unit_Test_Generator.tests import test_string_func as tsf
-
-
-# ---------------------------
-# Structural / module-level sanity checks
-# ---------------------------
-
-def test_module_imports_expected_names():
-    """Verify the module under test imports the three target functions correctly."""
-    assert hasattr(tsf, "reverse_string")
-    assert hasattr(tsf, "capitalize_words")
-    assert hasattr(tsf, "truncate")
-    assert callable(tsf.reverse_string)
-    assert callable(tsf.capitalize_words)
-    assert callable(tsf.truncate)
-
-
-def test_module_contains_expected_test_functions():
-    """Verify the module defines the full expected set of test functions (no missing coverage)."""
-    expected = {
-        "test_reverse_string_basic",
-        "test_reverse_string_empty",
-        "test_reverse_string_single_char",
-        "test_reverse_string_palindrome",
-        "test_reverse_string_with_spaces",
-        "test_reverse_string_with_unicode",
-        "test_reverse_string_with_special_chars_injection_payload",
-        "test_reverse_string_path_traversal_payload",
-        "test_reverse_string_non_string_input_raises",
-        "test_capitalize_words_basic",
-        "test_capitalize_words_empty_string",
-        "test_capitalize_words_already_capitalized",
-        "test_capitalize_words_all_uppercase",
-        "test_capitalize_words_multiple_spaces_collapsed",
-        "test_capitalize_words_leading_trailing_whitespace",
-        "test_capitalize_words_single_word",
-        "test_capitalize_words_with_numbers_and_symbols",
-        "test_capitalize_words_whitespace_only_returns_empty",
-        "test_capitalize_words_injection_payload_not_executed",
-        "test_capitalize_words_none_input_raises",
-        "test_truncate_no_truncation_needed",
-        "test_truncate_exact_length_no_ellipsis",
-        "test_truncate_longer_text_appends_ellipsis",
-        "test_truncate_max_length_zero_raises_value_error",
-        "test_truncate_negative_max_length_raises_value_error",
-        "test_truncate_empty_string_with_positive_max_length",
-        "test_truncate_max_length_one",
-        "test_truncate_large_max_length_no_truncation",
-        "test_truncate_injection_payload_truncated_safely",
-        "test_truncate_non_integer_max_length_raises_type_error",
-    }
-    defined = {
-        name
-        for name, obj in vars(tsf).items()
-        if inspect.isfunction(obj) and name.startswith("test_")
-    }
-    assert expected.issubset(defined)
-
-
-def test_all_test_functions_take_no_arguments():
-    """Verify every test function in the module is parameterless, preventing unexpected fixture injection."""
-    test_funcs = [
-        obj
-        for name, obj in vars(tsf).items()
-        if inspect.isfunction(obj) and name.startswith("test_")
-    ]
-    assert len(test_funcs) > 0
-    for obj in test_funcs:
-        sig = inspect.signature(obj)
-        assert len(sig.parameters) == 0, f"{obj.__name__} unexpectedly declares parameters"
-
-
-# ---------------------------
-# reverse_string related meta tests
-# ---------------------------
-
-def test_meta_reverse_string_basic_executes_cleanly():
-    """Verify test_reverse_string_basic passes and reverse_string produces the expected reversal."""
-    tsf.test_reverse_string_basic()
-    assert tsf.reverse_string("hello") == "olleh"
-
-
-def test_meta_reverse_string_empty_executes_cleanly():
-    """Verify test_reverse_string_empty passes and reverse_string handles empty input correctly."""
-    tsf.test_reverse_string_empty()
-    assert tsf.reverse_string("") == ""
-
-
-def test_meta_reverse_string_single_char_executes_cleanly():
-    """Verify test_reverse_string_single_char passes and single-character reversal is a no-op."""
-    tsf.test_reverse_string_single_char()
-    assert tsf.reverse_string("a") == "a"
-
-
-def test_meta_reverse_string_palindrome_executes_cleanly():
-    """Verify test_reverse_string_palindrome passes and a palindrome reverses to itself."""
-    tsf.test_reverse_string_palindrome()
-    assert tsf.reverse_string("madam") == "madam"
-
-
-def test_meta_reverse_string_with_spaces_executes_cleanly():
-    """Verify test_reverse_string_with_spaces passes and spaces are preserved during reversal."""
-    tsf.test_reverse_string_with_spaces()
-    assert tsf.reverse_string("a b c") == "c b a"
-
-
-def test_meta_reverse_string_with_unicode_executes_cleanly():
-    """Verify test_reverse_string_with_unicode passes and unicode characters reverse without corruption."""
-    tsf.test_reverse_string_with_unicode()
-    assert tsf.reverse_string("héllo") == "olléh"
-
-
-def test_meta_reverse_string_injection_payload_is_safely_handled():
-    """Verify the injection payload test passes and reverse_string never executes embedded script content."""
-    tsf.test_reverse_string_with_special_chars_injection_payload()
-    payload = "<script>alert(1)</script>"
-    result = tsf.reverse_string(payload)
-    assert result == payload[::-1]
-    assert "<script>alert(1)</script>" != result
-
-
-def test_meta_reverse_string_path_traversal_payload_is_safely_handled():
-    """Verify the path traversal payload test passes and reverse_string only performs plain text reversal."""
-    tsf.test_reverse_string_path_traversal_payload()
-    payload = "../../etc/passwd"
-    result = tsf.reverse_string(payload)
-    assert result == payload[::-1]
-    assert result != payload
-
-
-def test_meta_reverse_string_non_string_input_raises_typeerror():
-    """Verify the non-string input test passes and reverse_string rejects invalid types via TypeError."""
-    with pytest.raises(TypeError):
-        tsf.reverse_string(12345)
-    tsf.test_reverse_string_non_string_input_raises()
-
-
-# ---------------------------
-# capitalize_words related meta tests
-# ---------------------------
-
-def test_meta_capitalize_words_basic_executes_cleanly():
-    """Verify test_capitalize_words_basic passes and capitalize_words capitalizes each word."""
-    tsf.test_capitalize_words_basic()
-    assert tsf.capitalize_words("hello world") == "Hello World"
-
-
-def test_meta_capitalize_words_empty_string_executes_cleanly():
-    """Verify test_capitalize_words_empty_string passes and empty input returns empty output."""
-    tsf.test_capitalize_words_empty_string()
-    assert tsf.capitalize_words("") == ""
-
-
-def test_meta_capitalize_words_already_capitalized_executes_cleanly():
-    """Verify test_capitalize_words_already_capitalized passes and already-capitalized text is unchanged."""
-    tsf.test_capitalize_words_already_capitalized()
-    assert tsf.capitalize_words("Hello World") == "Hello World"
-
-
-def test_meta_capitalize_words_all_uppercase_executes_cleanly():
-    """Verify test_capitalize_words_all_uppercase passes and all-caps words get normalized."""
-    tsf.test_capitalize_words_all_uppercase()
-    assert tsf.capitalize_words("HELLO WORLD") == "Hello World"
-
-
-def test_meta_capitalize_words_multiple_spaces_collapsed_executes_cleanly():
-    """Verify test_capitalize_words_multiple_spaces_collapsed passes and repeated spaces collapse."""
-    tsf.test_capitalize_words_multiple_spaces_collapsed()
-    assert tsf.capitalize_words("hello    world") == "Hello World"
-
-
-def test_meta_capitalize_words_leading_trailing_whitespace_executes_cleanly():
-    """Verify test_capitalize_words_leading_trailing_whitespace passes and surrounding whitespace is stripped."""
-    tsf.test_capitalize_words_leading_trailing_whitespace()
-    assert tsf.capitalize_words("   hello world   ") == "Hello World"
-
-
-def test_meta_capitalize_words_single_word_executes_cleanly():
-    """Verify test_capitalize_words_single_word passes and a lone word is capitalized correctly."""
-    tsf.test_capitalize_words_single_word()
-    assert tsf.capitalize_words("python") == "Python"
-
-
-def test_meta_capitalize_words_with_numbers_and_symbols_executes_cleanly():
-    """Verify test_capitalize_words_with_numbers_and_symbols passes and digits/symbols are preserved."""
-    tsf.test_capitalize_words_with_numbers_and_symbols()
-    assert tsf.capitalize_words("hello123 world!") == "Hello123 World!"
-
-
-def test_meta_capitalize_words_whitespace_only_returns_empty_executes_cleanly():
-    """Verify test_capitalize_words_whitespace_only_returns_empty passes and whitespace-only input yields empty string."""
-    tsf.test_capitalize_words_whitespace_only_returns_empty()
-    assert tsf.capitalize_words("     ") == ""
-
-
-def test_meta_capitalize_words_injection_payload_is_safely_handled():
-    """Verify the injection payload test passes and capitalize_words never executes embedded script content."""
-    tsf.test_capitalize_words_injection_payload_not_executed()
-    payload = "<script>alert('x')</script> test"
-    result = tsf.capitalize_words(payload)
-    assert "Test" in result
-    assert "<script>alert('x')</script>".capitalize() in result
-
-
-def test_meta_capitalize_words_none_input_raises_attributeerror():
-    """Verify the None input test passes and capitalize_words rejects None via AttributeError."""
-    with pytest.raises(AttributeError):
-        tsf.capitalize_words(None)
-    tsf.test_capitalize_words_none_input_raises()
-
-
-# ---------------------------
-# truncate related meta tests
-# ---------------------------
-
-def test_meta_truncate_no_truncation_needed_executes_cleanly():
-    """Verify test_truncate_no_truncation_needed passes and short text is returned unchanged."""
-    tsf.test_truncate_no_truncation_needed()
-    assert tsf.truncate("hello", 10) == "hello"
-
-
-def test_meta_truncate_exact_length_no_ellipsis_executes_cleanly():
-    """Verify test_truncate_exact_length_no_ellipsis passes and exact-length text has no ellipsis appended."""
-    tsf.test_truncate_exact_length_no_ellipsis()
-    assert tsf.truncate("hello", 5) == "hello"
-
-
-def test_meta_truncate_longer_text_appends_ellipsis_executes_cleanly():
-    """Verify test_truncate_longer_text_appends_ellipsis passes and overlong text is truncated with ellipsis."""
-    tsf.test_truncate_longer_text_appends_ellipsis()
-    assert tsf.truncate("hello world", 5) == "hello..."
-
-
-def test_meta_truncate_max_length_zero_raises_value_error():
-    """Verify the zero max_length test passes and truncate rejects non-positive boundary via ValueError."""
-    with pytest.raises(ValueError):
-        tsf.truncate("hello", 0)
-    tsf.test_truncate_max_length_zero_raises_value_error()
-
-
-def test_meta_truncate_negative_max_length_raises_value_error():
-    """Verify the negative max_length test passes and truncate rejects invalid boundary via ValueError."""
-    with pytest.raises(ValueError):
-        tsf.truncate("hello", -5)
-    tsf.test_truncate_negative_max_length_raises_value_error()
-
-
-def test_meta_truncate_empty_string_with_positive_max_length_executes_cleanly():
-    """Verify test_truncate_empty_string_with_positive_max_length passes and empty text stays empty."""
-    tsf.test_truncate_empty_string_with_positive_max_length()
-    assert tsf.truncate("", 5) == ""
-
-
-def test_meta_truncate_max_length_one_executes_cleanly():
-    """Verify test_truncate_max_length_one passes and truncation works at the smallest valid boundary."""
-    tsf.test_truncate_max_length_one()
-    assert tsf.truncate("hello", 1) == "h..."
-
-
-def test_meta_truncate_large_max_length_no_truncation_executes_cleanly():
-    """Verify test_truncate_large_max_length_no_truncation passes and a very large max_length never truncates."""
-    tsf.test_truncate_large_max_length_no_truncation()
-    text = "short text"
-    assert tsf.truncate(text, 10_000) == text
-
-
-def test_meta_truncate_injection_payload_truncated_safely_is_handled():
-    """Verify the injection payload truncate test passes and payload is only sliced, never executed."""
-    tsf.test_truncate_injection_payload_truncated_safely()
-    payload = "<script>alert('xss')</script>"
-    result = tsf.truncate(payload, 8)
-    assert result == payload[:8] + "..."
-    assert result != payload
-
-
-def test_meta_truncate_non_integer_max_length_raises_type_error():
-    """Verify the non-integer max_length test passes and truncate rejects invalid types via TypeError."""
-    with pytest.raises(TypeError):
-        tsf.truncate("hello", "5")
-    tsf.test_truncate_non_integer_max_length_raises_type_error()
-
-
-# ---------------------------
-# Aggregate execution safety check
-# ---------------------------
-
-def test_all_module_test_functions_are_individually_callable():
-    """Verify every test_ function in the module can be invoked without side effects on the module namespace."""
-    before = dict(vars(tsf))
-    ran = 0
-    for name, obj in list(vars(tsf).items()):
-        if inspect.isfunction(obj) and name.startswith("test_"):
-            obj()
-            ran += 1
-    after = dict(vars(tsf))
-    assert ran > 0
-    # Module-level namespace should remain structurally unchanged after execution.
-    assert set(before.keys()) == set(after.keys())
+from NIC_SecEng_Task.Calculator.string_func import (
+    reverse_string,
+    capitalize_words,
+    truncate,
+)
+
+
+class TestReverseString:
+    def test_reverse_simple_string(self):
+        """Verify a simple string is reversed correctly."""
+        assert reverse_string("hello") == "olleh"
+
+    def test_reverse_empty_string(self):
+        """Verify reversing an empty string returns an empty string."""
+        assert reverse_string("") == ""
+
+    def test_reverse_single_char(self):
+        """Verify reversing a single character returns the same character."""
+        assert reverse_string("a") == "a"
+
+    def test_reverse_palindrome(self):
+        """Verify reversing a palindrome returns the same string."""
+        assert reverse_string("racecar") == "racecar"
+
+    def test_reverse_numeric_string(self):
+        """Verify a numeric string is reversed character by character, not treated as a number."""
+        assert reverse_string("12345") == "54321"
+
+    def test_reverse_unicode_string(self):
+        """Verify reversing a string with unicode characters preserves and reverses each character."""
+        assert reverse_string("héllo") == "olléh"
+
+    def test_reverse_whitespace_preserved(self):
+        """Verify whitespace characters are preserved in position after reversal."""
+        assert reverse_string("a b") == "b a"
+
+    def test_reverse_sql_injection_payload_not_executed(self):
+        """Verify an SQL-injection-like payload is only reversed and never interpreted or executed."""
+        payload = "'; DROP TABLE users; --"
+        result = reverse_string(payload)
+        assert result == payload[::-1]
+        assert "DROP TABLE" not in result
+
+    def test_reverse_path_traversal_payload_not_resolved(self):
+        """Verify a path-traversal-like string is safely reversed as plain text, not resolved as a path."""
+        payload = "../../../../etc/passwd"
+        result = reverse_string(payload)
+        assert result == payload[::-1]
+        assert result != "/etc/passwd"
+
+    def test_reverse_null_byte_payload_handled_as_text(self):
+        """Verify a string containing a null byte is reversed safely without truncation or crash."""
+        payload = "abc\x00def"
+        result = reverse_string(payload)
+        assert result == payload[::-1]
+        assert len(result) == len(payload)
+
+    def test_reverse_string_type_error_on_int(self):
+        """Verify passing an integer raises a TypeError since integers are not subscriptable/sliceable."""
+        with pytest.raises(TypeError):
+            reverse_string(12345)
+
+    def test_reverse_string_type_error_on_none(self):
+        """Verify passing None raises a TypeError instead of silently failing."""
+        with pytest.raises(TypeError):
+            reverse_string(None)
+
+    def test_reverse_string_type_error_on_list(self):
+        """Verify passing a list raises a TypeError since reversing a list is not the same as reversing a string."""
+        with pytest.raises(TypeError):
+            reverse_string(["a", "b", "c"])
+
+    def test_reverse_string_type_error_on_dict(self):
+        """Verify passing a dict raises a TypeError since it is not string-sliceable."""
+        with pytest.raises(TypeError):
+            reverse_string({"key": "value"})
+
+
+class TestCapitalizeWords:
+    def test_capitalize_single_word(self):
+        """Verify a single lowercase word gets its first letter capitalized."""
+        assert capitalize_words("hello") == "Hello"
+
+    def test_capitalize_multiple_words(self):
+        """Verify multiple words each get capitalized correctly."""
+        assert capitalize_words("hello world") == "Hello World"
+
+    def test_capitalize_empty_string_returns_empty(self):
+        """Verify an empty string input returns an empty string without error."""
+        assert capitalize_words("") == ""
+
+    def test_capitalize_all_uppercase_words(self):
+        """Verify all-uppercase words are converted to capitalized form (first letter upper, rest lower)."""
+        assert capitalize_words("HELLO WORLD") == "Hello World"
+
+    def test_capitalize_extra_whitespace_collapsed(self):
+        """Verify extra internal whitespace between words is collapsed by split/join logic."""
+        assert capitalize_words("hello    world") == "Hello World"
+
+    def test_capitalize_leading_trailing_whitespace_stripped(self):
+        """Verify leading and trailing whitespace is stripped in the output."""
+        assert capitalize_words("  hello world  ") == "Hello World"
+
+    def test_capitalize_whitespace_only_string_returns_empty(self):
+        """Verify a whitespace-only string returns an empty string since split() yields no words."""
+        assert capitalize_words("   ") == ""
+
+    def test_capitalize_words_with_digits_unaffected(self):
+        """Verify words containing digits are capitalized without raising errors or altering digits."""
+        assert capitalize_words("hello2world 123abc") == "Hello2world 123abc"
+
+    def test_capitalize_single_character_words(self):
+        """Verify single-character words are capitalized correctly."""
+        assert capitalize_words("a b c") == "A B C"
+
+    def test_capitalize_html_injection_payload_not_executed(self):
+        """Verify an HTML/script injection-like payload is only capitalized as text, never executed."""
+        payload = "<script>alert('xss')</script> hello"
+        result = capitalize_words(payload)
+        assert "<script>alert('xss')</script>".lower() in result.lower()
+        assert result.split()[-1] == "Hello"
+
+    def test_capitalize_none_raises_attribute_error(self):
+        """Verify passing None raises an AttributeError instead of silently succeeding."""
+        with pytest.raises(AttributeError):
+            capitalize_words(None)
+
+    def test_capitalize_non_string_int_raises_error(self):
+        """Verify passing a non-string integer raises an AttributeError since split() is unavailable on ints."""
+        with pytest.raises(AttributeError):
+            capitalize_words(12345)
+
+    def test_capitalize_non_string_list_raises_error(self):
+        """Verify passing a list raises an AttributeError since lists lack the split() string method."""
+        with pytest.raises(AttributeError):
+            capitalize_words(["hello", "world"])
+
+
+class TestTruncate:
+    def test_truncate_shorter_than_max_length_unchanged(self):
+        """Verify text shorter than max_length is returned unchanged with no ellipsis."""
+        assert truncate("hello", 10) == "hello"
+
+    def test_truncate_equal_to_max_length_unchanged(self):
+        """Verify text exactly equal to max_length is returned unchanged without ellipsis."""
+        assert truncate("hello", 5) == "hello"
+
+    def test_truncate_longer_than_max_length_appends_ellipsis(self):
+        """Verify text longer than max_length is truncated and ellipsis appended."""
+        assert truncate("hello world", 5) == "hello..."
+
+    def test_truncate_max_length_zero_raises_value_error(self):
+        """Verify max_length of zero raises ValueError as a boundary/input validation check."""
+        with pytest.raises(ValueError):
+            truncate("hello", 0)
+
+    def test_truncate_negative_max_length_raises_value_error(self):
+        """Verify a negative max_length raises ValueError, preventing invalid truncation logic."""
+        with pytest.raises(ValueError):
+            truncate("hello", -5)
+
+    def test_truncate_empty_string_returns_empty(self):
+        """Verify truncating an empty string with a positive max_length returns an empty string."""
+        assert truncate("", 5) == ""
+
+    def test_truncate_max_length_one(self):
+        """Verify truncation with max_length of 1 correctly slices to one character plus ellipsis."""
+        assert truncate("hello", 1) == "h..."
+
+    def test_truncate_large_input_string_handled_without_dos(self):
+        """Verify truncation handles a very large input string quickly and correctly (resource exhaustion boundary)."""
+        large_text = "a" * 100000
+        result = truncate(large_text, 10)
+        assert result == "a" * 10 + "..."
+
+    def test_truncate_script_injection_payload_safely_truncated(self):
+        """Verify a script-injection-like payload is safely truncated as plain text, never executed."""
+        payload = "<script>alert('xss')</script>"
+        result = truncate(payload, 8)
+        assert result == payload[:8] + "..."
+        assert "</script>" not in result
+
+    def test_truncate_sql_injection_payload_safely_truncated(self):
+        """Verify a SQL-injection-like payload is safely truncated as plain text without being interpreted."""
+        payload = "'; DROP TABLE users; --"
+        result = truncate(payload, 10)
+        assert result == payload[:10] + "..."
+        assert "DROP TABLE users" not in result
+
+    def test_truncate_type_error_on_non_string_text(self):
+        """Verify passing a non-string text raises a TypeError since len()/slicing require string-like behavior."""
+        with pytest.raises(TypeError):
+            truncate(12345, 5)
+
+    def test_truncate_type_error_on_none_text(self):
+        """Verify passing None as text raises a TypeError instead of silently succeeding."""
+        with pytest.raises(TypeError):
+            truncate(None, 5)
+
+    def test_truncate_type_error_on_non_int_max_length(self):
+        """Verify passing a non-integer max_length (e.g., string) raises a TypeError due to comparison/slicing failure."""
+        with pytest.raises(TypeError):
+            truncate("hello world", "five")
+
+    def test_truncate_type_error_on_none_max_length(self):
+        """Verify passing None as max_length raises a TypeError due to invalid comparison with int/len."""
+        with pytest.raises(TypeError):
+            truncate("hello world", None)
