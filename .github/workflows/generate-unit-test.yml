@@ -11,6 +11,7 @@ permissions:
   actions: write
   statuses: write
   pull-requests: write
+  checks: write
 
 jobs:
   generate-test:
@@ -124,6 +125,29 @@ jobs:
 
           echo "Error: Failed to push generated tests after 3 attempts due to branch activity."
           exit 1
+      
+      - name: Capture New Commit SHA
+        id: new_sha
+        if: always() && steps.filter_engine.outputs.run_generation == 'true' && steps.generate.outputs.has_generated_files == 'true'
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+        
+      - name: Create Queued Check Run
+        if: always() && steps.filter_engine.outputs.run_generation == 'true' && steps.generate.outputs.has_generated_files == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.checks.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              name: 'Bot Unit Tests',
+              head_sha: '${{ steps.new_sha.outputs.sha }}',
+              status: 'queued',
+              output: {
+                title: 'Pending Bot Unit Tests',
+                summary: 'The bot has pushed the tests. Waiting for the test runner to spin up...'
+              }
+            });
+
       - name: Post Results to PR
         if: always() && steps.generate.outputs.has_generated_files == 'true'
         uses: actions/github-script@v7
@@ -145,7 +169,7 @@ jobs:
             const body = `### 🤖 Unit Test Generation Complete\n\n` +
                          `- **Successfully generated:** ${generatedCount} file(s) 🎉\n` +
                          `- **Failed to generate:** ${failedCount} file(s) ❌\n\n` +
-                         `*Then Generated Tests are being run & will be displayed in PR once done.*`;
+                         `*Please wait a minute while the Generated Tests are being run & will be displayed in PR once done.*`;
             const markedBody = marker + '\n' + body;
 
             const comments = await github.rest.issues.listComments({
