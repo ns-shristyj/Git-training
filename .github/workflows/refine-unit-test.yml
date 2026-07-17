@@ -96,7 +96,7 @@ jobs:
         if: steps.collect_feedback.outputs.has_feedback == 'true'
         env:
           FILES_JSON: ${{ steps.collect_feedback.outputs.files }}
-          AGENT_RUNTIME_ARN: ${{ vars.AGENT_RUNTIME_ARN }}
+          AGENT_RUNTIME_ARN: ${{ vars.AGENT_REFINEMENT_AGENT_RUNTIME_ARN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           SOURCE_COMMIT_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
