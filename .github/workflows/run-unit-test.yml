@@ -43,30 +43,40 @@ jobs:
 
           # 2. DETERMINE WHAT WAS NEWLY CREATED IN THIS PR (Branch lifespan)
           MERGE_BASE=$(git merge-base origin/develop HEAD)
+          echo "🔍 DEBUG: Merge base with develop is: $MERGE_BASE"
+          
           echo "Evaluating files newly added in this PR (since branch off $MERGE_BASE)..."
-          # Diff-filter 'A' specifically looks for (A)dded files
           PR_ADDED_FILES=$(git diff --name-only --diff-filter=A $MERGE_BASE HEAD || true)
+          
+          echo "🔍 DEBUG: Files Git considers 'Added' in this PR:"
+          echo "$PR_ADDED_FILES"
+          echo "------------------------------------------------"
 
           TESTS_TO_RUN=""
 
           for file in $PUSH_CHANGED_FILES; do
-            # Condition A: If the file updated in this push is ALREADY a test file, run it
             if [[ "$file" == Agentic_Unit_Test_Generator/tests/test_*.py ]]; then
               echo "✅ Test file directly updated: $file"
               TESTS_TO_RUN="$TESTS_TO_RUN $file"
             else
-              # Condition B: A source file was updated. Let's find its matching test file.
               BASENAME=$(basename "$file" .py)
               EXPECTED_TEST_FILE="Agentic_Unit_Test_Generator/tests/test_${BASENAME}.py"
               
+              echo "🔍 DEBUG: Source file modified: $file"
+              echo "🔍 DEBUG: Looking for expected test file: $EXPECTED_TEST_FILE"
+              
               if [ -f "$EXPECTED_TEST_FILE" ]; then
-                # Condition C (The New Rule): Check if this test file was generated/added in THIS PR
-                if echo "$PR_ADDED_FILES" | grep -Fxq "$EXPECTED_TEST_FILE"; then
+                echo "🔍 DEBUG: Expected test file EXISTS on disk."
+                
+                # 🛑 FIX: Removed '-x' to prevent invisible whitespace/CRLF from breaking the match
+                if echo "$PR_ADDED_FILES" | grep -Fq "$EXPECTED_TEST_FILE"; then
                   echo "✅ Source file modified AND its test was newly generated in this PR: $EXPECTED_TEST_FILE"
                   TESTS_TO_RUN="$TESTS_TO_RUN $EXPECTED_TEST_FILE"
                 else
                   echo "⏭️ Source file modified, but its test ($EXPECTED_TEST_FILE) was NOT generated in this PR. Skipping."
                 fi
+              else
+                 echo "⏭️ Expected test file ($EXPECTED_TEST_FILE) DOES NOT EXIST on disk. Skipping."
               fi
             fi
           done
@@ -82,7 +92,7 @@ jobs:
             echo "test_files=$FINAL_TESTS" >> "$GITHUB_OUTPUT"
             echo "run_tests=true" >> "$GITHUB_OUTPUT"
           fi
-
+          
       - name: Set up Python
         if: steps.detect_tests.outputs.run_tests == 'true'
         uses: actions/setup-python@v5
