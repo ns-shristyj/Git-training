@@ -31,6 +31,10 @@ class TestReverseString:
         """Verify reversing a string with unicode characters preserves and reverses each character."""
         assert reverse_string("héllo") == "olléh"
 
+    def test_reverse_whitespace_preserved(self):
+        """Verify whitespace characters are preserved in position after reversal."""
+        assert reverse_string("a b") == "b a"
+
     def test_reverse_sql_injection_payload_not_executed(self):
         """Verify an SQL-injection-like payload is only reversed and never interpreted or executed."""
         payload = "'; DROP TABLE users; --"
@@ -44,6 +48,13 @@ class TestReverseString:
         result = reverse_string(payload)
         assert result == payload[::-1]
         assert result != "/etc/passwd"
+
+    def test_reverse_null_byte_payload_handled_as_text(self):
+        """Verify a string containing a null byte is reversed safely without truncation or crash."""
+        payload = "abc\x00def"
+        result = reverse_string(payload)
+        assert result == payload[::-1]
+        assert len(result) == len(payload)
 
     def test_reverse_string_type_error_on_int(self):
         """Verify passing an integer raises a TypeError since integers are not subscriptable/sliceable."""
@@ -59,6 +70,11 @@ class TestReverseString:
         """Verify passing a list raises a TypeError since reversing a list is not the same as reversing a string."""
         with pytest.raises(TypeError):
             reverse_string(["a", "b", "c"])
+
+    def test_reverse_string_type_error_on_dict(self):
+        """Verify passing a dict raises a TypeError since it is not string-sliceable."""
+        with pytest.raises(TypeError):
+            reverse_string({"key": "value"})
 
 
 class TestCapitalizeWords:
@@ -94,6 +110,10 @@ class TestCapitalizeWords:
         """Verify words containing digits are capitalized without raising errors or altering digits."""
         assert capitalize_words("hello2world 123abc") == "Hello2world 123abc"
 
+    def test_capitalize_single_character_words(self):
+        """Verify single-character words are capitalized correctly."""
+        assert capitalize_words("a b c") == "A B C"
+
     def test_capitalize_html_injection_payload_not_executed(self):
         """Verify an HTML/script injection-like payload is only capitalized as text, never executed."""
         payload = "<script>alert('xss')</script> hello"
@@ -110,6 +130,11 @@ class TestCapitalizeWords:
         """Verify passing a non-string integer raises an AttributeError since split() is unavailable on ints."""
         with pytest.raises(AttributeError):
             capitalize_words(12345)
+
+    def test_capitalize_non_string_list_raises_error(self):
+        """Verify passing a list raises an AttributeError since lists lack the split() string method."""
+        with pytest.raises(AttributeError):
+            capitalize_words(["hello", "world"])
 
 
 class TestTruncate:
@@ -156,6 +181,13 @@ class TestTruncate:
         assert result == payload[:8] + "..."
         assert "</script>" not in result
 
+    def test_truncate_sql_injection_payload_safely_truncated(self):
+        """Verify a SQL-injection-like payload is safely truncated as plain text without being interpreted."""
+        payload = "'; DROP TABLE users; --"
+        result = truncate(payload, 10)
+        assert result == payload[:10] + "..."
+        assert "DROP TABLE users" not in result
+
     def test_truncate_type_error_on_non_string_text(self):
         """Verify passing a non-string text raises a TypeError since len()/slicing require string-like behavior."""
         with pytest.raises(TypeError):
@@ -170,3 +202,8 @@ class TestTruncate:
         """Verify passing a non-integer max_length (e.g., string) raises a TypeError due to comparison/slicing failure."""
         with pytest.raises(TypeError):
             truncate("hello world", "five")
+
+    def test_truncate_type_error_on_none_max_length(self):
+        """Verify passing None as max_length raises a TypeError due to invalid comparison with int/len."""
+        with pytest.raises(TypeError):
+            truncate("hello world", None)
