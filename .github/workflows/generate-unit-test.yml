@@ -145,7 +145,7 @@ jobs:
             const body = `### 🤖 Unit Test Generation Complete\n\n` +
                          `- **Successfully generated:** ${generatedCount} file(s) 🎉\n` +
                          `- **Failed to generate:** ${failedCount} file(s) ❌\n\n` +
-                         `*Then Generated Tests are being run & will be displayed in PR once done.*`;
+                         `*Please wait a minute while the Generated Tests are being run & will be displayed in PR once done.*`;
             const markedBody = marker + '\n' + body;
 
             const comments = await github.rest.issues.listComments({
