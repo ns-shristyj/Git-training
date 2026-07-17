@@ -15,14 +15,14 @@ permissions:
 jobs:
   run-tests:
     name: Execute Unit Tests
-    runs-on: arc-default-basic-cheap-s-set
+    runs-on: arc-default-ub24-m-set
     
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
+          
       - name: Fetch base branch for Diffing
         run: |
           git remote set-branches origin develop

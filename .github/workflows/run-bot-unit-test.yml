@@ -13,7 +13,7 @@ permissions:
 jobs:
   run-tests:
     name: Execute Unit Tests
-    runs-on: arc-default-basic-cheap-s-set
+    runs-on: arc-default-ub24-m-set
 
     steps:
       - name: Checkout repository
@@ -71,7 +71,7 @@ jobs:
             
             // Output the ID so the final step can close it
             core.setOutput('check_id', checkId);
-            
+
       - name: Detect New or Modified Test Files
         id: detect_tests
         run: |
