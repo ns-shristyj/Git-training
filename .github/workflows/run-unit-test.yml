@@ -46,7 +46,7 @@ jobs:
           echo "🔍 DEBUG: Merge base with develop is: $MERGE_BASE"
           
           echo "Evaluating files newly added in this PR (since branch off $MERGE_BASE)..."
-          PR_ADDED_FILES=$(git diff --name-only --diff-filter=A $MERGE_BASE HEAD || true)
+          PR_ADDED_FILES=$(git diff --name-only --diff-filter=AM $MERGE_BASE HEAD || true)
           
           echo "🔍 DEBUG: Files Git considers 'Added' in this PR:"
           echo "$PR_ADDED_FILES"
@@ -92,7 +92,7 @@ jobs:
             echo "test_files=$FINAL_TESTS" >> "$GITHUB_OUTPUT"
             echo "run_tests=true" >> "$GITHUB_OUTPUT"
           fi
-          
+
       - name: Set up Python
         if: steps.detect_tests.outputs.run_tests == 'true'
         uses: actions/setup-python@v5
