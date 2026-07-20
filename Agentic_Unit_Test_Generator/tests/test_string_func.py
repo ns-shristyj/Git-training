@@ -7,123 +7,125 @@ from NIC_SecEng_Task.Calculator.string_func import (
 
 
 class TestReverseString:
-    def test_reverse_simple_string(self):
-        """Verifies basic string reversal works correctly."""
+    def test_reverse_normal_string(self):
+        """Verify a standard string is reversed correctly."""
         assert reverse_string("hello") == "olleh"
 
     def test_reverse_empty_string(self):
-        """Verifies reversing an empty string returns an empty string."""
+        """Verify an empty string reversed is still empty."""
         assert reverse_string("") == ""
 
     def test_reverse_single_character(self):
-        """Verifies reversing a single character returns the same character."""
+        """Verify a single character string reverses to itself."""
         assert reverse_string("a") == "a"
 
     def test_reverse_palindrome(self):
-        """Verifies reversing a palindrome returns the same string."""
+        """Verify a palindrome reverses to itself."""
         assert reverse_string("racecar") == "racecar"
 
-    def test_reverse_with_spaces(self):
-        """Verifies reversal correctly handles spaces within text."""
-        assert reverse_string("hello world") == "dlrow olleh"
+    def test_reverse_string_with_spaces(self):
+        """Verify spaces are preserved correctly during reversal."""
+        assert reverse_string("a b c") == "c b a"
 
-    def test_reverse_with_unicode_characters(self):
-        """Verifies reversal safely handles unicode/multi-byte characters without corruption."""
+    def test_reverse_string_with_special_characters(self):
+        """Verify special/injection-like characters are reversed safely without execution."""
+        payload = "<script>alert(1)</script>"
+        result = reverse_string(payload)
+        assert result == payload[::-1]
+        assert result != payload  # confirm it was actually reversed, not executed/altered
+
+    def test_reverse_unicode_string(self):
+        """Verify unicode characters are reversed correctly."""
         assert reverse_string("héllo") == "olléh"
 
-    def test_reverse_with_special_characters(self):
-        """Verifies reversal safely handles special/injection-like characters as inert data."""
-        assert reverse_string("<script>alert(1)</script>") == ">tpircs/<)1(trela>tpircs<"
-
-    def test_reverse_with_newlines_and_tabs(self):
-        """Verifies reversal handles control characters like newlines and tabs correctly."""
-        assert reverse_string("a\nb\tc") == "c\tb\na"
+    def test_reverse_non_string_input_raises_type_error(self):
+        """Verify non-string input raises TypeError instead of silently succeeding."""
+        with pytest.raises(TypeError):
+            reverse_string(12345)
 
 
 class TestCapitalizeWords:
     def test_capitalize_simple_sentence(self):
-        """Verifies each word's first letter is capitalized in a normal sentence."""
+        """Verify each word's first letter is capitalized in a simple sentence."""
         assert capitalize_words("hello world") == "Hello World"
 
     def test_capitalize_empty_string(self):
-        """Verifies an empty string input returns an empty string without error."""
+        """Verify empty string returns empty string without error."""
+        assert capitalize_words("") == ""
+
+    def test_capitalize_none_like_falsy_handled(self):
+        """Verify falsy empty string input is handled by early return branch."""
         assert capitalize_words("") == ""
 
     def test_capitalize_already_capitalized(self):
-        """Verifies already capitalized words remain correctly capitalized."""
+        """Verify already capitalized words remain unaffected in structure."""
         assert capitalize_words("Hello World") == "Hello World"
 
-    def test_capitalize_all_uppercase_words(self):
-        """Verifies all-uppercase words are lowered except for first letter."""
+    def test_capitalize_uppercase_words(self):
+        """Verify fully uppercase words are normalized to capitalized form."""
         assert capitalize_words("HELLO WORLD") == "Hello World"
 
     def test_capitalize_extra_whitespace_collapsed(self):
-        """Verifies multiple/extra whitespace between words is collapsed to single spaces."""
+        """Verify multiple/extra whitespace between words is collapsed by split/join logic."""
         assert capitalize_words("  hello   world  ") == "Hello World"
 
     def test_capitalize_single_word(self):
-        """Verifies a single word is correctly capitalized."""
+        """Verify a single word is capitalized correctly."""
         assert capitalize_words("python") == "Python"
 
     def test_capitalize_with_numbers_and_symbols(self):
-        """Verifies words containing numbers/symbols are handled without crashing."""
-        assert capitalize_words("123abc def!") == "123abc Def!"
+        """Verify words containing numbers/symbols are safely capitalized without crashing."""
+        result = capitalize_words("123abc test-case")
+        assert result == "123abc Test-case"
 
-    def test_capitalize_whitespace_only_string(self):
-        """Verifies a whitespace-only string returns an empty string after split/join."""
-        assert capitalize_words("   ") == ""
-
-    def test_capitalize_with_tabs_and_newlines_as_separators(self):
-        """Verifies tabs and newlines are treated as word separators like whitespace."""
-        assert capitalize_words("hello\tworld\nfoo") == "Hello World Foo"
+    def test_capitalize_non_string_input_raises_error(self):
+        """Verify non-string input raises an error rather than corrupting output silently."""
+        with pytest.raises(AttributeError):
+            capitalize_words(12345)
 
 
 class TestTruncate:
     def test_truncate_shorter_than_max_length(self):
-        """Verifies text shorter than max_length is returned unchanged."""
+        """Verify text shorter than max_length is returned unchanged."""
         assert truncate("hello", 10) == "hello"
 
     def test_truncate_equal_to_max_length(self):
-        """Verifies text exactly equal to max_length is returned unchanged without ellipsis."""
+        """Verify text exactly equal to max_length is returned unchanged without ellipsis."""
         assert truncate("hello", 5) == "hello"
 
     def test_truncate_longer_than_max_length(self):
-        """Verifies text longer than max_length is truncated and ellipsis appended."""
+        """Verify text longer than max_length is truncated and ellipsis appended."""
         assert truncate("hello world", 5) == "hello..."
 
-    def test_truncate_empty_string(self):
-        """Verifies an empty string with a positive max_length returns empty string unchanged."""
+    def test_truncate_max_length_zero_raises_value_error(self):
+        """Verify max_length of zero raises ValueError (boundary security check)."""
+        with pytest.raises(ValueError):
+            truncate("hello", 0)
+
+    def test_truncate_negative_max_length_raises_value_error(self):
+        """Verify negative max_length raises ValueError instead of silently misbehaving."""
+        with pytest.raises(ValueError):
+            truncate("hello", -5)
+
+    def test_truncate_empty_text(self):
+        """Verify empty text with a positive max_length returns empty string."""
         assert truncate("", 5) == ""
 
-    @pytest.mark.parametrize("max_length", [0, -1, -100])
-    def test_truncate_non_positive_max_length_raises_value_error(self, max_length):
-        """Verifies non-positive max_length values are safely rejected with ValueError."""
-        with pytest.raises(ValueError):
-            truncate("hello world", max_length)
+    def test_truncate_very_large_max_length(self):
+        """Verify a very large max_length does not truncate short text (no overflow/crash)."""
+        assert truncate("short", 10**6) == "short"
 
     def test_truncate_max_length_one(self):
-        """Verifies truncation to a length of one character works with ellipsis appended."""
+        """Verify truncation to length 1 appends ellipsis correctly for boundary case."""
         assert truncate("hello", 1) == "h..."
 
-    def test_truncate_with_injection_like_payload(self):
-        """Verifies truncation safely handles injection-like payloads as inert text data."""
-        payload = "<script>alert('xss')</script>"
-        result = truncate(payload, 8)
-        assert result == payload[:8] + "..."
-        assert len(result) == 8 + 3
+    @pytest.mark.parametrize("bad_max_length", [0, -1, -100])
+    def test_truncate_invalid_max_length_variants_raise_value_error(self, bad_max_length):
+        """Verify all non-positive max_length values are rejected with ValueError."""
+        with pytest.raises(ValueError):
+            truncate("some text", bad_max_length)
 
-    def test_truncate_with_path_traversal_like_payload(self):
-        """Verifies truncation safely handles path traversal-like strings as inert text data."""
-        payload = "../../../../etc/passwd"
-        result = truncate(payload, 10)
-        assert result == payload[:10] + "..."
-
-    def test_truncate_non_integer_max_length_raises_type_error(self):
-        """Verifies passing a non-integer, non-comparable max_length raises a TypeError instead of silently succeeding."""
+    def test_truncate_non_string_text_raises_error(self):
+        """Verify non-string text input raises an error rather than producing corrupted output."""
         with pytest.raises(TypeError):
-            truncate("hello", "5")
-
-    def test_truncate_large_max_length_no_truncation(self):
-        """Verifies a very large max_length results in the original text being returned unchanged."""
-        text = "short text"
-        assert truncate(text, 1_000_000) == text
+            truncate(12345, 3)
