@@ -36,11 +36,10 @@ class TestReverseString:
         payload = "<script>alert(1)</script>"
         result = reverse_string(payload)
         assert result == payload[::-1]
-        # Ensure no execution artifact; result is just a string.
         assert isinstance(result, str)
 
     def test_raises_type_error_on_non_string_input(self):
-        """Verify passing a non-string (e.g., int) raises TypeError due to slicing being unsupported/valid actually int supports slicing? Check int raises TypeError."""
+        """Verify passing a non-sliceable type (int) raises TypeError instead of corrupting output."""
         with pytest.raises(TypeError):
             reverse_string(12345)
 
@@ -55,11 +54,7 @@ class TestCapitalizeWords:
         assert capitalize_words("hello world") == "Hello World"
 
     def test_returns_empty_string_for_empty_input(self):
-        """Verify empty string input returns empty string (explicit guard)."""
-        assert capitalize_words("") == ""
-
-    def test_handles_none_like_falsy_input(self):
-        """Verify falsy input like empty string is handled by explicit early return."""
+        """Verify empty string input returns empty string via explicit guard."""
         assert capitalize_words("") == ""
 
     def test_collapses_extra_whitespace(self):
@@ -83,8 +78,8 @@ class TestCapitalizeWords:
         """Verify a string consisting only of whitespace returns empty string after split/join."""
         assert capitalize_words("   ") == ""
 
-    def test_raises_type_error_on_non_string_input(self):
-        """Verify passing a non-string input raises AttributeError/TypeError safely rather than corrupting output."""
+    def test_raises_attribute_error_on_non_string_input(self):
+        """Verify passing a non-string input raises AttributeError safely rather than corrupting output."""
         with pytest.raises(AttributeError):
             capitalize_words(12345)
 
@@ -102,15 +97,11 @@ class TestTruncate:
         """Verify text longer than max_length is truncated and ellipses appended."""
         assert truncate("hello world", 5) == "hello..."
 
-    def test_raises_value_error_on_zero_max_length(self):
-        """Verify max_length of zero raises ValueError (boundary/security guard)."""
+    @pytest.mark.parametrize("max_length", [0, -1, -5])
+    def test_raises_value_error_on_non_positive_max_length(self, max_length):
+        """Verify zero or negative max_length values raise ValueError to prevent invalid slicing behavior."""
         with pytest.raises(ValueError):
-            truncate("hello", 0)
-
-    def test_raises_value_error_on_negative_max_length(self):
-        """Verify negative max_length raises ValueError to prevent invalid slicing behavior."""
-        with pytest.raises(ValueError):
-            truncate("hello", -5)
+            truncate("hello", max_length)
 
     def test_truncates_with_max_length_one(self):
         """Verify minimal positive max_length of 1 truncates correctly with ellipses."""
@@ -121,13 +112,13 @@ class TestTruncate:
         assert truncate("", 5) == ""
 
     def test_truncate_does_not_execute_injection_payload(self):
-        """Verify truncation of an injection-like payload only slices text safely without execution."""
+        """Verify truncation of an injection-like payload only slices text safely without executing or leaking beyond the cut."""
         payload = "<script>alert('xss')</script>"
         result = truncate(payload, 8)
-        assert result == payload[:8] + "..."
-        assert "<script>alert" not in result or result.startswith(payload[:8])
+        assert result == "<script>..."
+        assert "alert" not in result
 
     def test_raises_type_error_on_non_integer_max_length(self):
-        """Verify passing a non-integer max_length raises TypeError due to invalid comparison/slicing."""
+        """Verify passing a non-integer max_length raises TypeError due to invalid comparison."""
         with pytest.raises(TypeError):
             truncate("hello", "5")
