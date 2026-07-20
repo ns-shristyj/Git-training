@@ -49,10 +49,6 @@ class TestCapitalizeWords:
         """Verifies an empty string input returns an empty string without error."""
         assert capitalize_words("") == ""
 
-    def test_capitalize_none_like_falsy_input(self):
-        """Verifies falsy string input (empty) is short-circuited safely."""
-        assert capitalize_words("") == ""
-
     def test_capitalize_already_capitalized(self):
         """Verifies already capitalized words remain correctly capitalized."""
         assert capitalize_words("Hello World") == "Hello World"
