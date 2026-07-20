@@ -32,11 +32,11 @@ agents:
     bedrock_agentcore:
       agent_id: unit_test_refine_agent-0ynGKdCbpl
       agent_arn: arn:aws:bedrock-agentcore:ap-southeast-2:786063285476:runtime/unit_test_refine_agent-0ynGKdCbpl
-      agent_session_id: null
+      agent_session_id: e3391998-ceb8-4be4-8227-b115adf0efa2
     codebuild:
-      project_name: null
-      execution_role: null
-      source_bucket: null
+      project_name: bedrock-agentcore-unit_test_refine_agent-builder
+      execution_role: arn:aws:iam::786063285476:role/AmazonBedrockAgentCoreSDKCodeBuild-ap-southeast-2-94455f58fb
+      source_bucket: bedrock-agentcore-codebuild-sources-786063285476-ap-southeast-2
     memory:
       mode: NO_MEMORY
       memory_id: null
