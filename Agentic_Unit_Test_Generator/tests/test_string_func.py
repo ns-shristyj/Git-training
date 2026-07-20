@@ -32,7 +32,6 @@ class TestReverseString:
         payload = "<script>alert(1)</script>"
         result = reverse_string(payload)
         assert result == payload[::-1]
-        # Ensure no code execution artifacts occur; result is just a string
         assert isinstance(result, str)
 
     def test_reverse_unicode_string(self):
@@ -102,16 +101,6 @@ class TestTruncate:
         """Verifies text longer than max_length is truncated and ellipsis appended."""
         assert truncate("hello world", 5) == "hello..."
 
-    def test_truncate_zero_max_length_raises_value_error(self):
-        """Verifies max_length of zero raises ValueError instead of producing invalid output."""
-        with pytest.raises(ValueError):
-            truncate("hello", 0)
-
-    def test_truncate_negative_max_length_raises_value_error(self):
-        """Verifies negative max_length raises ValueError to prevent malformed truncation."""
-        with pytest.raises(ValueError):
-            truncate("hello", -5)
-
     def test_truncate_empty_string_with_positive_max(self):
         """Verifies truncating an empty string with valid max_length returns empty string."""
         assert truncate("", 5) == ""
@@ -126,7 +115,7 @@ class TestTruncate:
         result = truncate(long_text, 10)
         assert result == "a" * 10 + "..."
 
-    @pytest.mark.parametrize("max_length", [0, -1, -100])
+    @pytest.mark.parametrize("max_length", [0, -1, -5, -100])
     def test_truncate_various_non_positive_lengths_raise(self, max_length):
         """Verifies all non-positive max_length values consistently raise ValueError."""
         with pytest.raises(ValueError):
