@@ -81,15 +81,9 @@ jobs:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ap-southeast-2
 
-      - name: Set up Python
-        if: steps.collect_feedback.outputs.has_feedback == 'true'
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
       - name: Install dependencies
         if: steps.collect_feedback.outputs.has_feedback == 'true'
-        run: pip install "boto3>=1.40"
+        run: pip3 install --user "boto3>=1.40"
 
       - name: Refine flagged test files
         id: refine
@@ -104,7 +98,7 @@ jobs:
 
           while IFS=$'\t' read -r test_file feedback_file; do
             echo "=== Refining $test_file from $feedback_file ==="
-            if python Agentic_Unit_Test_Generator/scripts/refine_unit_test.py "$test_file" "$test_file" "$feedback_file"; then
+            if python3 Agentic_Unit_Test_Generator/scripts/refine_unit_test.py "$test_file" "$test_file" "$feedback_file"; then
               REFINED_FILES+=("$test_file")
             else
               echo "::warning::Refinement failed for $test_file — skipping."
