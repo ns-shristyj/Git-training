@@ -13,16 +13,19 @@ class TestReverseString:
             ("hello", "olleh"),
             ("", ""),
             ("a", "a"),
+            ([1, 2, 3], [3, 2, 1]),
+            ((1, 2, 3), (3, 2, 1)),
         ],
     )
     def test_reverse_string_typical_and_empty(self, text, expected):
-        """Verifies reverse_string correctly reverses non-empty strings and handles empty string input."""
+        """Verifies reverse_string correctly reverses sliceable sequences (str, list, tuple) and handles empty string input."""
         assert reverse_string(text) == expected
 
-    def test_reverse_string_non_string_input_raises_type_error(self):
-        """Ensures non-sliceable input types (int) raise TypeError since the function performs unguarded slicing."""
+    @pytest.mark.parametrize("value", [123, None, 3.14, True])
+    def test_reverse_string_non_sliceable_input_raises_type_error(self, value):
+        """Ensures non-sliceable input types (int, None, float, bool) raise TypeError since the function performs unguarded slicing."""
         with pytest.raises(TypeError):
-            reverse_string(123)
+            reverse_string(value)
 
 
 class TestCapitalizeWords:
@@ -42,10 +45,11 @@ class TestCapitalizeWords:
         """Confirms that falsy inputs (empty string or None) are safely handled and return an empty string."""
         assert capitalize_words(text) == ""
 
-    def test_capitalize_words_non_string_truthy_input_raises_attribute_error(self):
-        """Ensures a truthy non-string input (int) bypasses the falsy check and fails on .split(), raising AttributeError."""
+    @pytest.mark.parametrize("value", [5, 3.14, [1, 2, 3]])
+    def test_capitalize_words_non_string_truthy_input_raises_attribute_error(self, value):
+        """Ensures truthy non-string inputs (int, float, list) bypass the falsy check and fail on .split(), raising AttributeError."""
         with pytest.raises(AttributeError):
-            capitalize_words(5)
+            capitalize_words(value)
 
 
 class TestTruncate:
