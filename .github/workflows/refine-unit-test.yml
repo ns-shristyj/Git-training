@@ -83,7 +83,7 @@ jobs:
 
       - name: Install dependencies
         if: steps.collect_feedback.outputs.has_feedback == 'true'
-        run: pip3 install --user "boto3>=1.40"
+        run: pip3 install --user --break-system-packages "boto3>=1.40"
 
       - name: Refine flagged test files
         id: refine
