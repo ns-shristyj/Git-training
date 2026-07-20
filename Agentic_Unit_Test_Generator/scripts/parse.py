@@ -249,17 +249,14 @@ def generate_github_summary(report, coverage_data, mutation_data=None):
     print(f"[PARSER] Markdown dashboard successfully saved to {output_comment_file} for PR delivery.")
 
 def parse_junit_xml(xml_file_path, language_name):
-    """Parses standard JUnit XML files."""
+    """Parses standard JUnit XML files. Raises on missing/malformed input —
+    callers decide whether that's fatal (the primary report) or skippable
+    (an individual mutation report)."""
     if not os.path.exists(xml_file_path):
-        print(f"CRITICAL ERROR: Target XML file '{xml_file_path}' not found.", file=sys.stderr)
-        sys.exit(1)
+        raise FileNotFoundError(f"Target XML file '{xml_file_path}' not found.")
 
-    try:
-        tree = ET.parse(xml_file_path)
-        root = tree.getroot()
-    except Exception as e:
-        print(f"CRITICAL ERROR: Failed to parse XML file: {e}", file=sys.stderr)
-        sys.exit(1)
+    tree = ET.parse(xml_file_path)
+    root = tree.getroot()
 
     unified_report = {
         "language": language_name,
@@ -330,7 +327,11 @@ if __name__ == "__main__":
     mutation_path = sys.argv[4] if len(sys.argv) > 4 else None
 
     # Process
-    report = parse_junit_xml(file_path, language)
+    try:
+        report = parse_junit_xml(file_path, language)
+    except Exception as e:
+        print(f"CRITICAL ERROR: Failed to parse XML file '{file_path}': {e}", file=sys.stderr)
+        sys.exit(1)
     coverage_data = parse_coverage_xml(coverage_path)
     mutation_data = parse_mutation_xml(mutation_path)
 

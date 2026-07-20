@@ -102,7 +102,7 @@ jobs:
           python3 -m pip install --upgrade pip --break-system-packages
           # Add any dependencies your calculator application requires here
           if [ -f requirements.txt ]; then pip3 install --break-system-packages -r requirements.txt; fi
-          pip3 install --break-system-packages pytest pytest-cov mutmut # Ensures pytest and mutmut are available
+          pip3 install --break-system-packages pytest pytest-cov "mutmut<3" # mutmut 3.x dropped the CLI flags this workflow relies on
           pip3 install --break-system-packages requests  # Ensures requests is available for Mocking API calls
 
       - name: Run Test Suite and Generate JUnit XML
