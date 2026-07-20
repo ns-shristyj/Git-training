@@ -12,7 +12,9 @@ Usage:
 
 feedback_json_path points to a JSON file: a list of
     {"line": int, "diff_hunk": str, "comment": str}
-for every reviewer comment left on that test_file.
+for every reviewer comment left on that test_file. diff_hunk is forwarded to
+the agent alongside line/comment since line numbers drift across refine
+cycles — the diff context is what actually pins the comment to a function.
 
 If --source-file is not provided, the Refinement Agent itself derives it from
 the test file name (reversing the naming convention, test_module.py ->
@@ -69,7 +71,11 @@ def main():
     with open(feedback_path) as f:
         feedback = json.load(f)
 
-    feedback_text = "\n".join(f"Line {item.get('line', '?')}: {item.get('comment', '')}" for item in feedback)
+    feedback_text = "\n\n".join(
+        f"Line {item.get('line', '?')}: {item.get('comment', '')}\n"
+        f"Diff context:\n{item.get('diff_hunk', '(none)')}"
+        for item in feedback
+    )
     print(f"DEBUG — {len(feedback)} reviewer feedback item(s) collected:\n{feedback_text}")
 
     custom_config = Config(
