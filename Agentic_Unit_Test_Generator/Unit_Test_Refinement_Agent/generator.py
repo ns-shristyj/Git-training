@@ -6,6 +6,7 @@ directly in a local Python process without spinning up the AgentCore runtime.
 import re
 
 import boto3
+from botocore.config import Config
 
 from language_framework import detect_language_framework
 from prompts import build_retry_message, build_system_prompt, build_user_message
@@ -15,6 +16,7 @@ MODEL_ID = "global.anthropic.claude-sonnet-5"
 REGION = "ap-southeast-2"
 MAX_ATTEMPTS = 3
 MAX_OUTPUT_TOKENS = 8192
+BEDROCK_CLIENT_CONFIG = Config(read_timeout=300, connect_timeout=10, retries={"max_attempts": 0})
 
 _CODE_BLOCK_PATTERN = re.compile(r"```(?:\w+)?\n(.*?)```", re.DOTALL)
 
@@ -55,7 +57,7 @@ def refine_tests(
     language, framework = detect_language_framework(source_file_path, language_override, framework_override)
     module_path = _module_path(source_file_path)
 
-    client = boto3.client("bedrock-runtime", region_name=REGION)
+    client = boto3.client("bedrock-runtime", region_name=REGION, config=BEDROCK_CLIENT_CONFIG)
     system_prompt = build_system_prompt(language, framework)
 
     messages = [
