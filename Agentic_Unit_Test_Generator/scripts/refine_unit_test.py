@@ -30,16 +30,21 @@ import uuid
 import boto3
 from botocore.config import Config
 
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "Unit_Test_Refinement_Agent"))
+from github_input import find_source_file_by_basename  # noqa: E402
+
 REGION = "ap-southeast-2"
 AGENT_RUNTIME_ARN = os.environ.get("AGENT_RUNTIME_ARN")
 GITHUB_REPOSITORY = os.environ.get("GITHUB_REPOSITORY")
 SOURCE_COMMIT_SHA = os.environ.get("SOURCE_COMMIT_SHA")
+TESTS_DIR = "Agentic_Unit_Test_Generator/tests"
 
 
-def derive_source_file(test_file: str) -> str:
-    """Reverse-engineer source file path from test file.
-    E.g., Agentic_Unit_Test_Generator/tests/test_module.py -> module.py (searched in repo root).
-    This is a best-effort guess; pass --source-file to override."""
+def derive_source_basename(test_file: str) -> str:
+    """test_module.py -> module.py. Directory info was dropped when the test
+    was generated (flat basename-only naming), so only the basename can be
+    recovered here — the actual directory is found by searching the repo
+    tree in find_source_file_by_basename()."""
     basename = os.path.basename(test_file)
     if basename.startswith("test_"):
         stem = basename[5:-3]  # remove 'test_' prefix and '.py' suffix
@@ -55,12 +60,10 @@ def main():
     test_file = sys.argv[1]
     output_path = sys.argv[2]
     feedback_path = sys.argv[3]
-    source_file = None
+    source_file_override = None
 
     if len(sys.argv) >= 6 and sys.argv[4] == "--source-file":
-        source_file = sys.argv[5]
-    else:
-        source_file = derive_source_file(test_file)
+        source_file_override = sys.argv[5]
 
     missing = [
         name
@@ -74,6 +77,17 @@ def main():
     if missing:
         print(f"ERROR: missing required environment variable(s): {', '.join(missing)}")
         sys.exit(1)
+
+    if source_file_override:
+        source_file = source_file_override
+    else:
+        basename = derive_source_basename(test_file)
+        try:
+            source_file = find_source_file_by_basename(GITHUB_REPOSITORY, SOURCE_COMMIT_SHA, basename, TESTS_DIR)
+        except ValueError as e:
+            print(f"ERROR: {e}")
+            sys.exit(1)
+        print(f"DEBUG — resolved source file: {source_file}")
 
     with open(feedback_path) as f:
         feedback = json.load(f)

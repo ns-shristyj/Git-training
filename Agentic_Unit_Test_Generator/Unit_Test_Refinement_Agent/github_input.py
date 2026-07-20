@@ -68,3 +68,43 @@ def fetch_multiple_from_github(repo: str, file_paths: list[str], ref: str) -> di
         result[file_path] = response.text
 
     return result
+
+
+def fetch_repo_tree(repo: str, ref: str) -> list[str]:
+    """List every file path in the repo at ref via the Git Trees API (recursive)."""
+    pat = _get_github_pat()
+
+    response = requests.get(
+        f"{GITHUB_API_BASE}/repos/{repo}/git/trees/{ref}",
+        params={"recursive": "1"},
+        headers={
+            "Authorization": f"Bearer {pat}",
+            "Accept": "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28",
+        },
+        timeout=15,
+    )
+    response.raise_for_status()
+    data = response.json()
+    if data.get("truncated"):
+        raise ValueError("Repo tree truncated by GitHub API; cannot reliably locate source file")
+    return [item["path"] for item in data["tree"] if item["type"] == "blob"]
+
+
+def find_source_file_by_basename(repo: str, ref: str, basename: str, exclude_dir: str) -> str:
+    """Locate the single repo file matching basename, outside exclude_dir.
+
+    Test file naming drops directory info (flat basename-only convention), so
+    the source path can't be reconstructed by string manipulation alone — the
+    repo tree has to be searched.
+    """
+    tree = fetch_repo_tree(repo, ref)
+    candidates = [
+        path for path in tree
+        if os.path.basename(path) == basename and not path.startswith(exclude_dir)
+    ]
+    if not candidates:
+        raise ValueError(f"No source file named '{basename}' found in {repo}@{ref}")
+    if len(candidates) > 1:
+        raise ValueError(f"Ambiguous source file '{basename}' found in {repo}@{ref}: {candidates}")
+    return candidates[0]
