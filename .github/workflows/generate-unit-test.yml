@@ -28,7 +28,7 @@ jobs:
         id: filter_engine
         run: |
           git diff --name-only origin/${{ github.event.pull_request.base.ref }} HEAD | \
-          python Agentic_Unit_Test_Generator/scripts/filter_source_files.py >> "$GITHUB_OUTPUT"
+          python3 Agentic_Unit_Test_Generator/scripts/filter_source_files.py >> "$GITHUB_OUTPUT"
 
       - name: Configure AWS credentials via OIDC
         if: steps.filter_engine.outputs.run_generation == 'true'
@@ -37,15 +37,9 @@ jobs:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ap-southeast-2
 
-      - name: Set up Python
-        if: steps.filter_engine.outputs.run_generation == 'true'
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
       - name: Install dependencies
         if: steps.filter_engine.outputs.run_generation == 'true'
-        run: pip install "boto3>=1.40"
+        run: pip3 install --user "boto3>=1.40"
 
       - name: Generate unit tests via Unit Test Generator Agent
         id: generate
@@ -61,7 +55,7 @@ jobs:
 
           while IFS=$'\t' read -r source_file test_file; do
             echo "=== Generating test for $source_file -> $test_file ==="
-            if python Agentic_Unit_Test_Generator/scripts/generate_unit_test.py "$source_file" "$test_file"; then
+            if python3 Agentic_Unit_Test_Generator/scripts/generate_unit_test.py "$source_file" "$test_file"; then
               GENERATED_FILES+=("$test_file")
             else
               echo "::warning::Generation failed for $source_file — skipping, continuing with remaining files."
