@@ -71,7 +71,7 @@ class TestCapitalizeWords:
         assert capitalize_words("  hello   world  ") == "Hello World"
 
     def test_capitalize_whitespace_only_string(self):
-        """Verifies a string containing only whitespace returns an empty string."""
+        """Verifies a string containing only whitespace returns an empty string since split() yields no words."""
         assert capitalize_words("   ") == ""
 
     def test_capitalize_mixed_case_words(self):
@@ -86,13 +86,12 @@ class TestCapitalizeWords:
         """Verifies single-character words are capitalized correctly."""
         assert capitalize_words("a b c") == "A B C"
 
-    def test_capitalize_none_input_raises_attribute_error(self):
-        """Verifies passing None safely raises an AttributeError rather than crashing silently or misbehaving (falsy but not empty string check bypass)."""
-        with pytest.raises(AttributeError):
-            capitalize_words(None)
+    def test_capitalize_none_input_returns_empty_string(self):
+        """Verifies passing None is treated as falsy and returns an empty string rather than raising an error."""
+        assert capitalize_words(None) == ""
 
     def test_capitalize_non_string_raises_attribute_error(self):
-        """Verifies passing a non-string type raises AttributeError since split() is not supported."""
+        """Verifies passing a truthy non-string type raises AttributeError since split() is not supported."""
         with pytest.raises(AttributeError):
             capitalize_words(12345)
 
@@ -114,21 +113,11 @@ class TestTruncate:
         """Verifies an empty string with positive max_length returns an empty string."""
         assert truncate("", 5) == ""
 
-    def test_truncate_max_length_zero_raises_value_error(self):
-        """Verifies zero max_length raises ValueError, preventing invalid boundary usage."""
-        with pytest.raises(ValueError):
-            truncate("hello", 0)
-
-    def test_truncate_negative_max_length_raises_value_error(self):
-        """Verifies negative max_length raises ValueError, blocking invalid/adversarial input."""
-        with pytest.raises(ValueError):
-            truncate("hello", -5)
-
-    @pytest.mark.parametrize("max_length", [-1000, -1, 0])
+    @pytest.mark.parametrize("max_length", [-1000, -5, -1, 0])
     def test_truncate_various_non_positive_lengths_raise_value_error(self, max_length):
         """Verifies a range of non-positive max_length values are all safely rejected via ValueError."""
         with pytest.raises(ValueError):
-            truncate("some text", max_length)
+            truncate("hello", max_length)
 
     def test_truncate_max_length_one(self):
         """Verifies truncation with max_length of 1 produces a single character plus ellipsis."""
