@@ -63,3 +63,4 @@ class TestTruncate:
         """Ensures passing a non-string, non-sized text (int) fails on len() with TypeError."""
         with pytest.raises(TypeError):
             truncate(12345, 3)
+
