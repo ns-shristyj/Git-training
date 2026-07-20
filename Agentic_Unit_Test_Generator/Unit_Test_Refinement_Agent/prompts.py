@@ -64,9 +64,19 @@ SOURCE CODE UNDER TEST:
 FAILURE LOGS / FEEDBACK:
 {failure_logs}
 
+Each feedback item above is a human reviewer's inline PR comment. "Line" is
+the line number the comment was anchored to at review time — it may no
+longer match the current file if the file changed since. "Diff context" is
+the actual code snippet the comment was left on; use it (not the bare line
+number) to find the exact function/statement the reviewer meant. Treat these
+comments as MANDATORY, non-negotiable instructions to apply exactly as
+written — locate their target first and resolve every one of them, in
+addition to (not instead of) any other redundant/vacuous/failing tests you
+independently find.
+
 """
 
-    context += f"""Review the existing tests against the source code and the feedback/logs above. Fix any failing tests, remove vacuous or redundant tests, and ensure every test has a meaningful assertion. Return the corrected test file now."""
+    context += f"""Review the existing tests against the source code and the feedback/logs above. Resolve every explicit reviewer comment at its exact target first, then fix any failing tests, remove vacuous or redundant tests, and ensure every test has a meaningful assertion. Return the corrected test file now."""
 
     return context
 
