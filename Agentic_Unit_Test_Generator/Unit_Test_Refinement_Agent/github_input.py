@@ -108,3 +108,11 @@ def find_source_file_by_basename(repo: str, ref: str, basename: str, exclude_dir
     if len(candidates) > 1:
         raise ValueError(f"Ambiguous source file '{basename}' found in {repo}@{ref}: {candidates}")
     return candidates[0]
+
+
+def derive_source_basename(test_file_path: str) -> str:
+    """test_module.py -> module.py (strip the 'test_' prefix the generator adds)."""
+    basename = os.path.basename(test_file_path)
+    if basename.startswith("test_"):
+        return f"{basename[5:-3]}.py"
+    return basename

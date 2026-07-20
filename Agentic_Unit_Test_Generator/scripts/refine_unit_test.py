@@ -14,8 +14,12 @@ feedback_json_path points to a JSON file: a list of
     {"line": int, "diff_hunk": str, "comment": str}
 for every reviewer comment left on that test_file.
 
-If --source-file is not provided, derives it from the test file name by
-reversing the naming convention (test_module.py -> module.py, searched in repo).
+If --source-file is not provided, the Refinement Agent itself derives it from
+the test file name (reversing the naming convention, test_module.py ->
+module.py) and locates the real path by searching the repo tree at `ref` —
+this script does not touch GitHub or Secrets Manager directly, since the CI
+role that runs this script has no secretsmanager:GetSecretValue permission
+(only the agent's own execution role does).
 
 Required environment variables:
     AGENT_RUNTIME_ARN  — ARN of the deployed AgentCore agent runtime (Refinement Agent).
@@ -30,26 +34,10 @@ import uuid
 import boto3
 from botocore.config import Config
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "Unit_Test_Refinement_Agent"))
-from github_input import find_source_file_by_basename  # noqa: E402
-
 REGION = "ap-southeast-2"
 AGENT_RUNTIME_ARN = os.environ.get("AGENT_RUNTIME_ARN")
 GITHUB_REPOSITORY = os.environ.get("GITHUB_REPOSITORY")
 SOURCE_COMMIT_SHA = os.environ.get("SOURCE_COMMIT_SHA")
-TESTS_DIR = "Agentic_Unit_Test_Generator/tests"
-
-
-def derive_source_basename(test_file: str) -> str:
-    """test_module.py -> module.py. Directory info was dropped when the test
-    was generated (flat basename-only naming), so only the basename can be
-    recovered here — the actual directory is found by searching the repo
-    tree in find_source_file_by_basename()."""
-    basename = os.path.basename(test_file)
-    if basename.startswith("test_"):
-        stem = basename[5:-3]  # remove 'test_' prefix and '.py' suffix
-        return f"{stem}.py"
-    return basename  # fallback: same name
 
 
 def main():
@@ -78,17 +66,6 @@ def main():
         print(f"ERROR: missing required environment variable(s): {', '.join(missing)}")
         sys.exit(1)
 
-    if source_file_override:
-        source_file = source_file_override
-    else:
-        basename = derive_source_basename(test_file)
-        try:
-            source_file = find_source_file_by_basename(GITHUB_REPOSITORY, SOURCE_COMMIT_SHA, basename, TESTS_DIR)
-        except ValueError as e:
-            print(f"ERROR: {e}")
-            sys.exit(1)
-        print(f"DEBUG — resolved source file: {source_file}")
-
     with open(feedback_path) as f:
         feedback = json.load(f)
 
@@ -102,16 +79,19 @@ def main():
     )
     agentcore = boto3.client("bedrock-agentcore", region_name=REGION, config=custom_config)
 
-    payload = json.dumps({
+    payload_dict = {
         "repo": GITHUB_REPOSITORY,
         "ref": SOURCE_COMMIT_SHA,
-        "file_path": source_file,
         "test_file_path": test_file,
         "failure_logs": feedback_text,
-    }).encode("utf-8")
+    }
+    if source_file_override:
+        payload_dict["file_path"] = source_file_override
+    payload = json.dumps(payload_dict).encode("utf-8")
 
     print(f"DEBUG — invoking Refinement Agent runtime: {AGENT_RUNTIME_ARN}")
-    print(f"DEBUG — repo={GITHUB_REPOSITORY} ref={SOURCE_COMMIT_SHA} source_file={source_file} test_file={test_file}")
+    print(f"DEBUG — repo={GITHUB_REPOSITORY} ref={SOURCE_COMMIT_SHA} "
+          f"source_file={source_file_override or '(resolved by agent)'} test_file={test_file}")
     response = agentcore.invoke_agent_runtime(
         agentRuntimeArn=AGENT_RUNTIME_ARN,
         runtimeSessionId=str(uuid.uuid4()),
