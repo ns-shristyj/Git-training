@@ -101,9 +101,9 @@ jobs:
           python3 -m pip install --upgrade pip --break-system-packages
           # Add any dependencies your calculator application requires here
           if [ -f requirements.txt ]; then pip3 install --break-system-packages -r requirements.txt; fi
-          pip3 install --break-system-packages pytest pytest-cov # Ensures pytest is available to run the tests
+          pip3 install --break-system-packages pytest pytest-cov mutmut # Ensures pytest and mutmut are available
           pip3 install --break-system-packages requests  # Ensures requests is available for Mocking API calls
-      
+
       - name: Run Test Suite and Generate JUnit XML
         if: steps.detect_tests.outputs.run_tests == 'true'
         env:
@@ -112,7 +112,26 @@ jobs:
         run: |
           echo "🚀 Executing pytest on: $TARGET_TESTS"
           # Run only the detected test files. '|| true' ensures we still parse results if tests fail.
-          pytest $TARGET_TESTS --cov=. --cov-report=term --cov-report=xml:${{ github.workspace }}/coverage.xml --junitxml=${{ github.workspace }}/dynamic_test_report.xml -v || true
+          pytest $TARGET_TESTS --cov=NIC_SecEng_Task --cov-branch --cov-report=term --cov-report=xml:${{ github.workspace }}/coverage.xml --junitxml=${{ github.workspace }}/dynamic_test_report.xml -v || true
+
+      - name: Run Mutation Testing
+        if: steps.detect_tests.outputs.run_tests == 'true'
+        env:
+          TARGET_TESTS: ${{ steps.detect_tests.outputs.test_files }}
+        run: |
+          mkdir -p "${{ github.workspace }}/mutation_reports"
+          for TEST_FILE in $TARGET_TESTS; do
+            SOURCE_FILE=$(python3 Agentic_Unit_Test_Generator/scripts/resolve_source_file.py "$TEST_FILE")
+            if [ -z "$SOURCE_FILE" ]; then
+              echo "⏭️ No source file resolved for $TEST_FILE — skipping mutation testing."
+              continue
+            fi
+            echo "🧬 Running mutmut on $SOURCE_FILE using $TEST_FILE"
+            rm -rf .mutmut-cache
+            mutmut run --paths-to-mutate "$SOURCE_FILE" --tests-dir Agentic_Unit_Test_Generator/tests \
+              --runner "python3 -m pytest $TEST_FILE -x -q" || true
+            mutmut junitxml > "${{ github.workspace }}/mutation_reports/$(basename "$SOURCE_FILE" .py).xml" || true
+          done
 
       - name: Parse Test Results
         id: parse_results
@@ -124,10 +143,9 @@ jobs:
                 echo "This PR update did not contain new or modified test files inside the test suite directory." >> pr_comment.md
                 echo "tests_failed=false" >> "$GITHUB_OUTPUT"
               elif [ -s "${{ github.workspace }}/dynamic_test_report.xml" ]; then
-                echo "Parsing test and coverage results..."
-                # Passed coverage.xml as an extra positional parameter argument
+                echo "Parsing test, coverage, and mutation results..."
                 python3 Agentic_Unit_Test_Generator/scripts/parse.py \
-                  "${{ github.workspace }}/dynamic_test_report.xml" "python" "${{ github.workspace }}/coverage.xml"
+                  "${{ github.workspace }}/dynamic_test_report.xml" "python" "${{ github.workspace }}/coverage.xml" "${{ github.workspace }}/mutation_reports"
                 FAILED=$(python3 -c "import json; print(json.load(open('unified_results.json'))['summary']['failed'])")
                 echo "failed_count=$FAILED" >> "$GITHUB_OUTPUT"
                 if [ "$FAILED" -gt 0 ]; then

@@ -135,7 +135,41 @@ def parse_coverage_xml(coverage_file_path):
         print(f"[COVERAGE] Warning: Failed parsing coverage XML metadata: {e}", file=sys.stderr)
         return None
 
-def generate_github_summary(report, coverage_data):
+def parse_mutation_xml(mutation_path):
+    """Parses mutmut's `mutmut junitxml` output (JUnit-shaped: each mutant is
+    a testcase; a <failure> means the mutant survived, no <failure> means it
+    was killed). Returns {killed, survived, total, score} or None.
+
+    `mutation_path` may be a single XML file, or a directory containing one
+    XML file per source/test pair (one mutmut run per pair) — counts are
+    summed across every file in the directory.
+    """
+    if not mutation_path or not os.path.exists(mutation_path):
+        return None
+
+    xml_files = []
+    if os.path.isdir(mutation_path):
+        xml_files = [os.path.join(mutation_path, f) for f in os.listdir(mutation_path) if f.endswith(".xml")]
+    else:
+        xml_files = [mutation_path]
+
+    killed = survived = total = 0
+    for xml_file in xml_files:
+        try:
+            report = parse_junit_xml(xml_file, "mutation")
+            total += report["summary"]["total"]
+            survived += report["summary"]["failed"]
+            killed += report["summary"]["passed"]
+        except Exception as e:
+            print(f"[MUTATION] Warning: Failed parsing mutation XML '{xml_file}': {e}", file=sys.stderr)
+
+    if total == 0:
+        return None
+    score = (killed / total) * 100
+    return {"killed": killed, "survived": survived, "total": total, "score": f"{score:.1f}%"}
+
+
+def generate_github_summary(report, coverage_data, mutation_data=None):
     """Generates a highly presentable Markdown UI summary and saves it to a file for PR comments.
 
     Renders one summary + detail table per source test file (grouped by JUnit
@@ -174,6 +208,17 @@ def generate_github_summary(report, coverage_data):
         for f in coverage_data["files"]:
             markdown += f"| `{f['name']}` | **{f['rate']}** |\n"
         markdown += "</details>\n"
+
+    if mutation_data:
+        markdown += f"""
+### 🧬 Mutation Score
+
+| Mutation Score | Killed | Survived | Total Mutants |
+| :---: | :---: | :---: | :---: |
+| 🎯 **{mutation_data['score']}** | **{mutation_data['killed']}** | **{mutation_data['survived']}** | **{mutation_data['total']}** |
+
+*Mutation score = killed / total mutants. A surviving mutant means an injected bug slipped past every assertion in the generated test.*
+"""
 
     for group_name, group in report["groups"].items():
         g_total = group["summary"]["total"]
@@ -276,20 +321,25 @@ def parse_junit_xml(xml_file_path, language_name):
 
 if __name__ == "__main__":
     if len(sys.argv) < 3:
-        print("Usage: python parse.py <xml_file_path> <language> [coverage_file_path]", file=sys.stderr)
+        print("Usage: python parse.py <xml_file_path> <language> [coverage_file_path] [mutation_file_path]", file=sys.stderr)
         sys.exit(1)
 
     file_path = sys.argv[1]
     language = sys.argv[2]
     coverage_path = sys.argv[3] if len(sys.argv) > 3 else None
+    mutation_path = sys.argv[4] if len(sys.argv) > 4 else None
 
     # Process
     report = parse_junit_xml(file_path, language)
     coverage_data = parse_coverage_xml(coverage_path)
-        
+    mutation_data = parse_mutation_xml(mutation_path)
+
+    if mutation_data:
+        report["mutation"] = mutation_data
+
     # Save raw JSON backup artifact
     with open('unified_results.json', 'w') as f:
         json.dump(report, f, indent=2)
 
     # Render interactive UI
-    generate_github_summary(report, coverage_data)
+    generate_github_summary(report, coverage_data, mutation_data)
