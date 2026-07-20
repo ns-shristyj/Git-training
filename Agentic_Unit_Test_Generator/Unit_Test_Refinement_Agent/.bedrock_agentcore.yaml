@@ -30,8 +30,8 @@ agents:
         idle_runtime_session_timeout: null
         max_lifetime: null
     bedrock_agentcore:
-      agent_id: null
-      agent_arn: null
+      agent_id: unit_test_refine_agent-0ynGKdCbpl
+      agent_arn: arn:aws:bedrock-agentcore:ap-southeast-2:786063285476:runtime/unit_test_refine_agent-0ynGKdCbpl
       agent_session_id: null
     codebuild:
       project_name: null
