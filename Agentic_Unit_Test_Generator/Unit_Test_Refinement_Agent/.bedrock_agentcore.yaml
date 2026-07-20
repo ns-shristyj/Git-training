@@ -1,0 +1,62 @@
+default_agent: unit_test_refine_agent
+agents:
+  unit_test_refine_agent:
+    name: unit_test_refine_agent
+    language: python
+    node_version: '20'
+    entrypoint: /Users/apanikar/Documents/GIS-SecEng-Intern/Agentic_Unit_Test_Generator/Unit_Test_Refinement_Agent/agent.py
+    deployment_type: container
+    runtime_type: null
+    platform: linux/arm64
+    container_runtime: none
+    source_path: /Users/apanikar/Documents/GIS-SecEng-Intern/Agentic_Unit_Test_Generator/Unit_Test_Refinement_Agent
+    aws:
+      execution_role: arn:aws:iam::786063285476:role/unit-test-refine-agentcore-execution-role
+      execution_role_auto_create: false
+      account: '786063285476'
+      region: ap-southeast-2
+      ecr_repository: 786063285476.dkr.ecr.ap-southeast-2.amazonaws.com/bedrock-agentcore-unit_test_refine_agent
+      ecr_auto_create: false
+      s3_path: null
+      s3_auto_create: false
+      network_configuration:
+        network_mode: PUBLIC
+        network_mode_config: null
+      protocol_configuration:
+        server_protocol: HTTP
+      observability:
+        enabled: true
+      lifecycle_configuration:
+        idle_runtime_session_timeout: null
+        max_lifetime: null
+    bedrock_agentcore:
+      agent_id: unit_test_refine_agent-0ynGKdCbpl
+      agent_arn: arn:aws:bedrock-agentcore:ap-southeast-2:786063285476:runtime/unit_test_refine_agent-0ynGKdCbpl
+      agent_session_id: e3391998-ceb8-4be4-8227-b115adf0efa2
+    codebuild:
+      project_name: bedrock-agentcore-unit_test_refine_agent-builder
+      execution_role: arn:aws:iam::786063285476:role/AmazonBedrockAgentCoreSDKCodeBuild-ap-southeast-2-94455f58fb
+      source_bucket: bedrock-agentcore-codebuild-sources-786063285476-ap-southeast-2
+    memory:
+      mode: NO_MEMORY
+      memory_id: null
+      memory_arn: null
+      memory_name: null
+      event_expiry_days: 30
+      first_invoke_memory_check_done: false
+      was_created_by_toolkit: false
+    identity:
+      credential_providers: []
+      workload: null
+    aws_jwt:
+      enabled: false
+      audiences: []
+      signing_algorithm: ES384
+      issuer_url: null
+      duration_seconds: 300
+    authorizer_configuration: null
+    request_header_configuration: null
+    oauth_configuration: null
+    api_key_env_var_name: null
+    api_key_credential_provider_name: null
+    is_generated_by_agentcore_create: false

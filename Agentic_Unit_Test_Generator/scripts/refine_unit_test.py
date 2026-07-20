@@ -3,27 +3,24 @@
 Refines an existing generated unit test file based on reviewer feedback left
 as PR inline comments.
 
-TEMPORARY: no dedicated Refinement Agent exists yet, so this reuses the
-Unit Test Generator Agent (same AGENT_RUNTIME_ARN, same request contract as
-generate_unit_test.py: {repo, ref, file_path}) just to prove the collect ->
-invoke -> write -> commit -> push pipeline works end to end. It regenerates
-the test file from scratch — reviewer feedback is collected and logged but
-NOT sent to the agent, since the generator agent's contract has no slot for
-it. Swap AGENT_RUNTIME_ARN for a real Refinement Agent ARN and extend the
-payload with test_code/feedback once that agent exists.
+The Refinement Agent fetches both the source file and test file from GitHub,
+reviews the test against the source code and failure feedback, and returns a
+corrected test file.
 
 Usage:
-    python refine_unit_test.py <test_file> <output_test_file> <feedback_json_path>
+    python refine_unit_test.py <test_file> <output_test_file> <feedback_json_path> [--source-file <path>]
 
 feedback_json_path points to a JSON file: a list of
     {"line": int, "diff_hunk": str, "comment": str}
 for every reviewer comment left on that test_file.
 
+If --source-file is not provided, derives it from the test file name by
+reversing the naming convention (test_module.py -> module.py, searched in repo).
+
 Required environment variables:
-    AGENT_RUNTIME_ARN  — ARN of the deployed AgentCore agent runtime (reusing
-                         the Generator Agent's runtime for now).
+    AGENT_RUNTIME_ARN  — ARN of the deployed AgentCore agent runtime (Refinement Agent).
     GITHUB_REPOSITORY  — "owner/repo".
-    SOURCE_COMMIT_SHA  — PR head SHA to fetch the file at.
+    SOURCE_COMMIT_SHA  — PR head SHA to fetch files at.
 """
 import json
 import os
@@ -33,18 +30,40 @@ import uuid
 import boto3
 from botocore.config import Config
 
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "Unit_Test_Refinement_Agent"))
+from github_input import find_source_file_by_basename  # noqa: E402
+
 REGION = "ap-southeast-2"
 AGENT_RUNTIME_ARN = os.environ.get("AGENT_RUNTIME_ARN")
 GITHUB_REPOSITORY = os.environ.get("GITHUB_REPOSITORY")
 SOURCE_COMMIT_SHA = os.environ.get("SOURCE_COMMIT_SHA")
+TESTS_DIR = "Agentic_Unit_Test_Generator/tests"
+
+
+def derive_source_basename(test_file: str) -> str:
+    """test_module.py -> module.py. Directory info was dropped when the test
+    was generated (flat basename-only naming), so only the basename can be
+    recovered here — the actual directory is found by searching the repo
+    tree in find_source_file_by_basename()."""
+    basename = os.path.basename(test_file)
+    if basename.startswith("test_"):
+        stem = basename[5:-3]  # remove 'test_' prefix and '.py' suffix
+        return f"{stem}.py"
+    return basename  # fallback: same name
 
 
 def main():
-    if len(sys.argv) != 4:
-        print("Usage: refine_unit_test.py <test_file> <output_test_file> <feedback_json_path>")
+    if len(sys.argv) < 4:
+        print("Usage: refine_unit_test.py <test_file> <output_test_file> <feedback_json_path> [--source-file <path>]")
         sys.exit(1)
 
-    test_file, output_path, feedback_path = sys.argv[1], sys.argv[2], sys.argv[3]
+    test_file = sys.argv[1]
+    output_path = sys.argv[2]
+    feedback_path = sys.argv[3]
+    source_file_override = None
+
+    if len(sys.argv) >= 6 and sys.argv[4] == "--source-file":
+        source_file_override = sys.argv[5]
 
     missing = [
         name
@@ -59,9 +78,22 @@ def main():
         print(f"ERROR: missing required environment variable(s): {', '.join(missing)}")
         sys.exit(1)
 
+    if source_file_override:
+        source_file = source_file_override
+    else:
+        basename = derive_source_basename(test_file)
+        try:
+            source_file = find_source_file_by_basename(GITHUB_REPOSITORY, SOURCE_COMMIT_SHA, basename, TESTS_DIR)
+        except ValueError as e:
+            print(f"ERROR: {e}")
+            sys.exit(1)
+        print(f"DEBUG — resolved source file: {source_file}")
+
     with open(feedback_path) as f:
         feedback = json.load(f)
-    print(f"DEBUG — {len(feedback)} reviewer feedback item(s) collected (not sent to agent yet): {feedback}")
+
+    feedback_text = "\n".join(f"Line {item.get('line', '?')}: {item.get('comment', '')}" for item in feedback)
+    print(f"DEBUG — {len(feedback)} reviewer feedback item(s) collected:\n{feedback_text}")
 
     custom_config = Config(
         read_timeout=900,
@@ -73,11 +105,13 @@ def main():
     payload = json.dumps({
         "repo": GITHUB_REPOSITORY,
         "ref": SOURCE_COMMIT_SHA,
-        "file_path": test_file,
+        "file_path": source_file,
+        "test_file_path": test_file,
+        "failure_logs": feedback_text,
     }).encode("utf-8")
 
-    print(f"DEBUG — invoking agent runtime: {AGENT_RUNTIME_ARN}")
-    print(f"DEBUG — repo={GITHUB_REPOSITORY} ref={SOURCE_COMMIT_SHA} file_path={test_file}")
+    print(f"DEBUG — invoking Refinement Agent runtime: {AGENT_RUNTIME_ARN}")
+    print(f"DEBUG — repo={GITHUB_REPOSITORY} ref={SOURCE_COMMIT_SHA} source_file={source_file} test_file={test_file}")
     response = agentcore.invoke_agent_runtime(
         agentRuntimeArn=AGENT_RUNTIME_ARN,
         runtimeSessionId=str(uuid.uuid4()),
