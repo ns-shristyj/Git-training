@@ -21,3 +21,4 @@ def truncate(text: str, max_length: int) -> str:
  
  
  
+ 
