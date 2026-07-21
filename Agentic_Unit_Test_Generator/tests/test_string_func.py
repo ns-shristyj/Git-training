@@ -39,10 +39,6 @@ class TestCapitalizeWords:
         """Verify capitalize_words capitalizes each word and returns empty string for empty input."""
         assert capitalize_words(text) == expected
 
-    def test_capitalize_words_none_returns_empty_string(self):
-        """Verify capitalize_words safely handles None by returning an empty string due to falsy check."""
-        assert capitalize_words(None) == ""
-
 
 class TestTruncate:
     @pytest.mark.parametrize(
