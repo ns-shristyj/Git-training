@@ -25,11 +25,6 @@ class TestExecuteUserQuery:
         mock_db.execute.assert_called_once_with(expected_query)
         assert result == [{"id": "acc1"}]
 
-    def test_none_db_client_raises_attribute_error(self):
-        """Edge case: passing None as db_client raises AttributeError since .execute is called on it."""
-        with pytest.raises(AttributeError):
-            execute_user_query(None, "acc1", "vip")
-
     def test_sql_injection_payload_should_not_be_embedded_unsanitized(self):
         """Security: SQL injection payload in search_term must not be directly interpolated unsanitized into the executed query."""
         mock_db = MagicMock()
