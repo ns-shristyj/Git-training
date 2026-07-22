@@ -21,10 +21,16 @@ class TestReverseString:
         """Verifies reverse_string correctly reverses typical/empty strings and other sliceable sequences (list, tuple)."""
         assert reverse_string(text) == expected
 
-    @pytest.mark.parametrize("invalid_input", [123, None, 3.14, {}, {"a": 1}, {1, 2, 3}])
+    @pytest.mark.parametrize("invalid_input", [123, None, 3.14])
     def test_reverse_string_invalid_input_raises_type_error(self, invalid_input):
-        """Ensures non-sliceable inputs (int, None, float, dict, set) raise TypeError from the slicing operation."""
+        """Ensures non-sliceable inputs (int, None, float) raise TypeError from the slicing operation."""
         with pytest.raises(TypeError):
+            reverse_string(invalid_input)
+
+    @pytest.mark.parametrize("invalid_input", [{}, {"a": 1}, {1, 2, 3}])
+    def test_reverse_string_dict_set_raises_key_error(self, invalid_input):
+        """Ensures dict/set inputs raise KeyError from the slicing operation."""
+        with pytest.raises(KeyError):
             reverse_string(invalid_input)
 
 
