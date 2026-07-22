@@ -19,9 +19,12 @@ class TestReverseString:
         """Verify reverse_string reverses a typical string and handles an empty string."""
         assert reverse_string(text) == expected
 
-    @pytest.mark.parametrize("bad_input", [None, 42, 3.14, True, {}])
+    @pytest.mark.parametrize(
+        "bad_input",
+        [None, 42, 3.14, True, {}, set(), complex(1, 2)],
+    )
     def test_non_sliceable_input_raises_type_error(self, bad_input):
-        """Verify non-sliceable inputs of various types (None, int, float, bool, dict) raise TypeError."""
+        """Verify non-sliceable inputs across many types (None, int, float, bool, dict, set, complex) raise TypeError."""
         with pytest.raises(TypeError):
             reverse_string(bad_input)
 
