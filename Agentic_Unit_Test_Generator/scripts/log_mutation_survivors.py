@@ -6,6 +6,7 @@ Useful for debugging why certain mutants escaped the test suite.
 import xml.etree.ElementTree as ET
 import sys
 import os
+import subprocess
 
 
 def parse_diff_mutation(diff_text):
@@ -80,6 +81,26 @@ def format_mutant_info(failure_msg):
     return failure_msg[:200]
 
 
+def show_mutant(mutant_id):
+    """Run `mutmut show <id>` and print its diff output."""
+    print("\n" + "="*70)
+    print(f"🧬 MUTMUT SHOW {mutant_id}")
+    print("="*70 + "\n")
+
+    result = subprocess.run(
+        ["mutmut", "show", str(mutant_id)],
+        capture_output=True,
+        text=True,
+    )
+
+    if result.stdout:
+        print(result.stdout)
+    if result.returncode != 0:
+        print(f"mutmut show exited with code {result.returncode}")
+        if result.stderr:
+            print(result.stderr)
+
+
 def log_survivors(mutation_reports_dir):
     """Parse all mutation XMLs in directory and log survived mutants."""
     if not os.path.isdir(mutation_reports_dir):
@@ -140,5 +161,12 @@ def log_survivors(mutation_reports_dir):
 
 
 if __name__ == "__main__":
-    mutation_dir = sys.argv[1] if len(sys.argv) > 1 else "./mutation_reports"
-    log_survivors(mutation_dir)
+    if "--show" in sys.argv:
+        idx = sys.argv.index("--show")
+        if idx + 1 >= len(sys.argv):
+            print("Usage: python3 log_mutation_survivors.py --show <mutant_id>")
+            sys.exit(1)
+        show_mutant(sys.argv[idx + 1])
+    else:
+        mutation_dir = sys.argv[1] if len(sys.argv) > 1 else "./mutation_reports"
+        log_survivors(mutation_dir)
