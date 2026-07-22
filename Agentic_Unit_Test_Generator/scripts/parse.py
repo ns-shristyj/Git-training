@@ -135,6 +135,13 @@ def parse_coverage_xml(coverage_file_path, tested_sources=None):
                 c_line_rate = float(clazz.get("line-rate", 0)) * 100
                 c_lines_valid = int(clazz.get("lines-valid", 0))
                 c_lines_covered = int(clazz.get("lines-covered", 0))
+
+                # If line counts are 0, recalculate from <line> elements
+                if c_lines_valid == 0:
+                    lines = clazz.findall(".//line")
+                    c_lines_valid = len(lines)
+                    c_lines_covered = len([l for l in lines if l.get("hits", "0") != "0"])
+
                 file_breakdown.append({
                     "name": c_name,
                     "rate": f"{c_line_rate:.1f}%",
@@ -149,12 +156,12 @@ def parse_coverage_xml(coverage_file_path, tested_sources=None):
             if total_valid > 0:
                 overall_rate = (total_covered / total_valid) * 100
             else:
-                # No executable lines in filtered results - use weighted rate from file breakdown
+                # Fallback to rate average if no line counts available
                 overall_rate = sum(float(f["rate"].rstrip('%')) for f in file_breakdown) / len(file_breakdown) if file_breakdown else 0
             return {
                 "total_rate": f"{overall_rate:.1f}%",
-                "lines_valid": total_valid if total_valid > 0 else sum(f["total"] for f in file_breakdown),
-                "lines_covered": total_covered if total_covered > 0 else sum(f["covered"] for f in file_breakdown),
+                "lines_valid": total_valid,
+                "lines_covered": total_covered,
                 "files": file_breakdown
             }
         return None
@@ -297,12 +304,20 @@ def generate_github_summary(report, coverage_data, mutation_data=None):
 """
         if mutation_data.get('survived_mutants'):
             markdown += "\n<details>\n<summary>🔴 Survived Mutants Details</summary>\n\n"
-            for i, mutant in enumerate(mutation_data['survived_mutants'][:15], 1):  # Show up to 15
-                mut_id = mutant.get('id', 'Unknown').replace('`', '\\`')
-                mut_desc = mutant.get('description', 'No description').replace('`', '\\`')
-                markdown += f"{i}. **{mut_id}**  \n   {mut_desc}\n\n"
+            for i, mutant in enumerate(mutation_data['survived_mutants'][:15], 1):
+                mut_id = mutant.get('id', 'Unknown')
+                mut_desc = mutant.get('description', 'No details')
+
+                # Attempt to extract rich details if description has structured info
+                if ' → ' in mut_desc:
+                    # Format: "Line X: operator — original → mutated"
+                    markdown += f"{i}. **{mut_id}**  \n   {mut_desc}\n\n"
+                else:
+                    # Plain description - just show it
+                    markdown += f"{i}. **{mut_id}**  \n   {mut_desc}\n\n"
+
             if len(mutation_data['survived_mutants']) > 15:
-                markdown += f"*... and {len(mutation_data['survived_mutants']) - 15} more survived mutants*\n"
+                markdown += f"\n*... and {len(mutation_data['survived_mutants']) - 15} more survived mutants*\n"
             markdown += "\n</details>\n"
 
     for group_name, group in report["groups"].items():
