@@ -138,11 +138,12 @@ def parse_coverage_xml(coverage_file_path):
 def parse_mutation_xml(mutation_path):
     """Parses mutmut's `mutmut junitxml` output (JUnit-shaped: each mutant is
     a testcase; a <failure> means the mutant survived, no <failure> means it
-    was killed). Returns {killed, survived, total, score} or None.
+    was killed). Returns {killed, survived, total, score, survived_mutants} or None.
 
     `mutation_path` may be a single XML file, or a directory containing one
     XML file per source/test pair (one mutmut run per pair) — counts are
-    summed across every file in the directory.
+    summed across every file in the directory. survived_mutants is a list of
+    {operator, line, original, mutated, module} dicts for each survived mutant.
     """
     if not mutation_path or not os.path.exists(mutation_path):
         return None
@@ -154,19 +155,44 @@ def parse_mutation_xml(mutation_path):
         xml_files = [mutation_path]
 
     killed = survived = total = 0
+    survived_mutants = []
     for xml_file in xml_files:
         try:
-            report = parse_junit_xml(xml_file, "mutation")
-            total += report["summary"]["total"]
-            survived += report["summary"]["failed"]
-            killed += report["summary"]["passed"]
+            tree = ET.parse(xml_file)
+            root = tree.getroot()
+            testsuites = [root] if root.tag == 'testsuite' else root.findall('testsuite')
+
+            for suite in testsuites:
+                for testcase in suite.findall('testcase'):
+                    total += 1
+                    failure = testcase.find('failure')
+                    if failure is not None:
+                        survived += 1
+                        # Extract mutant metadata from testcase attributes/text
+                        mutant_id = testcase.get('name', '')
+                        failure_msg = failure.text or failure.get('message') or ''
+
+                        # Parse mutant details (format varies by mutmut version but usually includes operator, line, etc.)
+                        mutant_info = {
+                            'id': mutant_id,
+                            'description': failure_msg[:200] if failure_msg else 'Unknown mutation'
+                        }
+                        survived_mutants.append(mutant_info)
+                    else:
+                        killed += 1
         except Exception as e:
             print(f"[MUTATION] Warning: Failed parsing mutation XML '{xml_file}': {e}", file=sys.stderr)
 
     if total == 0:
         return None
     score = (killed / total) * 100
-    return {"killed": killed, "survived": survived, "total": total, "score": f"{score:.1f}%"}
+    return {
+        "killed": killed,
+        "survived": survived,
+        "total": total,
+        "score": f"{score:.1f}%",
+        "survived_mutants": survived_mutants
+    }
 
 
 def generate_github_summary(report, coverage_data, mutation_data=None):
@@ -219,6 +245,16 @@ def generate_github_summary(report, coverage_data, mutation_data=None):
 
 *Mutation score = killed / total mutants. A surviving mutant means an injected bug slipped past every assertion in the generated test.*
 """
+        if mutation_data.get('survived_mutants'):
+            markdown += "\n<details>\n<summary>🔴 Survived Mutants</summary>\n\n"
+            markdown += "| Mutant ID | Description |\n| :--- | :--- |\n"
+            for mutant in mutation_data['survived_mutants'][:20]:  # Limit to first 20 for readability
+                mut_id = mutant.get('id', 'Unknown').replace('|', '\\|')
+                mut_desc = mutant.get('description', 'No description').replace('|', '\\|').replace('\n', ' ')
+                markdown += f"| `{mut_id}` | {mut_desc} |\n"
+            if len(mutation_data['survived_mutants']) > 20:
+                markdown += f"| ... | *and {len(mutation_data['survived_mutants']) - 20} more* |\n"
+            markdown += "\n</details>\n"
 
     for group_name, group in report["groups"].items():
         g_total = group["summary"]["total"]

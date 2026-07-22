@@ -133,6 +133,7 @@ jobs:
               --runner "python3 -m pytest $TEST_FILE -x -q" || true
             mutmut junitxml > "${{ github.workspace }}/mutation_reports/$(basename "$SOURCE_FILE" .py).xml" || true
           done
+          python3 Agentic_Unit_Test_Generator/scripts/log_mutation_survivors.py "${{ github.workspace }}/mutation_reports"
 
       - name: Parse Test Results
         if: always() && steps.detect_tests.outputs.run_tests == 'true'
