@@ -67,6 +67,10 @@ Look for `Ready - Agent deployed and endpoint available`.
 ```bash
 .venv/bin/agentcore invoke '{"file_path":"NIC_SecEng_Task/vul_service.py","test_file_path":"Agentic_Unit_Test_Generator/tests/test_vul_service.py","repo":"netSkope/GIS-SecEng-Intern","ref":"<a commit SHA pushed to origin>"}'
 ```
+Example:
+```bash
+.venv/bin/agentcore invoke '{"file_path":"NIC_SecEng_Task/Calculator/string_func.py","test_file_path":"Agentic_Unit_Test_Generator/tests/test_string_func.py","repo":"netSkope/GIS-SecEng-Intern","ref":"51607d7520225b56019bbaa2b0b6d99dc971c783"}' 
+```
 
 Swap in whatever source/test file pair you want to check — must be a path that
 actually exists at that ref **on GitHub** (the agent fetches via GitHub Contents API,
