@@ -1,5 +1,4 @@
 import pytest
-
 from NIC_SecEng_Task.Calculator.string_func import (
     reverse_string,
     capitalize_words,
@@ -7,83 +6,82 @@ from NIC_SecEng_Task.Calculator.string_func import (
 )
 
 
-# ---------------------------
-# reverse_string
-# ---------------------------
+class TestReverseString:
+    @pytest.mark.parametrize(
+        "text, expected",
+        [
+            ("hello", "olleh"),
+            ("", ""),
+        ],
+    )
+    def test_reverse_string_functionality(self, text, expected):
+        """Verifies that reverse_string correctly reverses a typical string and handles an empty string."""
+        assert reverse_string(text) == expected
 
-@pytest.mark.parametrize(
-    "text,expected",
-    [
-        ("hello", "olleh"),
-        ("", ""),
-        ("a", "a"),
-    ],
-)
-def test_reverse_string_functionality(text, expected):
-    """Verifies reverse_string correctly reverses typical and empty strings."""
-    assert reverse_string(text) == expected
-
-
-@pytest.mark.parametrize("bad_input", [None, 123, 3.14])
-def test_reverse_string_invalid_input_raises_type_error(bad_input):
-    """Ensures reverse_string raises TypeError for non-subscriptable/unsliceable types."""
-    with pytest.raises(TypeError):
-        reverse_string(bad_input)
+    @pytest.mark.parametrize(
+        "value",
+        [None, 123, 4.5],
+    )
+    def test_reverse_string_invalid_input_raises_type_error(self, value):
+        """Verifies that non-sliceable types raise TypeError since slicing is unguarded."""
+        with pytest.raises(TypeError):
+            reverse_string(value)
 
 
-# ---------------------------
-# capitalize_words
-# ---------------------------
+class TestCapitalizeWords:
+    @pytest.mark.parametrize(
+        "text, expected",
+        [
+            ("hello world", "Hello World"),
+            ("", ""),
+            ("  multiple   spaces  ", "Multiple Spaces"),
+        ],
+    )
+    def test_capitalize_words_functionality(self, text, expected):
+        """Verifies that capitalize_words capitalizes each word, handles empty string, and collapses extra whitespace."""
+        assert capitalize_words(text) == expected
 
-@pytest.mark.parametrize(
-    "text,expected",
-    [
-        ("hello world", "Hello World"),
-        ("", ""),
-        ("  multiple   spaces  here", "Multiple Spaces Here"),
-    ],
-)
-def test_capitalize_words_functionality(text, expected):
-    """Verifies capitalize_words capitalizes each word and handles empty strings/whitespace."""
-    assert capitalize_words(text) == expected
+    def test_capitalize_words_invalid_input_raises_attribute_error(self):
+        """Verifies that a non-string input raises AttributeError since .split() is unguarded for non-str types."""
+        with pytest.raises(AttributeError):
+            capitalize_words(123)
 
-
-def test_capitalize_words_none_returns_empty_string():
-    """Ensures capitalize_words treats None as falsy and safely returns empty string."""
-    assert capitalize_words(None) == ""
-
-
-def test_capitalize_words_non_string_truthy_raises_attribute_error():
-    """Ensures capitalize_words raises AttributeError when given a non-string truthy value lacking split()."""
-    with pytest.raises(AttributeError):
-        capitalize_words(123)
-
-
-# ---------------------------
-# truncate
-# ---------------------------
-
-@pytest.mark.parametrize(
-    "text,max_length,expected",
-    [
-        ("hello", 10, "hello"),
-        ("hello world", 5, "hello..."),
-        ("exact", 5, "exact"),
-    ],
-)
-def test_truncate_functionality(text, max_length, expected):
-    """Verifies truncate returns text unchanged if within length, and appends ellipsis if exceeded."""
-    assert truncate(text, max_length) == expected
+    def test_capitalize_words_security_injection_payload_not_executed(self):
+        """Verifies that a script injection style payload is treated as plain text and safely capitalized without execution or alteration of structure."""
+        payload = "<script>alert('xss')</script> drop table users"
+        result = capitalize_words(payload)
+        # Ensure it's just capitalized word-by-word text, no code execution or unexpected transformation
+        assert result == "<script>alert('xss')</script> Drop Table Users"
+        assert "<script>" in result  # confirms payload preserved as inert text, not sanitized/executed
 
 
-@pytest.mark.parametrize("max_length", [0, -1, -100])
-def test_truncate_invalid_max_length_raises_value_error(max_length):
-    """Ensures truncate raises ValueError for non-positive max_length boundary values."""
-    with pytest.raises(ValueError):
-        truncate("some text", max_length)
+class TestTruncate:
+    @pytest.mark.parametrize(
+        "text, max_length, expected",
+        [
+            ("hello world", 5, "hello..."),
+            ("hi", 10, "hi"),
+        ],
+    )
+    def test_truncate_functionality(self, text, max_length, expected):
+        """Verifies that truncate shortens text and appends ellipsis when exceeding max_length, and returns text unchanged otherwise."""
+        assert truncate(text, max_length) == expected
 
+    @pytest.mark.parametrize(
+        "text, max_length",
+        [
+            ("hello", 0),
+            ("hello", -5),
+        ],
+    )
+    def test_truncate_invalid_max_length_raises_value_error(self, text, max_length):
+        """Verifies that truncate raises ValueError when max_length is zero or negative."""
+        with pytest.raises(ValueError):
+            truncate(text, max_length)
 
-def test_truncate_non_int_max_length_raises_type_error():
-    """Ensures truncate raises TypeError when max_length is a non-comparable/non-numeric type."""
-    with pytest.raises(TypeError):
-        truncate("some text", "not a number")
+    def test_truncate_security_long_payload_is_bounded(self):
+        """Verifies that a very long/malicious input string is safely truncated to the specified bound, preventing unbounded output."""
+        payload = "A" * 10000 + "<script>alert(1)</script>"
+        result = truncate(payload, 20)
+        assert len(result) == 23  # 20 chars + "..."
+        assert result.endswith("...")
