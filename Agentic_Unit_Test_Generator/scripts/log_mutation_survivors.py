@@ -8,6 +8,20 @@ import sys
 import os
 
 
+def format_mutant_info(failure_msg):
+    """Extract key mutant details from failure message. Handle various mutmut formats."""
+    if not failure_msg:
+        return "No details"
+
+    # Clean up and truncate intelligently
+    lines = failure_msg.strip().split('\n')
+    # Try to extract the most meaningful line
+    for line in lines[:3]:  # Look at first few lines
+        if line.strip() and not line.startswith('['):
+            return line.strip()[:150]
+    return failure_msg.strip()[:150]
+
+
 def log_survivors(mutation_reports_dir):
     """Parse all mutation XMLs in directory and log survived mutants."""
     if not os.path.isdir(mutation_reports_dir):
@@ -20,6 +34,8 @@ def log_survivors(mutation_reports_dir):
         return
 
     total_survived = 0
+    all_survivors = []
+
     for xml_file in sorted(xml_files):
         xml_path = os.path.join(mutation_reports_dir, xml_file)
         try:
@@ -35,14 +51,18 @@ def log_survivors(mutation_reports_dir):
                     failure = testcase.find('failure')
                     if failure is not None:
                         mutant_id = testcase.get('name', 'unknown')
-                        survived_in_file.append(mutant_id)
+                        failure_msg = failure.text or failure.get('message', '')
+                        mutant_desc = format_mutant_info(failure_msg)
+                        survived_in_file.append((mutant_id, mutant_desc))
+                        all_survivors.append((module_name, mutant_id, mutant_desc))
 
             total_survived += len(survived_in_file)
 
             if survived_in_file:
                 print(f"🔴 {module_name}: {len(survived_in_file)} mutant(s) survived")
-                for m in survived_in_file[:5]:
-                    print(f"   └─ {m}")
+                for mid, desc in survived_in_file[:5]:
+                    print(f"   └─ {mid}")
+                    print(f"      → {desc}")
                 if len(survived_in_file) > 5:
                     print(f"   └─ ... and {len(survived_in_file) - 5} more")
             else:
@@ -52,6 +72,10 @@ def log_survivors(mutation_reports_dir):
             print(f"[ERROR] Failed parsing {xml_file}: {e}", file=sys.stderr)
 
     print(f"\n📊 Total survived mutants across all modules: {total_survived}")
+    if all_survivors and total_survived <= 20:
+        print("\n📋 Full list of survivors:")
+        for mod, mid, desc in all_survivors:
+            print(f"  [{mod}] {mid}: {desc}")
 
 
 if __name__ == "__main__":

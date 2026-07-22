@@ -168,14 +168,18 @@ def parse_mutation_xml(mutation_path):
                     failure = testcase.find('failure')
                     if failure is not None:
                         survived += 1
-                        # Extract mutant metadata from testcase attributes/text
                         mutant_id = testcase.get('name', '')
                         failure_msg = failure.text or failure.get('message') or ''
 
-                        # Parse mutant details (format varies by mutmut version but usually includes operator, line, etc.)
+                        # Extract full failure message, clean newlines for markdown
+                        full_desc = failure_msg.strip() if failure_msg else 'Unknown mutation'
+                        # Keep first meaningful line or full message if short
+                        lines = full_desc.split('\n')
+                        desc_display = next((l.strip() for l in lines if l.strip() and not l.startswith('[')), full_desc)[:300]
+
                         mutant_info = {
                             'id': mutant_id,
-                            'description': failure_msg[:200] if failure_msg else 'Unknown mutation'
+                            'description': desc_display
                         }
                         survived_mutants.append(mutant_info)
                     else:
@@ -246,14 +250,13 @@ def generate_github_summary(report, coverage_data, mutation_data=None):
 *Mutation score = killed / total mutants. A surviving mutant means an injected bug slipped past every assertion in the generated test.*
 """
         if mutation_data.get('survived_mutants'):
-            markdown += "\n<details>\n<summary>🔴 Survived Mutants</summary>\n\n"
-            markdown += "| Mutant ID | Description |\n| :--- | :--- |\n"
-            for mutant in mutation_data['survived_mutants'][:20]:  # Limit to first 20 for readability
-                mut_id = mutant.get('id', 'Unknown').replace('|', '\\|')
-                mut_desc = mutant.get('description', 'No description').replace('|', '\\|').replace('\n', ' ')
-                markdown += f"| `{mut_id}` | {mut_desc} |\n"
-            if len(mutation_data['survived_mutants']) > 20:
-                markdown += f"| ... | *and {len(mutation_data['survived_mutants']) - 20} more* |\n"
+            markdown += "\n<details>\n<summary>🔴 Survived Mutants Details</summary>\n\n"
+            for i, mutant in enumerate(mutation_data['survived_mutants'][:15], 1):  # Show up to 15
+                mut_id = mutant.get('id', 'Unknown').replace('`', '\\`')
+                mut_desc = mutant.get('description', 'No description').replace('`', '\\`')
+                markdown += f"{i}. **{mut_id}**  \n   {mut_desc}\n\n"
+            if len(mutation_data['survived_mutants']) > 15:
+                markdown += f"*... and {len(mutation_data['survived_mutants']) - 15} more survived mutants*\n"
             markdown += "\n</details>\n"
 
     for group_name, group in report["groups"].items():
