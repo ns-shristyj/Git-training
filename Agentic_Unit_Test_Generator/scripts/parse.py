@@ -111,26 +111,49 @@ def _render_test_table(tests, docstrings):
         rows += f"| `{clean_name}` | {description} | {status_tag} | {error_detail} |\n"
     return rows
 
-def parse_coverage_xml(coverage_file_path):
-    """Parses standard Cobertura XML coverage reports."""
+def parse_coverage_xml(coverage_file_path, tested_sources=None):
+    """Parses standard Cobertura XML coverage reports. If tested_sources provided, only show those files."""
     if not coverage_file_path or not os.path.exists(coverage_file_path):
         return None
     try:
         tree = ET.parse(coverage_file_path)
         root = tree.getroot()
-        line_rate = float(root.get("line-rate", 0)) * 100
-        lines_valid = int(root.get("lines-valid", 0))
-        lines_covered = int(root.get("lines-covered", 0))
-        
+
         file_breakdown = []
         for package in root.findall(".//package"):
             for clazz in package.findall(".//class"):
                 c_name = clazz.get("name", "Unknown Module")
-                c_line_rate = float(clazz.get("line-rate", 0)) * 100
+                # Skip test files and internal tools
                 if "agentic_unit_test_generator" in c_name.lower() or "test_" in c_name.lower() or "parse" in c_name.lower():
                     continue
-                file_breakdown.append({"name": c_name, "rate": f"{c_line_rate:.1f}%"})
-        return {"total_rate": f"{line_rate:.1f}%", "lines_valid": lines_valid, "lines_covered": lines_covered, "files": file_breakdown}
+
+                # If tested_sources provided, only include those
+                if tested_sources:
+                    if not any(src in c_name for src in tested_sources):
+                        continue
+
+                c_line_rate = float(clazz.get("line-rate", 0)) * 100
+                c_lines_valid = int(clazz.get("lines-valid", 0))
+                c_lines_covered = int(clazz.get("lines-covered", 0))
+                file_breakdown.append({
+                    "name": c_name,
+                    "rate": f"{c_line_rate:.1f}%",
+                    "covered": c_lines_covered,
+                    "total": c_lines_valid
+                })
+
+        # Recalculate overall totals based on filtered files only
+        if file_breakdown:
+            total_covered = sum(f["covered"] for f in file_breakdown)
+            total_valid = sum(f["total"] for f in file_breakdown)
+            overall_rate = (total_covered / total_valid * 100) if total_valid > 0 else 0
+            return {
+                "total_rate": f"{overall_rate:.1f}%",
+                "lines_valid": total_valid,
+                "lines_covered": total_covered,
+                "files": file_breakdown
+            }
+        return None
     except Exception as e:
         print(f"[COVERAGE] Warning: Failed parsing coverage XML metadata: {e}", file=sys.stderr)
         return None
@@ -357,13 +380,14 @@ def parse_junit_xml(xml_file_path, language_name):
 
 if __name__ == "__main__":
     if len(sys.argv) < 3:
-        print("Usage: python parse.py <xml_file_path> <language> [coverage_file_path] [mutation_file_path]", file=sys.stderr)
+        print("Usage: python parse.py <xml_file_path> <language> [coverage_file_path] [mutation_file_path] [tested_sources...]", file=sys.stderr)
         sys.exit(1)
 
     file_path = sys.argv[1]
     language = sys.argv[2]
     coverage_path = sys.argv[3] if len(sys.argv) > 3 else None
     mutation_path = sys.argv[4] if len(sys.argv) > 4 else None
+    tested_sources = sys.argv[5:] if len(sys.argv) > 5 else None
 
     # Process
     try:
@@ -371,7 +395,7 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"CRITICAL ERROR: Failed to parse XML file '{file_path}': {e}", file=sys.stderr)
         sys.exit(1)
-    coverage_data = parse_coverage_xml(coverage_path)
+    coverage_data = parse_coverage_xml(coverage_path, tested_sources)
     mutation_data = parse_mutation_xml(mutation_path)
 
     if mutation_data:
