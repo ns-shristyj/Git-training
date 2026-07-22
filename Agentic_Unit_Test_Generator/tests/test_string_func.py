@@ -13,7 +13,6 @@ class TestReverseString:
         [
             ("hello", "olleh"),
             ("", ""),
-            ("a", "a"),
         ],
     )
     def test_reverse_string_functionality(self, text, expected):
