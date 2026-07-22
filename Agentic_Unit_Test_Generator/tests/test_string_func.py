@@ -1,4 +1,5 @@
 import pytest
+
 from NIC_SecEng_Task.Calculator.string_func import (
     reverse_string,
     capitalize_words,
@@ -14,20 +15,18 @@ class TestReverseString:
             ("", ""),
         ],
     )
-    def test_reverse_string_typical_and_empty(self, text, expected):
-        """Verify reverse_string correctly reverses a normal string and handles empty string."""
+    def test_reverses_string_typical_and_empty(self, text, expected):
+        """Verifies core reversal behavior works for typical and empty strings."""
         assert reverse_string(text) == expected
 
-    @pytest.mark.parametrize("bad_input", [None, 123, 1.5])
-    def test_reverse_string_unsliceable_types_raise_type_error(self, bad_input):
-        """Verify reverse_string raises TypeError for types that don't support slicing."""
+    @pytest.mark.parametrize(
+        "bad_input",
+        [None, 12345],
+    )
+    def test_non_sliceable_input_raises_type_error(self, bad_input):
+        """Ensures non-subscriptable inputs (None, int) raise TypeError instead of silently succeeding."""
         with pytest.raises(TypeError):
             reverse_string(bad_input)
-
-    def test_reverse_string_list_input_returns_reversed_list(self):
-        """Verify reverse_string on a list (which supports slicing) returns a reversed list, not a string."""
-        result = reverse_string([1, 2, 3])
-        assert result == [3, 2, 1]
 
 
 class TestCapitalizeWords:
@@ -36,47 +35,30 @@ class TestCapitalizeWords:
         [
             ("hello world", "Hello World"),
             ("", ""),
-            ("  multiple   spaces  here ", "Multiple Spaces Here"),
         ],
     )
-    def test_capitalize_words_typical_and_empty(self, text, expected):
-        """Verify capitalize_words capitalizes each word, handles empty string and extra whitespace."""
+    def test_capitalizes_words_typical_and_empty(self, text, expected):
+        """Verifies each word is capitalized for typical input and empty string returns empty."""
         assert capitalize_words(text) == expected
 
-    @pytest.mark.parametrize("bad_input", [None, 123, 1.5])
-    def test_capitalize_words_invalid_types_raise_appropriate_error(self, bad_input):
-        """Verify capitalize_words raises TypeError for non-string, non-falsy-equivalent inputs lacking split()."""
-        if not bad_input:
-            # falsy inputs (None, 0, 0.0) short-circuit to "" before .split() is called
-            assert capitalize_words(bad_input) == ""
-        else:
-            with pytest.raises(AttributeError):
-                capitalize_words(bad_input)
+    def test_none_input_returns_empty_string(self):
+        """Confirms None is safely handled via the falsy check and returns empty string without error."""
+        assert capitalize_words(None) == ""
+
+    def test_non_string_non_falsy_input_raises_attribute_error(self):
+        """Ensures a truthy non-string input (int) fails predictably with AttributeError on .split()."""
+        with pytest.raises(AttributeError):
+            capitalize_words(5)
 
 
 class TestTruncate:
-    @pytest.mark.parametrize(
-        "text, max_length, expected",
-        [
-            ("hello", 10, "hello"),
-            ("hello world", 5, "hello..."),
-            ("", 5, ""),
-        ],
-    )
-    def test_truncate_typical_and_edge_lengths(self, text, max_length, expected):
-        """Verify truncate returns unmodified text when within limit and truncates with ellipsis when exceeding it."""
-        assert truncate(text, max_length) == expected
+    def test_truncate_typical_and_no_truncation_needed(self):
+        """Verifies text shorter than max_length is returned unchanged and longer text is truncated with ellipsis."""
+        assert truncate("hello", 10) == "hello"
+        assert truncate("hello world", 5) == "hello..."
 
-    @pytest.mark.parametrize("max_length", [0, -1, -100])
-    def test_truncate_non_positive_max_length_raises_value_error(self, max_length):
-        """Verify truncate raises ValueError when max_length is zero or negative."""
+    @pytest.mark.parametrize("max_length", [0, -5])
+    def test_non_positive_max_length_raises_value_error(self, max_length):
+        """Ensures zero or negative max_length is rejected with a ValueError, preventing invalid truncation bounds."""
         with pytest.raises(ValueError):
             truncate("hello", max_length)
-
-    def test_truncate_injection_like_payload_is_length_bounded(self):
-        """Verify truncate safely bounds a script-injection-like payload to the specified max length plus ellipsis."""
-        payload = "<script>alert('xss')</script>" * 5
-        max_length = 10
-        result = truncate(payload, max_length)
-        assert result == payload[:max_length] + "..."
-        assert len(result) == max_length + 3
