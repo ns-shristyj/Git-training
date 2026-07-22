@@ -19,3 +19,4 @@ def truncate(text: str, max_length: int) -> str:
     return text[:max_length] + "..." 
  
  
+ 
