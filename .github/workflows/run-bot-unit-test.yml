@@ -132,10 +132,13 @@ jobs:
               --runner "python3 -m pytest $TEST_FILE -x -q" || true
             mutmut junitxml > "${{ github.workspace }}/mutation_reports/$(basename "$SOURCE_FILE" .py).xml" || true
           done
+          python3 Agentic_Unit_Test_Generator/scripts/log_mutation_survivors.py "${{ github.workspace }}/mutation_reports"
 
       - name: Parse Test Results
         id: parse_results
         if: always() && steps.detect_tests.outputs.run_tests == 'true'
+        env:
+          TARGET_TESTS: ${{ steps.detect_tests.outputs.test_files }}
         run: |
               if [ "${{ steps.detect_tests.outputs.run_tests }}" = "false" ]; then
                 # Clean skip notice if no tests were touched
@@ -144,8 +147,18 @@ jobs:
                 echo "tests_failed=false" >> "$GITHUB_OUTPUT"
               elif [ -s "${{ github.workspace }}/dynamic_test_report.xml" ]; then
                 echo "Parsing test, coverage, and mutation results..."
+                # Extract source files from test files for coverage filtering
+                TESTED_SOURCES=""
+                for TEST_FILE in $TARGET_TESTS; do
+                  SOURCE_FILE=$(python3 Agentic_Unit_Test_Generator/scripts/resolve_source_file.py "$TEST_FILE")
+                  if [ -n "$SOURCE_FILE" ]; then
+                    # Extract module name (e.g., from NIC_SecEng_Task/Calculator/string_func.py)
+                    MODULE=$(basename "$SOURCE_FILE" .py)
+                    TESTED_SOURCES="$TESTED_SOURCES $MODULE"
+                  fi
+                done
                 python3 Agentic_Unit_Test_Generator/scripts/parse.py \
-                  "${{ github.workspace }}/dynamic_test_report.xml" "python" "${{ github.workspace }}/coverage.xml" "${{ github.workspace }}/mutation_reports"
+                  "${{ github.workspace }}/dynamic_test_report.xml" "python" "${{ github.workspace }}/coverage.xml" "${{ github.workspace }}/mutation_reports" $TESTED_SOURCES
                 FAILED=$(python3 -c "import json; print(json.load(open('unified_results.json'))['summary']['failed'])")
                 echo "failed_count=$FAILED" >> "$GITHUB_OUTPUT"
                 if [ "$FAILED" -gt 0 ]; then

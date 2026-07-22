@@ -111,26 +111,49 @@ def _render_test_table(tests, docstrings):
         rows += f"| `{clean_name}` | {description} | {status_tag} | {error_detail} |\n"
     return rows
 
-def parse_coverage_xml(coverage_file_path):
-    """Parses standard Cobertura XML coverage reports."""
+def parse_coverage_xml(coverage_file_path, tested_sources=None):
+    """Parses standard Cobertura XML coverage reports. If tested_sources provided, only show those files."""
     if not coverage_file_path or not os.path.exists(coverage_file_path):
         return None
     try:
         tree = ET.parse(coverage_file_path)
         root = tree.getroot()
-        line_rate = float(root.get("line-rate", 0)) * 100
-        lines_valid = int(root.get("lines-valid", 0))
-        lines_covered = int(root.get("lines-covered", 0))
-        
+
         file_breakdown = []
         for package in root.findall(".//package"):
             for clazz in package.findall(".//class"):
                 c_name = clazz.get("name", "Unknown Module")
-                c_line_rate = float(clazz.get("line-rate", 0)) * 100
+                # Skip test files and internal tools
                 if "agentic_unit_test_generator" in c_name.lower() or "test_" in c_name.lower() or "parse" in c_name.lower():
                     continue
-                file_breakdown.append({"name": c_name, "rate": f"{c_line_rate:.1f}%"})
-        return {"total_rate": f"{line_rate:.1f}%", "lines_valid": lines_valid, "lines_covered": lines_covered, "files": file_breakdown}
+
+                # If tested_sources provided, only include those
+                if tested_sources:
+                    if not any(src in c_name for src in tested_sources):
+                        continue
+
+                c_line_rate = float(clazz.get("line-rate", 0)) * 100
+                c_lines_valid = int(clazz.get("lines-valid", 0))
+                c_lines_covered = int(clazz.get("lines-covered", 0))
+                file_breakdown.append({
+                    "name": c_name,
+                    "rate": f"{c_line_rate:.1f}%",
+                    "covered": c_lines_covered,
+                    "total": c_lines_valid
+                })
+
+        # Recalculate overall totals based on filtered files only
+        if file_breakdown:
+            total_covered = sum(f["covered"] for f in file_breakdown)
+            total_valid = sum(f["total"] for f in file_breakdown)
+            overall_rate = (total_covered / total_valid * 100) if total_valid > 0 else 0
+            return {
+                "total_rate": f"{overall_rate:.1f}%",
+                "lines_valid": total_valid,
+                "lines_covered": total_covered,
+                "files": file_breakdown
+            }
+        return None
     except Exception as e:
         print(f"[COVERAGE] Warning: Failed parsing coverage XML metadata: {e}", file=sys.stderr)
         return None
@@ -138,11 +161,12 @@ def parse_coverage_xml(coverage_file_path):
 def parse_mutation_xml(mutation_path):
     """Parses mutmut's `mutmut junitxml` output (JUnit-shaped: each mutant is
     a testcase; a <failure> means the mutant survived, no <failure> means it
-    was killed). Returns {killed, survived, total, score} or None.
+    was killed). Returns {killed, survived, total, score, survived_mutants} or None.
 
     `mutation_path` may be a single XML file, or a directory containing one
     XML file per source/test pair (one mutmut run per pair) — counts are
-    summed across every file in the directory.
+    summed across every file in the directory. survived_mutants is a list of
+    {operator, line, original, mutated, module} dicts for each survived mutant.
     """
     if not mutation_path or not os.path.exists(mutation_path):
         return None
@@ -154,19 +178,48 @@ def parse_mutation_xml(mutation_path):
         xml_files = [mutation_path]
 
     killed = survived = total = 0
+    survived_mutants = []
     for xml_file in xml_files:
         try:
-            report = parse_junit_xml(xml_file, "mutation")
-            total += report["summary"]["total"]
-            survived += report["summary"]["failed"]
-            killed += report["summary"]["passed"]
+            tree = ET.parse(xml_file)
+            root = tree.getroot()
+            testsuites = [root] if root.tag == 'testsuite' else root.findall('testsuite')
+
+            for suite in testsuites:
+                for testcase in suite.findall('testcase'):
+                    total += 1
+                    failure = testcase.find('failure')
+                    if failure is not None:
+                        survived += 1
+                        mutant_id = testcase.get('name', '')
+                        failure_msg = failure.text or failure.get('message') or ''
+
+                        # Extract full failure message, clean newlines for markdown
+                        full_desc = failure_msg.strip() if failure_msg else 'Unknown mutation'
+                        # Keep first meaningful line or full message if short
+                        lines = full_desc.split('\n')
+                        desc_display = next((l.strip() for l in lines if l.strip() and not l.startswith('[')), full_desc)[:300]
+
+                        mutant_info = {
+                            'id': mutant_id,
+                            'description': desc_display
+                        }
+                        survived_mutants.append(mutant_info)
+                    else:
+                        killed += 1
         except Exception as e:
             print(f"[MUTATION] Warning: Failed parsing mutation XML '{xml_file}': {e}", file=sys.stderr)
 
     if total == 0:
         return None
     score = (killed / total) * 100
-    return {"killed": killed, "survived": survived, "total": total, "score": f"{score:.1f}%"}
+    return {
+        "killed": killed,
+        "survived": survived,
+        "total": total,
+        "score": f"{score:.1f}%",
+        "survived_mutants": survived_mutants
+    }
 
 
 def generate_github_summary(report, coverage_data, mutation_data=None):
@@ -219,6 +272,15 @@ def generate_github_summary(report, coverage_data, mutation_data=None):
 
 *Mutation score = killed / total mutants. A surviving mutant means an injected bug slipped past every assertion in the generated test.*
 """
+        if mutation_data.get('survived_mutants'):
+            markdown += "\n<details>\n<summary>🔴 Survived Mutants Details</summary>\n\n"
+            for i, mutant in enumerate(mutation_data['survived_mutants'][:15], 1):  # Show up to 15
+                mut_id = mutant.get('id', 'Unknown').replace('`', '\\`')
+                mut_desc = mutant.get('description', 'No description').replace('`', '\\`')
+                markdown += f"{i}. **{mut_id}**  \n   {mut_desc}\n\n"
+            if len(mutation_data['survived_mutants']) > 15:
+                markdown += f"*... and {len(mutation_data['survived_mutants']) - 15} more survived mutants*\n"
+            markdown += "\n</details>\n"
 
     for group_name, group in report["groups"].items():
         g_total = group["summary"]["total"]
@@ -318,13 +380,14 @@ def parse_junit_xml(xml_file_path, language_name):
 
 if __name__ == "__main__":
     if len(sys.argv) < 3:
-        print("Usage: python parse.py <xml_file_path> <language> [coverage_file_path] [mutation_file_path]", file=sys.stderr)
+        print("Usage: python parse.py <xml_file_path> <language> [coverage_file_path] [mutation_file_path] [tested_sources...]", file=sys.stderr)
         sys.exit(1)
 
     file_path = sys.argv[1]
     language = sys.argv[2]
     coverage_path = sys.argv[3] if len(sys.argv) > 3 else None
     mutation_path = sys.argv[4] if len(sys.argv) > 4 else None
+    tested_sources = sys.argv[5:] if len(sys.argv) > 5 else None
 
     # Process
     try:
@@ -332,7 +395,7 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"CRITICAL ERROR: Failed to parse XML file '{file_path}': {e}", file=sys.stderr)
         sys.exit(1)
-    coverage_data = parse_coverage_xml(coverage_path)
+    coverage_data = parse_coverage_xml(coverage_path, tested_sources)
     mutation_data = parse_mutation_xml(mutation_path)
 
     if mutation_data:
