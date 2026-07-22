@@ -169,6 +169,40 @@ def parse_coverage_xml(coverage_file_path, tested_sources=None):
         print(f"[COVERAGE] Warning: Failed parsing coverage XML metadata: {e}", file=sys.stderr)
         return None
 
+def _explain_mutation(original, mutated):
+    """Best-effort plain-English gloss for a mutmut original/mutated code pair.
+    Falls back to a generic note when no pattern matches."""
+    if not original or not mutated:
+        return "Code was altered; behavior may differ from the original."
+
+    comparison_ops = ["<=", ">=", "==", "!=", "<", ">"]
+    for op in comparison_ops:
+        if f"{op} " in original or f" {op}" in original or original.strip().endswith(op):
+            for op2 in comparison_ops:
+                if op2 != op and op2 in mutated and op not in mutated.replace(op2, ""):
+                    return f"A comparison changed from `{op}` to `{op2}`, shifting a boundary condition (off-by-one risk)."
+
+    orig_str_match = re.search(r'"([^"]*)"', original)
+    mut_str_match = re.search(r'"([^"]*)"', mutated)
+    if orig_str_match and mut_str_match and orig_str_match.group(1) != mut_str_match.group(1):
+        return "A string literal (e.g. an error message) was altered — tests aren't checking its exact text."
+
+    if original.strip() != mutated.strip() and set(original.split()) == set(mutated.split()):
+        return "Terms were reordered/swapped — tests didn't catch the logic change."
+
+    if "+" in original and "-" in mutated:
+        return "An arithmetic operator was flipped (+ to -), changing a calculation."
+    if "-" in original and "+" in mutated:
+        return "An arithmetic operator was flipped (- to +), changing a calculation."
+
+    if "True" in original and "False" in mutated:
+        return "A boolean literal flipped from True to False."
+    if "False" in original and "True" in mutated:
+        return "A boolean literal flipped from False to True."
+
+    return "Code logic was altered and no test caught the difference."
+
+
 def parse_mutation_xml(mutation_path):
     """Parses mutmut's `mutmut junitxml` output (JUnit-shaped: each mutant is
     a testcase; a <failure> means the mutant survived, no <failure> means it
@@ -221,10 +255,15 @@ def parse_mutation_xml(mutation_path):
                         if mutant_id in details_map:
                             detail = details_map[mutant_id]
                             line = detail.get('line', '?')
-                            operator = detail.get('operator', '?')
                             original = detail.get('original', '').strip()
                             mutated = detail.get('mutated', '').strip()
-                            description = f"**Line {line}** — `{operator}`  \n`{original}` → `{mutated}`"
+                            mutant_info = {
+                                'id': mutant_id,
+                                'line': line,
+                                'original': original,
+                                'mutated': mutated,
+                                'explanation': _explain_mutation(original, mutated)
+                            }
                         else:
                             # Fallback to parsing failure message
                             failure_msg = failure.text or failure.get('message') or ''
@@ -233,11 +272,13 @@ def parse_mutation_xml(mutation_path):
                                 (line.strip() for line in desc_lines if line.strip()),
                                 'Unknown mutation'
                             )[:250]
-
-                        mutant_info = {
-                            'id': mutant_id,
-                            'description': description
-                        }
+                            mutant_info = {
+                                'id': mutant_id,
+                                'line': None,
+                                'original': None,
+                                'mutated': None,
+                                'description': description
+                            }
                         survived_mutants.append(mutant_info)
                     else:
                         killed += 1
@@ -307,18 +348,27 @@ def generate_github_summary(report, coverage_data, mutation_data=None):
 *Mutation score = killed / total mutants. A surviving mutant means an injected bug slipped past every assertion in the generated test.*
 """
         if mutation_data.get('survived_mutants'):
-            markdown += "\n<details>\n<summary>🔴 Survived Mutants Details</summary>\n\n"
+            markdown += (
+                "\n<details>\n<summary>🔴 Survived Mutants — bugs your tests missed</summary>\n\n"
+                "*Each row is a small change (\"mutant\") injected into the source code that "
+                "no test caught. That's a gap in test coverage worth closing.*\n\n"
+                "| # | Where | What changed | Why it's a gap |\n"
+                "| :---: | :--- | :--- | :--- |\n"
+            )
             for i, mutant in enumerate(mutation_data['survived_mutants'][:15], 1):
-                mut_id = mutant.get('id', 'Unknown')
-                mut_desc = mutant.get('description', 'No details')
+                line = mutant.get('line')
+                where = f"Line {line}" if line else "?"
 
-                # Attempt to extract rich details if description has structured info
-                if ' → ' in mut_desc:
-                    # Format: "Line X: operator — original → mutated"
-                    markdown += f"**No.{i}** — {mut_id}  \n{mut_desc}\n\n"
+                if mutant.get('original') is not None:
+                    diff = (
+                        f"<code>{mutant['original']}</code> → <code>{mutant['mutated']}</code>"
+                    )
+                    explanation = mutant.get('explanation', 'Logic changed and no test caught it.')
                 else:
-                    # Plain description - just show it
-                    markdown += f"**No.{i}** — {mut_id}  \n{mut_desc}\n\n"
+                    diff = mutant.get('description', 'No details')
+                    explanation = "Could not auto-explain — see raw failure text."
+
+                markdown += f"| {i} | {where} | {diff} | {explanation} |\n"
 
             if len(mutation_data['survived_mutants']) > 15:
                 markdown += f"\n*... and {len(mutation_data['survived_mutants']) - 15} more survived mutants*\n"
