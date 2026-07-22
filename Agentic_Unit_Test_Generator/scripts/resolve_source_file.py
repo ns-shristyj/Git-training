@@ -2,53 +2,65 @@
 """
 resolve_source_file.py
 
-Inverse of filter_source_files.derive_test_path(): given a generated test
-file path (e.g. Agentic_Unit_Test_Generator/tests/test_calculator.py),
-find the application source file it targets (e.g.
-NIC_SecEng_Task/Calculator/calculator.py) by basename match under
-SEARCH_ROOT.
+Given a generated test file path (e.g. Agentic_Unit_Test_Generator/tests/test_calculator.py),
+extract import statements to find the source module it targets, then resolve to file path.
 
-Used by the mutation-testing CI step to figure out which source file to
-mutate for a given detected test file. Prints the resolved path to stdout,
-or nothing (exit 0) if no match is found, so the caller can skip that pair.
+Example:
+  Test file contains: from NIC_SecEng_Task.Calculator.string_func import ...
+  Resolves to: NIC_SecEng_Task/Calculator/string_func.py
 
 Usage:
     python3 resolve_source_file.py <test_file_path>
 """
 
 import os
+import re
 import sys
 
 SEARCH_ROOT = "NIC_SecEng_Task"
-SKIP_DIR_SUBSTRINGS = ("__pycache__", "/tests/", "/test/")
 
 
-def stem_from_test_path(test_path: str) -> str:
-    basename = os.path.basename(test_path)
-    stem = os.path.splitext(basename)[0]
-    if stem.startswith("test_"):
-        stem = stem[len("test_"):]
-    return stem
-
-
-def find_source_file(stem: str):
-    target = f"{stem}.py"
-    matches = []
-    for dirpath, _dirnames, filenames in os.walk(SEARCH_ROOT):
-        if any(skip in dirpath.replace(os.sep, "/") + "/" for skip in SKIP_DIR_SUBSTRINGS):
-            continue
-        if target in filenames:
-            matches.append(os.path.join(dirpath, target))
-
-    if not matches:
+def extract_source_module_from_imports(test_file_path: str):
+    """Parse test file imports and extract non-test module paths."""
+    try:
+        with open(test_file_path, 'r') as f:
+            content = f.read()
+    except Exception as e:
+        print(f"[resolve] Error reading test file: {e}", file=sys.stderr)
         return None
-    if len(matches) > 1:
-        print(
-            f"[resolve] WARNING: multiple source files named '{target}' found "
-            f"({matches}) — using first match.",
-            file=sys.stderr,
-        )
-    return matches[0]
+
+    # Look for import statements
+    patterns = [
+        r'from\s+([\w.]+)\s+import',
+        r'import\s+([\w.]+)',
+    ]
+
+    for pattern in patterns:
+        matches = re.findall(pattern, content)
+        for match in matches:
+            # Skip test modules
+            if 'test' in match.lower():
+                continue
+            # Return first non-test import
+            return match
+
+    return None
+
+
+def module_path_to_file_path(module_path: str) -> str:
+    """Convert module path (e.g., NIC_SecEng_Task.Calculator.string_func) to file path."""
+    return module_path.replace('.', '/') + '.py'
+
+
+def find_source_file(module_path: str):
+    """Find source file by converting module path to file path."""
+    file_path = module_path_to_file_path(module_path)
+
+    if os.path.exists(file_path):
+        return file_path
+
+    print(f"[resolve] WARNING: module path '{module_path}' -> '{file_path}' not found", file=sys.stderr)
+    return None
 
 
 def main():
@@ -56,11 +68,19 @@ def main():
         print("Usage: python3 resolve_source_file.py <test_file_path>", file=sys.stderr)
         sys.exit(1)
 
-    stem = stem_from_test_path(sys.argv[1])
-    source_file = find_source_file(stem)
+    test_file_path = sys.argv[1]
+
+    # Extract source module from test file imports
+    source_module = extract_source_module_from_imports(test_file_path)
+
+    if source_module is None:
+        print(f"[resolve] No source module found in imports of {test_file_path}", file=sys.stderr)
+        return
+
+    # Convert module path to file path and verify it exists
+    source_file = find_source_file(source_module)
 
     if source_file is None:
-        print(f"[resolve] No source file found for stem '{stem}'", file=sys.stderr)
         return
 
     print(source_file)
