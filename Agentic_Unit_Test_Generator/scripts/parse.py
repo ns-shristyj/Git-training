@@ -220,7 +220,11 @@ def parse_mutation_xml(mutation_path):
                         # Try to get rich details from _details.json first
                         if mutant_id in details_map:
                             detail = details_map[mutant_id]
-                            description = f"Line {detail.get('line', '?')}: {detail.get('operator', '?')} — {detail.get('original', '').strip()} → {detail.get('mutated', '').strip()}"
+                            line = detail.get('line', '?')
+                            operator = detail.get('operator', '?')
+                            original = detail.get('original', '').strip()
+                            mutated = detail.get('mutated', '').strip()
+                            description = f"**Line {line}** — `{operator}`  \n`{original}` → `{mutated}`"
                         else:
                             # Fallback to parsing failure message
                             failure_msg = failure.text or failure.get('message') or ''
@@ -311,10 +315,10 @@ def generate_github_summary(report, coverage_data, mutation_data=None):
                 # Attempt to extract rich details if description has structured info
                 if ' → ' in mut_desc:
                     # Format: "Line X: operator — original → mutated"
-                    markdown += f"{i}. **{mut_id}**  \n   {mut_desc}\n\n"
+                    markdown += f"**No.{i}** — {mut_id}  \n{mut_desc}\n\n"
                 else:
                     # Plain description - just show it
-                    markdown += f"{i}. **{mut_id}**  \n   {mut_desc}\n\n"
+                    markdown += f"**No.{i}** — {mut_id}  \n{mut_desc}\n\n"
 
             if len(mutation_data['survived_mutants']) > 15:
                 markdown += f"\n*... and {len(mutation_data['survived_mutants']) - 15} more survived mutants*\n"
