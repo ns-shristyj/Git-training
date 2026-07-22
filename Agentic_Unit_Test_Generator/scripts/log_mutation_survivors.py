@@ -8,8 +8,39 @@ import sys
 import os
 
 
+def parse_diff_mutation(diff_text):
+    """Parse unified diff format from mutmut to extract actual code changes."""
+    if not diff_text:
+        return None
+
+    lines = diff_text.strip().split('\n')
+    removed = []
+    added = []
+    line_info = None
+
+    for line in lines:
+        if line.startswith('@@'):
+            # Extract line number info: @@ -11,7 +11,7 @@
+            parts = line.split(' ')
+            if len(parts) >= 2:
+                line_info = parts[1]  # e.g., "-11,7"
+        elif line.startswith('-') and not line.startswith('---'):
+            removed.append(line[1:].strip())
+        elif line.startswith('+') and not line.startswith('+++'):
+            added.append(line[1:].strip())
+
+    if removed and added:
+        line_num = line_info.split(',')[0][1:] if line_info else '?'
+        return {
+            'line': line_num,
+            'original': removed[0] if removed else '',
+            'mutated': added[0] if added else ''
+        }
+    return None
+
+
 def format_mutant_info(failure_msg):
-    """Extract key mutant details from failure message. Handle various mutmut formats."""
+    """Extract key mutant details from failure message. Parse diffs to describe mutations."""
     if not failure_msg:
         return "No details"
 
@@ -18,18 +49,35 @@ def format_mutant_info(failure_msg):
     except Exception:
         return "Could not decode mutation details"
 
+    # Try to parse as unified diff
+    mutation = parse_diff_mutation(failure_msg)
+    if mutation:
+        line = mutation['line']
+        original = mutation['original']
+        mutated = mutation['mutated']
+
+        if original and mutated:
+            return f"Line {line}:\n  Original: {original}\n  Mutated:  {mutated}"
+
+    # Fallback: extract readable lines from diff
     lines = failure_msg.split('\n')
     key_lines = []
 
-    for line in lines[:10]:
-        line = line.strip()
-        if not line or line.startswith('['):
+    for line in lines:
+        stripped = line.strip()
+        if not stripped:
             continue
-        key_lines.append(line)
+        if stripped.startswith('---') or stripped.startswith('+++') or stripped.startswith('@@'):
+            continue
+        if stripped.startswith('-'):
+            key_lines.append(f"Removed: {stripped[1:].strip()}")
+        elif stripped.startswith('+'):
+            key_lines.append(f"Added:   {stripped[1:].strip()}")
 
     if key_lines:
-        return '\n  '.join(key_lines[:3])[:300]
-    return failure_msg[:300]
+        return '\n  '.join(key_lines[:4])[:300]
+
+    return failure_msg[:200]
 
 
 def log_survivors(mutation_reports_dir):
