@@ -9,6 +9,35 @@ import os
 import xml.etree.ElementTree as ET
 
 
+def parse_diff_mutation(diff_text):
+    """Parse unified diff to extract original and mutated code."""
+    if not diff_text:
+        return None
+
+    lines = diff_text.strip().split('\n')
+    removed = []
+    added = []
+    line_num = '?'
+
+    for line in lines:
+        if line.startswith('@@'):
+            parts = line.split(' ')
+            if len(parts) >= 2:
+                line_num = parts[1][1:].split(',')[0]
+        elif line.startswith('-') and not line.startswith('---'):
+            removed.append(line[1:].strip())
+        elif line.startswith('+') and not line.startswith('+++'):
+            added.append(line[1:].strip())
+
+    if removed and added:
+        return {
+            'line': line_num,
+            'original': removed[0],
+            'mutated': added[0]
+        }
+    return None
+
+
 def extract_from_xml(xml_file, output_file="mutation_details.json"):
     """Parse mutmut XML report for survived mutations with full details."""
     if not os.path.exists(xml_file):
@@ -32,13 +61,25 @@ def extract_from_xml(xml_file, output_file="mutation_details.json"):
                     mutant_id = testcase.get('name', 'unknown')
                     failure_msg = failure.text or failure.get('message', '')
 
-                    survived.append({
+                    mutation_info = parse_diff_mutation(failure_msg)
+
+                    entry = {
                         "id": mutant_id,
                         "line": testcase.get('line', 'unknown'),
                         "status": status,
-                        "message": failure_msg.strip() if failure_msg else "No details",
-                        "description": f"**{mutant_id}** — {failure_msg[:200]}" if failure_msg else f"**{mutant_id}** — No details"
-                    })
+                    }
+
+                    if mutation_info:
+                        entry.update({
+                            "mutation_line": mutation_info['line'],
+                            "original": mutation_info['original'],
+                            "mutated": mutation_info['mutated'],
+                            "description": f"{mutant_id} — Line {mutation_info['line']}\nOriginal: {mutation_info['original']}\nMutated:  {mutation_info['mutated']}"
+                        })
+                    else:
+                        entry["description"] = f"{mutant_id} — No code details available"
+
+                    survived.append(entry)
 
         output = {
             "survived_count": len(survived),
