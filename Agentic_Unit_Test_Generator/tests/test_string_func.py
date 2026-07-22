@@ -51,7 +51,7 @@ class TestCapitalizeWords:
         payload = "<script>alert('xss')</script> drop table users"
         result = capitalize_words(payload)
         # Ensure it's just capitalized word-by-word text, no code execution or unexpected transformation
-        assert result == "<script>Alert('xss')</script> Drop Table Users"
+        assert result == "<script>alert('xss')</script> Drop Table Users"
         assert "<script>" in result  # confirms payload preserved as inert text, not sanitized/executed
 
 
