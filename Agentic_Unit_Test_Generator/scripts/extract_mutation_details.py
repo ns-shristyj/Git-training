@@ -1,67 +1,59 @@
 #!/usr/bin/env python3
 """
 Extract mutation details from mutmut cache and save as JSON for parsing.
-Run this AFTER mutmut to get full mutation descriptions beyond what junitxml provides.
+Reads from .mutmut-cache to extract survived mutation details.
 """
 import json
 import sys
-import subprocess
+import os
 from pathlib import Path
 
 
-def extract_mutations_to_json(output_file="mutation_details.json"):
-    """Run 'mutmut results' and parse into structured data."""
-    try:
-        result = subprocess.run(
-            ["mutmut", "results", "--json"],
-            capture_output=True,
-            text=True,
-            timeout=10
-        )
-        if result.returncode == 0 and result.stdout:
-            data = json.loads(result.stdout)
-            # Filter for survived mutations
-            survived = []
-            if isinstance(data, dict) and "mutation_id" in data:
-                # Single format
-                if data.get("status") == "survived":
-                    survived.append(data)
-            elif isinstance(data, list):
-                # List format
-                survived = [m for m in data if m.get("status") == "survived"]
-
-            output = {
-                "survived_count": len(survived),
-                "mutations": [
-                    {
-                        "id": m.get("mutation_id", "unknown"),
-                        "line": m.get("line", "?"),
-                        "operator": m.get("mutation_type", "unknown"),
-                        "file": m.get("filename", "unknown"),
-                        "original": m.get("original", ""),
-                        "mutated": m.get("mutated", ""),
-                    }
-                    for m in survived[:20]  # Limit to top 20
-                ]
-            }
-            with open(output_file, "w") as f:
-                json.dump(output, f, indent=2)
-            print(f"[MUTATION DETAILS] Extracted {len(survived)} survived mutations to {output_file}")
-            return output_file
-        else:
-            print(f"[MUTATION DETAILS] mutmut results returned no JSON output", file=sys.stderr)
-            return None
-    except subprocess.TimeoutExpired:
-        print("[MUTATION DETAILS] mutmut results timed out", file=sys.stderr)
+def extract_mutations_from_cache(output_file="mutation_details.json"):
+    """Parse .mutmut-cache for survived mutations with full details."""
+    cache_file = ".mutmut-cache"
+    if not os.path.exists(cache_file):
+        print(f"[MUTATION DETAILS] Cache file not found: {cache_file}", file=sys.stderr)
         return None
+
+    try:
+        with open(cache_file, "r") as f:
+            cache_data = json.load(f)
+
+        survived = []
+
+        # mutmut cache format: dict with "mutations" key
+        if "mutations" in cache_data:
+            for mut_id, mut_data in cache_data["mutations"].items():
+                if mut_data.get("status") == "survived":
+                    # mut_data has keys: status, line, mutator, original, mutated, operator
+                    survived.append({
+                        "id": f"Mutant #{mut_id}" if isinstance(mut_id, int) else mut_id,
+                        "line": mut_data.get("line", "?"),
+                        "operator": mut_data.get("mutator", mut_data.get("operator", "unknown")),
+                        "original": str(mut_data.get("original", ""))[:100],
+                        "mutated": str(mut_data.get("mutated", ""))[:100],
+                    })
+
+        output = {
+            "survived_count": len(survived),
+            "mutations": survived[:20]
+        }
+
+        with open(output_file, "w") as f:
+            json.dump(output, f, indent=2)
+
+        print(f"[MUTATION DETAILS] Extracted {len(survived)} survived mutations to {output_file}")
+        return output_file
+
     except json.JSONDecodeError as e:
-        print(f"[MUTATION DETAILS] Failed to parse mutmut JSON: {e}", file=sys.stderr)
+        print(f"[MUTATION DETAILS] Failed parsing cache JSON: {e}", file=sys.stderr)
         return None
     except Exception as e:
-        print(f"[MUTATION DETAILS] Error extracting mutations: {e}", file=sys.stderr)
+        print(f"[MUTATION DETAILS] Error extracting: {e}", file=sys.stderr)
         return None
 
 
 if __name__ == "__main__":
     output = sys.argv[1] if len(sys.argv) > 1 else "mutation_details.json"
-    extract_mutations_to_json(output)
+    extract_mutations_from_cache(output)
