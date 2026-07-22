@@ -130,8 +130,9 @@ jobs:
             rm -rf .mutmut-cache
             mutmut run --paths-to-mutate "$SOURCE_FILE" --tests-dir Agentic_Unit_Test_Generator/tests \
               --runner "python3 -m pytest $TEST_FILE -x -q" || true
-            mutmut junitxml > "${{ github.workspace }}/mutation_reports/$(basename "$SOURCE_FILE" .py).xml" || true
-            python3 Agentic_Unit_Test_Generator/scripts/extract_mutation_details.py "${{ github.workspace }}/mutation_reports/$(basename "$SOURCE_FILE" .py)_details.json" || true
+            XML_FILE="${{ github.workspace }}/mutation_reports/$(basename "$SOURCE_FILE" .py).xml"
+            mutmut junitxml > "$XML_FILE" || true
+            python3 Agentic_Unit_Test_Generator/scripts/extract_mutation_details.py "$XML_FILE" "${{ github.workspace }}/mutation_reports/$(basename "$SOURCE_FILE" .py)_details.json" || true
           done
           python3 Agentic_Unit_Test_Generator/scripts/log_mutation_survivors.py "${{ github.workspace }}/mutation_reports"
 
