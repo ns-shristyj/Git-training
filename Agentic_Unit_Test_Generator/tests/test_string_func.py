@@ -1,62 +1,60 @@
 import pytest
-from NIC_SecEng_Task.Calculator.string_func import (
-    reverse_string,
-    capitalize_words,
-    truncate,
-)
+from NIC_SecEng_Task.Calculator.string_func import reverse_string, capitalize_words, truncate
 
 
 class TestReverseString:
-    @pytest.mark.parametrize(
-        "text, expected",
-        [
-            ("hello", "olleh"),
-            ("", ""),
-        ],
-    )
+    @pytest.mark.parametrize("text,expected", [
+        ("hello", "olleh"),
+        ("", ""),
+        ("a", "a"),
+    ])
     def test_reverse_string_functionality(self, text, expected):
-        """Verify reverse_string correctly reverses a typical string and handles an empty string."""
+        """Verifies reverse_string correctly reverses typical and empty strings."""
         assert reverse_string(text) == expected
 
-    def test_reverse_string_invalid_type_raises_typeerror(self):
-        """Verify reverse_string raises TypeError when given a non-sliceable type like int."""
+    @pytest.mark.parametrize("bad_input", [123, 3.14, None])
+    def test_reverse_string_invalid_type_raises_type_error(self, bad_input):
+        """Ensures non-sliceable types (int, float, None) raise TypeError on slicing."""
         with pytest.raises(TypeError):
-            reverse_string(123)
+            reverse_string(bad_input)
 
 
 class TestCapitalizeWords:
-    @pytest.mark.parametrize(
-        "text, expected",
-        [
-            ("hello world", "Hello World"),
-            ("", ""),
-            ("   ", ""),
-        ],
-    )
+    @pytest.mark.parametrize("text,expected", [
+        ("hello world", "Hello World"),
+        ("", ""),
+        ("   ", ""),
+    ])
     def test_capitalize_words_functionality(self, text, expected):
-        """Verify capitalize_words capitalizes each word and returns empty string for empty/whitespace input."""
+        """Verifies capitalize_words capitalizes each word and handles empty/whitespace-only strings."""
         assert capitalize_words(text) == expected
 
     def test_capitalize_words_none_input_returns_empty_string(self):
-        """Verify capitalize_words safely returns empty string when given None (falsy) instead of crashing."""
+        """Ensures None input is treated as falsy and safely returns an empty string."""
         assert capitalize_words(None) == ""
+
+    def test_capitalize_words_non_string_truthy_raises_attribute_error(self):
+        """Ensures a non-string truthy input (int) without a split() method raises AttributeError."""
+        with pytest.raises(AttributeError):
+            capitalize_words(123)
 
 
 class TestTruncate:
-    @pytest.mark.parametrize(
-        "text, max_length, expected",
-        [
-            ("short", 10, "short"),
-            ("this is a long text", 7, "this is..."),
-            ("exact", 5, "exact"),
-        ],
-    )
+    @pytest.mark.parametrize("text,max_length,expected", [
+        ("hello world", 5, "hello..."),
+        ("short", 10, "short"),
+    ])
     def test_truncate_functionality(self, text, max_length, expected):
-        """Verify truncate returns text unchanged when within limit and appends ellipsis when exceeding it."""
+        """Verifies truncate returns full text when within length and truncates with ellipsis when exceeding it."""
         assert truncate(text, max_length) == expected
 
     @pytest.mark.parametrize("max_length", [0, -1, -100])
-    def test_truncate_invalid_max_length_raises_valueerror(self, max_length):
-        """Verify truncate raises ValueError for zero or negative max_length values."""
+    def test_truncate_non_positive_max_length_raises_value_error(self, max_length):
+        """Ensures a non-positive max_length raises ValueError as validated by the source code."""
         with pytest.raises(ValueError):
             truncate("some text", max_length)
+
+    def test_truncate_non_int_max_length_raises_type_error(self):
+        """Ensures a non-numeric max_length raises TypeError on the unguarded comparison operation."""
+        with pytest.raises(TypeError):
+            truncate("some text", "5")

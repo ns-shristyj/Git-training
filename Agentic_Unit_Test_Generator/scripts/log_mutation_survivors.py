@@ -13,13 +13,23 @@ def format_mutant_info(failure_msg):
     if not failure_msg:
         return "No details"
 
-    # Clean up and truncate intelligently
-    lines = failure_msg.strip().split('\n')
-    # Try to extract the most meaningful line
-    for line in lines[:3]:  # Look at first few lines
-        if line.strip() and not line.startswith('['):
-            return line.strip()[:150]
-    return failure_msg.strip()[:150]
+    try:
+        failure_msg = str(failure_msg).strip()
+    except Exception:
+        return "Could not decode mutation details"
+
+    lines = failure_msg.split('\n')
+    key_lines = []
+
+    for line in lines[:10]:
+        line = line.strip()
+        if not line or line.startswith('['):
+            continue
+        key_lines.append(line)
+
+    if key_lines:
+        return '\n  '.join(key_lines[:3])[:300]
+    return failure_msg[:300]
 
 
 def log_survivors(mutation_reports_dir):
@@ -60,11 +70,12 @@ def log_survivors(mutation_reports_dir):
 
             if survived_in_file:
                 print(f"🔴 {module_name}: {len(survived_in_file)} mutant(s) survived")
-                for mid, desc in survived_in_file[:5]:
-                    print(f"   └─ {mid}")
-                    print(f"      → {desc}")
-                if len(survived_in_file) > 5:
-                    print(f"   └─ ... and {len(survived_in_file) - 5} more")
+                for i, (mid, desc) in enumerate(survived_in_file[:10], 1):
+                    print(f"\n   No.{i} — {mid}")
+                    for detail_line in desc.split('\n'):
+                        print(f"        {detail_line}")
+                if len(survived_in_file) > 10:
+                    print(f"\n   └─ ... and {len(survived_in_file) - 10} more")
             else:
                 print(f"✅ {module_name}: All mutants killed!")
 
@@ -75,7 +86,9 @@ def log_survivors(mutation_reports_dir):
     if all_survivors and total_survived <= 20:
         print("\n📋 Full list of survivors:")
         for mod, mid, desc in all_survivors:
-            print(f"  [{mod}] {mid}: {desc}")
+            print(f"\n  [{mod}] {mid}")
+            for detail_line in desc.split('\n'):
+                print(f"    {detail_line}")
 
 
 if __name__ == "__main__":
