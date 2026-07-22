@@ -146,11 +146,15 @@ def parse_coverage_xml(coverage_file_path, tested_sources=None):
         if file_breakdown:
             total_covered = sum(f["covered"] for f in file_breakdown)
             total_valid = sum(f["total"] for f in file_breakdown)
-            overall_rate = (total_covered / total_valid * 100) if total_valid > 0 else 0
+            if total_valid > 0:
+                overall_rate = (total_covered / total_valid) * 100
+            else:
+                # No executable lines in filtered results - use weighted rate from file breakdown
+                overall_rate = sum(float(f["rate"].rstrip('%')) for f in file_breakdown) / len(file_breakdown) if file_breakdown else 0
             return {
                 "total_rate": f"{overall_rate:.1f}%",
-                "lines_valid": total_valid,
-                "lines_covered": total_covered,
+                "lines_valid": total_valid if total_valid > 0 else sum(f["total"] for f in file_breakdown),
+                "lines_covered": total_covered if total_covered > 0 else sum(f["covered"] for f in file_breakdown),
                 "files": file_breakdown
             }
         return None
@@ -165,15 +169,28 @@ def parse_mutation_xml(mutation_path):
 
     `mutation_path` may be a single XML file, or a directory containing one
     XML file per source/test pair (one mutmut run per pair) — counts are
-    summed across every file in the directory. survived_mutants is a list of
-    {operator, line, original, mutated, module} dicts for each survived mutant.
+    summed across every file in the directory. Attempts to load detailed mutation
+    info from *_details.json files if available.
     """
     if not mutation_path or not os.path.exists(mutation_path):
         return None
 
     xml_files = []
+    details_map = {}
     if os.path.isdir(mutation_path):
         xml_files = [os.path.join(mutation_path, f) for f in os.listdir(mutation_path) if f.endswith(".xml")]
+        # Load any available details files
+        details_files = [os.path.join(mutation_path, f) for f in os.listdir(mutation_path) if f.endswith("_details.json")]
+        for df in details_files:
+            try:
+                with open(df, 'r') as f:
+                    detail_data = json.load(f)
+                    if "mutations" in detail_data:
+                        for m in detail_data["mutations"]:
+                            key = m.get("id", "")
+                            details_map[key] = m
+            except Exception as e:
+                print(f"[MUTATION] Warning: Failed loading details from {df}: {e}", file=sys.stderr)
     else:
         xml_files = [mutation_path]
 
@@ -192,17 +209,23 @@ def parse_mutation_xml(mutation_path):
                     if failure is not None:
                         survived += 1
                         mutant_id = testcase.get('name', '')
-                        failure_msg = failure.text or failure.get('message') or ''
 
-                        # Extract full failure message, clean newlines for markdown
-                        full_desc = failure_msg.strip() if failure_msg else 'Unknown mutation'
-                        # Keep first meaningful line or full message if short
-                        lines = full_desc.split('\n')
-                        desc_display = next((l.strip() for l in lines if l.strip() and not l.startswith('[')), full_desc)[:300]
+                        # Try to get rich details from _details.json first
+                        if mutant_id in details_map:
+                            detail = details_map[mutant_id]
+                            description = f"Line {detail.get('line', '?')}: {detail.get('operator', '?')} — {detail.get('original', '').strip()} → {detail.get('mutated', '').strip()}"
+                        else:
+                            # Fallback to parsing failure message
+                            failure_msg = failure.text or failure.get('message') or ''
+                            desc_lines = failure_msg.strip().split('\n') if failure_msg else []
+                            description = next(
+                                (line.strip() for line in desc_lines if line.strip()),
+                                'Unknown mutation'
+                            )[:250]
 
                         mutant_info = {
                             'id': mutant_id,
-                            'description': desc_display
+                            'description': description
                         }
                         survived_mutants.append(mutant_info)
                     else:
