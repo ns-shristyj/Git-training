@@ -20,6 +20,7 @@ from agent import (
     assert_posture,
     assert_http_posture,
     PostureViolationError,
+    TokenAcquisitionError,
     LoginEvent,
 )
 
@@ -242,6 +243,27 @@ def test_ac10_invalid_email_returns_valid_schema():
     result = fetch_auth0_data({"email": "not-an-email"})
     assert result["user_found"] is False
     assert result["error"] == "invalid_email_input"
+
+
+# Regression test: bad/placeholder credentials cause a real HTTPError from
+# the Auth0 token endpoint (raise_for_status()), which previously wasn't
+# caught anywhere and crashed the whole invocation with an unhandled
+# exception (HTTP 500) instead of the graceful error the spec requires.
+def test_regression_bad_credentials_token_failure_is_graceful():
+    import requests as requests_module
+
+    with patch("agent.get_secrets_client") as mock_sm, patch("agent.requests.post") as mock_post, \
+         patch("agent.time.sleep"):
+        mock_sm.return_value.get_secret_value.return_value = mock_secret_response()
+        bad_response = MagicMock()
+        bad_response.raise_for_status.side_effect = requests_module.exceptions.HTTPError("401 Unauthorized")
+        mock_post.return_value = bad_response
+
+        result = fetch_auth0_data({"email": "someone@example.com"})
+
+    assert result["user_found"] is False
+    assert result["error"] == "auth0_token_acquisition_failed"
+    assert mock_post.call_count == 3  # exhausted all retries, per spec §8
 
 
 # AC-12: Secrets Manager unavailable returns structured error

@@ -160,24 +160,39 @@ def get_auth0_credentials() -> dict:
     return json.loads(response["SecretString"])
 
 
-def acquire_token() -> str:
-    """Fetch credentials and request a fresh M2M access token (§4.1 steps 1-2)."""
+class TokenAcquisitionError(RuntimeError):
+    """Raised when the M2M token endpoint fails after all retries (§8)."""
+
+
+def acquire_token() -> tuple:
+    """Fetch credentials and request a fresh M2M access token (§4.1 steps 1-2).
+    Retries up to MAX_RETRIES times on any request failure or non-2xx
+    response, per §8 ("after 3 retries on token endpoint")."""
     creds = get_auth0_credentials()
     assert_http_posture(AUTH0_DOMAIN, "/oauth/token", "POST")
 
-    response = requests.post(
-        f"https://{AUTH0_DOMAIN}/oauth/token",
-        json={
-            "grant_type": "client_credentials",
-            "client_id": creds["client_id"],
-            "client_secret": creds["client_secret"],
-            "audience": f"https://{AUTH0_DOMAIN}/api/v2/",
-        },
-        timeout=HTTP_TIMEOUT_SECONDS,
-    )
-    response.raise_for_status()
-    body = response.json()
-    return body["access_token"], body.get("expires_in", 86400)
+    last_error = None
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
+            response = requests.post(
+                f"https://{AUTH0_DOMAIN}/oauth/token",
+                json={
+                    "grant_type": "client_credentials",
+                    "client_id": creds["client_id"],
+                    "client_secret": creds["client_secret"],
+                    "audience": f"https://{AUTH0_DOMAIN}/api/v2/",
+                },
+                timeout=HTTP_TIMEOUT_SECONDS,
+            )
+            response.raise_for_status()
+            body = response.json()
+            return body["access_token"], body.get("expires_in", 86400)
+        except requests.exceptions.RequestException as e:
+            last_error = e
+            if attempt < MAX_RETRIES:
+                time.sleep(2 ** (attempt - 1))
+
+    raise TokenAcquisitionError(str(last_error))
 
 
 def get_valid_token() -> str:
@@ -439,6 +454,14 @@ def fetch_auth0_data(payload: dict) -> dict:
             user_found=False,
             error="secrets_manager_unavailable",
         ).model_dump()
+    except TokenAcquisitionError as e:
+        logger.error(f"[{run_id}] Token acquisition failed: {e}")
+        return Auth0Payload(
+            run_id=run_id,
+            fetched_at=fetched_at,
+            user_found=False,
+            error="auth0_token_acquisition_failed",
+        ).model_dump()
 
     if tool1_error:
         logger.error(f"[{run_id}] Tool 1 failed: {tool1_error}")
@@ -470,7 +493,13 @@ def fetch_auth0_data(payload: dict) -> dict:
         auth0_warnings.append("no_metadata")
 
     # Step 4: fetch login history (Tool 2) — only if user found (§6.1)
-    login_history, tool2_error = get_login_history(selected_user.user_id, days)
+    # Tool 2 failure is non-fatal (§8) — including token acquisition failure
+    # during a mid-invocation refresh, which must not crash the whole payload.
+    try:
+        login_history, tool2_error = get_login_history(selected_user.user_id, days)
+    except TokenAcquisitionError as e:
+        logger.warning(f"[{run_id}] Tool 2 token acquisition failed (non-fatal): {e}")
+        login_history, tool2_error = [], "auth0_token_acquisition_failed"
 
     failed_logins_last_7_days, last_failed_login_reason = derive_failed_login_stats(login_history)
 
