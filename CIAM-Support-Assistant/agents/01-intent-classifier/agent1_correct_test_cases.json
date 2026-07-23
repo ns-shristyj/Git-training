@@ -1,0 +1,113 @@
+{
+  "test_scenarios": [
+    {
+      "id": "TC-001",
+      "title": "Password Reset Failure During Migration",
+      "issue_key": "TQI-1001",
+      "summary": "User cannot reset password",
+      "description": "Customer at user.account@example.com unable to reset password, getting error: 'Reset token invalid'. Issue occurred after Nov 1 CIAM migration. User works in support team.",
+      "expected_intent": "MFA_RESET",
+      "expected_email": "user.account@example.com",
+      "expected_routing": "Agent 2, Agent 3, Agent 4"
+    },
+    {
+      "id": "TC-002",
+      "title": "Account Access Blocked Post-Migration",
+      "issue_key": "TQI-1002",
+      "summary": "Employee locked out after migration",
+      "description": "Employee employee.user@example.com reports: 'I can't access the support portal after the system migration on Nov 1. Keep getting 403 Access Denied error.' Verified email exists in SFDC.",
+      "expected_intent": "ACCESS_DENIED",
+      "expected_email": "employee.user@example.com",
+      "expected_routing": "Agent 2, Agent 3, Agent 4"
+    },
+    {
+      "id": "TC-003",
+      "title": "SSO/Okta Login Failure",
+      "issue_key": "TQI-1003",
+      "summary": "Okta SSO redirect loop",
+      "description": "Remote worker remote.worker@example.com experiencing SAML redirect loop when attempting to login via Okta. Gets redirected back to login page repeatedly. No browser errors, just infinite loop.",
+      "expected_intent": "SSO_ERROR",
+      "expected_email": "remote.worker@example.com",
+      "expected_routing": "Agent 3"
+    },
+    {
+      "id": "TC-004",
+      "title": "Missing Entitlements/Permissions",
+      "issue_key": "TQI-1004",
+      "summary": "User missing portal access",
+      "description": "Contractor contractor.account@example.com can login fine but cannot access Academy portal. Other team members can access. Check if entitlements were synced correctly for this user post-migration.",
+      "expected_intent": "SYNC_ISSUE",
+      "expected_email": "contractor.account@example.com",
+      "expected_routing": "Agent 2, Agent 3, Agent 4"
+    },
+    {
+      "id": "TC-005",
+      "title": "Account Not Found in New System",
+      "issue_key": "TQI-1005",
+      "summary": "New hire has no account",
+      "description": "New employee new.joiner@example.com was hired on Oct 30 and needs portal access. Account does not exist in the new CIAM system post-migration. Please create account.",
+      "expected_intent": "ACCOUNT_CREATION",
+      "expected_email": "new.joiner@example.com",
+      "expected_routing": "Agent 2, Agent 3"
+    },
+    {
+      "id": "TC-006",
+      "title": "Duplicate Account Entries",
+      "issue_key": "TQI-1006",
+      "summary": "Duplicate accounts after migration",
+      "description": "User multiple.accounts@example.com reports seeing two portal accounts. Both accounts appear to exist. Migration may have created duplicates. Please consolidate.",
+      "expected_intent": "ACCOUNT_NOT_FOUND",
+      "expected_email": "multiple.accounts@example.com",
+      "expected_routing": "Agent 2, Agent 3"
+    },
+    {
+      "id": "TC-007",
+      "title": "Account Deactivation Status",
+      "issue_key": "TQI-1007",
+      "summary": "Deactivated user still has access",
+      "description": "Former employee former.employee@example.com who left in September is still able to login to support portal. Account should be deactivated. Please verify account status.",
+      "expected_intent": "ACCESS_DENIED",
+      "expected_email": "former.employee@example.com",
+      "expected_routing": "Agent 2, Agent 3, Agent 4"
+    },
+    {
+      "id": "TC-008",
+      "title": "Birthright Entitlements Question",
+      "issue_key": "TQI-1008",
+      "summary": "Customer inquiring about expected access",
+      "description": "Manager team.lead@example.com asking: 'What portals and access should a Netskope contractor have?' Looking for documentation on birthright entitlements and expected roles.",
+      "expected_intent": "BIRTHRIGHT_INQUIRY",
+      "expected_email": "team.lead@example.com",
+      "expected_routing": "Agent 2, Agent 3, Agent 4"
+    },
+    {
+      "id": "TC-009",
+      "title": "Sync Not Running",
+      "issue_key": "TQI-1009",
+      "summary": "Birthright sync appears stale",
+      "description": "Support ticket indicates that user sync.issue@example.com has not received updated entitlements in 48 hours. Last sync appears to be from 2 days ago. Birthright sync may not be running.",
+      "expected_intent": "SYNC_ISSUE",
+      "expected_email": "sync.issue@example.com",
+      "expected_routing": "Agent 2, Agent 3, Agent 4"
+    },
+    {
+      "id": "TC-010",
+      "title": "Vague Issue - Insufficient Context",
+      "issue_key": "TQI-1010",
+      "summary": "Help needed ASAP",
+      "description": "User having problem. Please fix. Urgent!",
+      "expected_intent": "UNKNOWN",
+      "expected_email": null,
+      "expected_routing": "None (auto-escalate to L2 human)"
+    }
+  ],
+  "test_format_explanation": {
+    "issue_key": "Jira ticket ID (required by Agent 1)",
+    "summary": "One-line problem statement",
+    "description": "Full ticket description with user email, problem details, and context",
+    "expected_intent": "What Agent 1 should classify as",
+    "expected_email": "What Agent 1 should extract",
+    "expected_routing": "Which agents Agent 1 should invoke"
+  },
+  "key_difference": "Agent 1 does NOT receive pre-classified intent. It RECEIVES Jira ticket text and CLASSIFIES the intent itself by analyzing the description."
+}

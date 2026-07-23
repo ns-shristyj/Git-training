@@ -1,0 +1,14 @@
+bedrock_agentcore:
+  agent_name: ciam-database-agent
+  description: CIAM Database Agent - Queries DynamoDB for account information
+  execution_role: arn:aws:iam::786063285476:role/CIAMAgentDynamoDBAccessRole
+  region: us-east-1
+  deployment_type: direct_code_deploy
+  runtime: PYTHON_3_13
+  platform: linux/arm64
+  foundation_model: anthropic.claude-haiku-4-5-20251001-v1:0
+
+  # These will be populated after deployment
+  agent_id: null
+  agent_arn: null
+  status: PENDING
