@@ -1,0 +1,19 @@
+bedrock_agentcore:
+  agent_name: ciam-auth0-agent
+  description: CIAM Auth0 Agent - Fetches Auth0 user metadata and login history (no LLM, deterministic lookup)
+  execution_role: arn:aws:iam::786063285476:role/CIAMAgentAuth0AccessRole
+  region: us-east-1
+  deployment_type: direct_code_deploy
+  runtime: PYTHON_3_13
+  platform: linux/arm64
+
+  agent_id: ciamAuth0Agent-lVu70L5GK4
+  agent_arn: arn:aws:bedrock-agentcore:us-east-1:786063285476:runtime/ciamAuth0Agent-lVu70L5GK4
+  agent_runtime_version: '2'
+  status: READY
+
+  # Placeholder Auth0 M2M credentials are in Secrets Manager at
+  # ciam-agent/auth0 -- real invocations will return
+  # error: "auth0_token_acquisition_failed" until real credentials are set.
+  # See README.md for exact setup steps needed.
+  auth0_credentials_status: PLACEHOLDER_NEEDS_REAL_VALUES

@@ -6,9 +6,10 @@ bedrock_agentcore:
   deployment_type: direct_code_deploy
   runtime: PYTHON_3_13
   platform: linux/arm64
-  foundation_model: anthropic.claude-haiku-4-5-20251001-v1:0
+  # No foundation_model -- Agent 2 does deterministic DynamoDB lookups only,
+  # no LLM reasoning. BedrockAgentCoreApp is the hosting framework only.
 
-  # These will be populated after deployment
-  agent_id: null
-  agent_arn: null
-  status: PENDING
+  agent_id: ciamDatabaseAgent-rme27a8env
+  agent_arn: arn:aws:bedrock-agentcore:us-east-1:786063285476:runtime/ciamDatabaseAgent-rme27a8env
+  agent_runtime_version: '6'
+  status: READY
