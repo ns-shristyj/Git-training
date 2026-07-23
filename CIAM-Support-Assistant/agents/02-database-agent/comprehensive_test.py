@@ -149,7 +149,7 @@ print("-" * 80)
 
 test_payload_5 = {
     "email": "charlie@example.com",
-    "intent": "MFA_RESET",
+    "intent": "PASSWORD_RESET",
     "run_id": "test-005"
 }
 

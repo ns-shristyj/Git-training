@@ -7,9 +7,9 @@ reviewers: [Peer]
 approver: Ritwik Mandal
 prd: https://confluence.netskope.example/display/GIS/ciam-intent-classifier-prd  # placeholder — link to docs/confluence/ciam-intent-classifier/prd.md until Phase 0 lands
 jira_epic: GIS-EPIC-CIAM  # placeholder — see docs/jira/ciam-intent-classifier-epic.md until Phase 0 lands
-version: 0.3.0
+version: 0.4.0
 created: 2026-06-23
-last_updated: 2026-06-30
+last_updated: 2026-07-23
 ---
 
 # spec.md — CIAM Intent Classifier Agent (Agent 1)
@@ -64,7 +64,7 @@ downstream agents.
 - Produce a deterministic, **Pydantic-validated JSON routing envelope** that
   specifies which sub-agents to invoke and whether to auto-escalate to L2.
 - Auto-escalate (route to L2, invoke zero sub-agents) when no email is found,
-  confidence is below threshold, or intent is `UNKNOWN` or `MFA_RESET`.
+  confidence is below threshold, or intent is `UNKNOWN` or `PASSWORD_RESET`.
 - Emit a `posture-violation` finding (CRITICAL) and halt if the agent's own
   code attempts any external API call outside the allow-list (defense-in-depth
   tripwire).
@@ -112,11 +112,13 @@ or pre-built here.
 
 ## 4. Permitted Tools / Authorization Boundary
 
-The Intent Classifier has **zero permitted external API calls**. It operates
-entirely on the text supplied in the invocation payload. The action-group
-allow-list in `core/agentcore/action_group.py` MUST be empty (or explicitly
-set to `[]`) for this agent. Any attempt by the model or any tool shim to call
-an external API raises `PostureViolationError` before the call is issued.
+The Intent Classifier has **zero permitted external API calls** beyond the
+single Bedrock model invocation. It operates entirely on the text supplied in
+the invocation payload. The `ALLOWED_ACTIONS` allow-list, defined directly in
+`agent.py` (there is no separate action-group module), contains **exactly
+one** entry — `bedrock:InvokeModel` — checked via an `assert_posture(action)`
+tripwire before every SDK call. Any attempt to call an action outside this set
+raises `PostureViolationError` before the call is issued.
 
 | Tool | Permitted | Notes |
 | :--- | :--- | :--- |
@@ -134,11 +136,12 @@ release blocker** (see §5).
 
 ## 5. Explicit Denies (Phase 1 invariants)
 
-The agent's code-layer action-group (`core/agentcore/action_group.py`) MUST
-enforce an **empty external-call allow-list**. Because this agent has no IAM
-execution role with AWS service permissions, the deny surface is enforced
-entirely in code rather than via an IAM policy. These invariants are
-**gating posture invariants** — CI fails the PR if they are missing or weakened.
+The agent's code-layer `ALLOWED_ACTIONS` allow-list (in `agent.py`) MUST
+contain only `bedrock:InvokeModel`. Because this agent has no IAM execution
+role with AWS service permissions beyond model invocation, the deny surface
+for every other action is enforced entirely in code rather than via an IAM
+policy. These invariants are **gating posture invariants** — CI fails the PR
+if they are missing or weakened.
 
 | Denied capability | Reason |
 | :--- | :--- |
@@ -185,19 +188,25 @@ An invocation proceeds in the following deterministic steps:
    `intent: "UNKNOWN"`, `confidence: 0.0`, `auto_escalate: true`,
    `escalation_reason: "model_parse_error"`.
 
-5. **Apply email extraction rules.**
-   - If `extracted_email` is `null` → override `intent` to `"UNKNOWN"`,
-     set `auto_escalate: true`, `escalation_reason: "no_email_found"`.
-   - If multiple emails are present in the raw text → use the **first** email
-     found, log a `routing_warning: "multiple_emails_found"` in the envelope.
+5. **Apply email extraction rules.** The final `extracted_email` is resolved
+   via a two-stage fallback: prefer the model's own extraction; if the model
+   returns `null`, fall back to the first email found by a deterministic regex
+   pass over the raw text (see OQ-2 — this fallback is implemented, not
+   pending).
+   - If the **final** `extracted_email` (after the fallback) is still `null`
+     → override `intent` to `"UNKNOWN"`, set `auto_escalate: true`,
+     `escalation_reason: "no_email_found"`.
+   - If multiple emails are present in the raw text (regardless of which one
+     the model or fallback selected) → log a `routing_warning:
+     "multiple_emails_found"` in the envelope.
 
 6. **Apply confidence threshold.** If `confidence < 0.7` (and `intent` is not
    already overridden) → set `auto_escalate: true`,
    `escalation_reason: "low_confidence"`.
 
-7. **Apply MFA/unknown escalation rules.** If `intent` is `"MFA_RESET"` or
-   `"UNKNOWN"` → set `auto_escalate: true`. These intents always escalate
-   regardless of confidence score.
+7. **Apply password-reset/unknown escalation rules.** If `intent` is
+   `"PASSWORD_RESET"` or `"UNKNOWN"` → set `auto_escalate: true`. These
+   intents always escalate regardless of confidence score.
 
 8. **Resolve routing flags.** Using the routing table in §6.1, populate
    `invoke_agent_2` (Database), `invoke_agent_3` (Auth0), and `invoke_agent_4`
@@ -214,7 +223,7 @@ An invocation proceeds in the following deterministic steps:
 | `ACCESS_DENIED` | User cannot access a Netskope portal. | ✓ | ✓ | ✓ | — |
 | `SSO_ERROR` | SSO error, redirect loop, or SAML failure. | — | ✓ | — | — |
 | `ACCOUNT_NOT_FOUND` | User does not exist in Auth0 or Salesforce. | ✓ | ✓ | — | — |
-| `MFA_RESET` | MFA or password reset requested. | — | — | — | **always** |
+| `PASSWORD_RESET` | Password reset requested, or reset token/link invalid. | — | — | — | **always** |
 | `ACCOUNT_CREATION` | Request to create a new portal account. | ✓ | ✓ | — | — |
 | `BIRTHRIGHT_INQUIRY` | Question about what access a user should have. | ✓ | ✓ | ✓ | — |
 | `SYNC_ISSUE` | Birthright sync not run or stale entitlements. | ✓ | ✓ | ✓ | — |
@@ -228,13 +237,19 @@ canonical value:
 
 | Keyword(s) in message | Canonical `extracted_portal` value |
 | :--- | :--- |
-| "support portal", "support access" | `"Support"` |
+| "support portal", "support access", bare "support" | `"Support"` |
 | "community" | `"Community"` |
 | "academy", "learning" | `"Academy"` |
-| "partner portal", "partner access" | `"Partner"` |
+| "partner portal", "partner access", bare "partner" | `"Partner"` |
 | "notification", "notification center" | `"Notification"` |
 | "dashboard" | `"Dashboard"` |
 | "prime", "prime okta", "prime tenant", "prime partner okta" | `"Prime"` |
+
+> Matching on the bare substrings "support" and "partner" (not just the
+> multi-word phrases) is intentional per `PORTAL_KEYWORD_TABLE` in `agent.py`
+> — it maximizes recall on short/informal tickets, at the cost of also
+> matching incidental uses of those words (see OQ-3 for whether this should be
+> narrowed).
 
 If no portal keyword is found, `extracted_portal` is `null`. If multiple portals
 are mentioned, capture only the **first** match and log
@@ -274,7 +289,7 @@ class RoutingEnvelope(BaseModel):
         "ACCESS_DENIED",
         "SSO_ERROR",
         "ACCOUNT_NOT_FOUND",
-        "MFA_RESET",
+        "PASSWORD_RESET",
         "ACCOUNT_CREATION",
         "BIRTHRIGHT_INQUIRY",
         "SYNC_ISSUE",
@@ -363,14 +378,14 @@ ACs marked **GATING** fail the PR in CI if they regress.
   false`, `invoke_agent_3: true`, `invoke_agent_4: false`, and `auto_escalate:
   false`.
 
-### AC-3 — MFA_RESET auto-escalates with zero sub-agents invoked
+### AC-3 — PASSWORD_RESET auto-escalates with zero sub-agents invoked
 
 - **Given** a Jira TQI ticket containing a user email and a request to reset
-  MFA (e.g. "user needs MFA reset"),
+  a password (e.g. "user needs password reset"),
 - **When** the agent runs,
-- **Then** the routing envelope has `intent: "MFA_RESET"`, `auto_escalate:
-  true`, `invoke_agent_2: false`, `invoke_agent_3: false`, `invoke_agent_4:
-  false`, and `escalation_reason` is non-null.
+- **Then** the routing envelope has `intent: "PASSWORD_RESET"`,
+  `auto_escalate: true`, `invoke_agent_2: false`, `invoke_agent_3: false`,
+  `invoke_agent_4: false`, and `escalation_reason` is non-null.
 
 ### AC-4 — No email found forces UNKNOWN and auto-escalation
 
@@ -491,11 +506,11 @@ ACs marked **GATING** fail the PR in CI if they regress.
   tunable per-intent (e.g. a lower threshold for `ACCESS_DENIED` which is the
   most common case) or remain a single global value? Pending eval data from
   Phase 1 runs.
-- **OQ-2.** Email extraction strategy: rely on the model to extract the email,
-  or add a pre-processing regex pass as a deterministic fallback before
-  invoking the model? A regex fallback would improve `no_email_found`
-  false-positives but adds a maintenance surface. Decision deferred pending
-  AC-4 eval results.
+- **OQ-2 (resolved).** Email extraction strategy: the implementation prefers
+  the model's own extraction, falling back to the first email found by a
+  regex pass over the raw text only if the model returns `null` (see §6 step
+  5). This is already implemented unconditionally in `agent.py`, not an open
+  decision.
 - **OQ-3.** Portal extraction: "Prime" (Prime Okta Tenant / Prime Partner Okta)
   has been added to the §6.2 keyword table. Is the list now exhaustive for
   Phase 1, or do additional portal aliases (e.g. "NSS", "Borderless WAN")

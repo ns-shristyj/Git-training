@@ -102,7 +102,7 @@ IntentType = Literal[
     "ACCESS_DENIED",
     "SSO_ERROR",
     "ACCOUNT_NOT_FOUND",
-    "MFA_RESET",
+    "PASSWORD_RESET",
     "ACCOUNT_CREATION",
     "BIRTHRIGHT_INQUIRY",
     "SYNC_ISSUE",
@@ -163,7 +163,7 @@ ROUTING_TABLE: dict[str, dict[str, bool]] = {
     "ACCESS_DENIED":      {"invoke_agent_2": True,  "invoke_agent_3": True,  "invoke_agent_4": True},
     "SSO_ERROR":          {"invoke_agent_2": False, "invoke_agent_3": True,  "invoke_agent_4": False},
     "ACCOUNT_NOT_FOUND":  {"invoke_agent_2": True,  "invoke_agent_3": True,  "invoke_agent_4": False},
-    "MFA_RESET":          {"invoke_agent_2": False, "invoke_agent_3": False, "invoke_agent_4": False},
+    "PASSWORD_RESET":     {"invoke_agent_2": False, "invoke_agent_3": False, "invoke_agent_4": False},
     "ACCOUNT_CREATION":   {"invoke_agent_2": True,  "invoke_agent_3": True,  "invoke_agent_4": False},
     "BIRTHRIGHT_INQUIRY": {"invoke_agent_2": True,  "invoke_agent_3": True,  "invoke_agent_4": True},
     "SYNC_ISSUE":         {"invoke_agent_2": True,  "invoke_agent_3": True,  "invoke_agent_4": True},
@@ -226,9 +226,9 @@ category and extract key entities.
    User does not exist in Auth0 or the Salesforce-backed customer database
    Examples: "user not found", "no account for this email", "can't find user record"
 
-4. MFA_RESET
-   MFA reset, 2FA reset, lost authenticator app, or password reset request
-   Examples: "MFA reset", "lost authenticator", "reset 2FA", "password reset"
+4. PASSWORD_RESET
+   Password reset request, or a reset token/link that is invalid or not received
+   Examples: "password reset", "reset token invalid", "forgot password", "can't reset password"
 
 5. ACCOUNT_CREATION
    Request to create a brand new portal account for a user
@@ -523,9 +523,9 @@ def classify_ticket(payload: dict) -> dict:
         auto_escalate = True
         escalation_reason = "low_confidence"
 
-    # ── Step 7: MFA / UNKNOWN always escalate ─────────────────────────────────
-    # §6 step 7: MFA_RESET and UNKNOWN are always escalated
-    if intent in ("MFA_RESET", "UNKNOWN"):
+    # ── Step 7: PASSWORD_RESET / UNKNOWN always escalate ──────────────────────
+    # §6 step 7: PASSWORD_RESET and UNKNOWN are always escalated
+    if intent in ("PASSWORD_RESET", "UNKNOWN"):
         auto_escalate = True
         escalation_reason = escalation_reason or intent.lower()
 

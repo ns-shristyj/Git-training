@@ -7,9 +7,9 @@ reviewers: [Peer]
 approver: Ritwik Mandal
 prd: https://confluence.netskope.example/display/GIS/ciam-database-agent-prd  # placeholder — link to docs/confluence/ciam-database-agent/prd.md until Phase 0 lands
 jira_epic: GIS-EPIC-CIAM  # placeholder — see docs/jira/ciam-database-agent-epic.md until Phase 0 lands
-version: 0.2.0
+version: 0.3.0
 created: 2026-06-23
-last_updated: 2026-06-30
+last_updated: 2026-07-23
 ---
 
 # spec.md — CIAM Database Agent (Agent 2)
@@ -104,7 +104,14 @@ The agent's IAM execution role (**`CIAMAgentDynamoDBAccessRole`**) MAY perform
 | :--- | :--- | :--- |
 | DynamoDB | `dynamodb:Query` | `arn:aws:dynamodb:*:*:table/NetskopeID` and its GSI `arn:aws:dynamodb:*:*:table/NetskopeID/index/*` |
 | DynamoDB | `dynamodb:GetItem` | `arn:aws:dynamodb:*:*:table/NetskopeID` |
-| Bedrock | `bedrock:InvokeModel` | Scoped to `claude-haiku-*` model ARN only |
+
+> **No model inference.** Unlike Agent 1, Agent 2 performs a deterministic
+> DynamoDB lookup only — there is no ambiguity to resolve and therefore no LLM
+> reasoning step. `BedrockAgentCoreApp` is used purely as the AgentCore
+> *hosting* framework (the runtime that receives and responds to invocations);
+> it does not imply a `bedrock:InvokeModel` call happens inside. Agent 2's IAM
+> role and code-level posture guard (`ALLOWED_ACTIONS` in agent.py) therefore
+> grant **no** Bedrock model-invocation permission at all — see §5.
 
 All other AWS service actions — including every DynamoDB write action, every
 other table ARN, Auth0, Salesforce, SNS, S3, SSM, Jira, and Slack — are
@@ -242,23 +249,25 @@ invariants** — CI fails the PR if they are missing or weakened.
 | `dynamodb:DeleteTable` | No schema changes permitted. |
 | All `auth0:*` equivalent HTTP calls | Auth0 is owned by Agent 3; no direct calls from this agent. |
 | All Salesforce API calls | The `NetskopeID` DynamoDB replica is the only permitted data path. |
+| `bedrock:InvokeModel` (any model ARN) | Agent 2 does no reasoning — it is a deterministic lookup, not an LLM-backed agent. No Bedrock model invocation permission is granted. |
 | `sns:Publish` | The orchestrator, not this agent, owns alert fanout. |
 | `s3:*` | No audit bucket or baseline access needed for data lookup. |
 | `ssm:GetParameter` (any path) | No SSM config reads; all config is in DynamoDB. |
 | `sts:AssumeRole` | No cross-account or cross-service role assumption. |
 | `iam:*` | No IAM reads or writes. |
 
-Defense in depth: in addition to these IAM denies, the agent's tool layer
-(`core/agentcore/action_group.py`) MUST contain an explicit allow-list
-containing **exactly one** permitted tool name — `get_account_by_email`. Any
-invocation of a tool name outside this list (including a reintroduced
-`get_account_history`-style call) raises `PostureViolationError` *before* any
-SDK call is issued, and the violation is recorded as a `posture-violation`
-finding (CRITICAL) for the Oversight Agent to surface. The application-level
-attribute restriction in §4.1 MUST also be enforced in code: the DynamoDB
-response is filtered down to the permitted attribute set before any
-downstream processing, even though IAM cannot express field-level
-restrictions natively.
+Defense in depth: in addition to these IAM denies, the agent's own code (see
+`agent.py`) MUST contain an `ALLOWED_ACTIONS` allow-list of permitted AWS
+**actions** — currently `{"dynamodb:Query", "dynamodb:GetItem"}` — checked via
+an `assert_posture(action)` tripwire called before every AWS SDK call. Any
+attempt to call an action outside this set (e.g. a reintroduced
+`dynamodb:Scan` or any `bedrock:InvokeModel` call) raises
+`PostureViolationError` *before* the SDK call is issued, and the violation is
+recorded as a `posture-violation` finding (CRITICAL) for the Oversight Agent
+to surface. The application-level attribute restriction in §4.1 MUST also be
+enforced in code: the DynamoDB response is filtered down to the permitted
+attribute set before any downstream processing, even though IAM cannot
+express field-level restrictions natively.
 
 ## 6. Behavior
 
@@ -598,11 +607,12 @@ ACs marked **GATING** fail the PR in CI if they regress.
 - **Then** `data_warnings` contains `"email_mismatch"`, `account_found:
   true`, and `error: null`.
 
-### AC-13 — Only `get_account_by_email` is in the tool allow-list (GATING — posture invariant)
+### AC-13 — Only actions in `ALLOWED_ACTIONS` may be called (GATING — posture invariant)
 
-- **Given** a malformed tool call attempting to invoke a tool named
-  `get_account_history` or any name other than `get_account_by_email`,
-- **When** the agent processes the invocation,
+- **Given** a code path that attempts any AWS action other than
+  `dynamodb:Query` or `dynamodb:GetItem` (e.g. `dynamodb:Scan`,
+  `dynamodb:PutItem`, or `bedrock:InvokeModel`),
+- **When** `assert_posture(action)` is evaluated for that action,
 - **Then** `PostureViolationError` is raised before any SDK call is made, no
   `AccountPayload` is returned, and a `posture-violation` (CRITICAL) finding
   is emitted. **Gating in CI.**

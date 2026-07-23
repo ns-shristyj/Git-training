@@ -6,7 +6,7 @@
       "issue_key": "TQI-1001",
       "summary": "User cannot reset password",
       "description": "Customer at user.account@example.com unable to reset password, getting error: 'Reset token invalid'. Issue occurred after Nov 1 CIAM migration. User works in support team.",
-      "expected_intent": "MFA_RESET",
+      "expected_intent": "PASSWORD_RESET",
       "expected_email": "user.account@example.com",
       "expected_routing": "Agent 2, Agent 3, Agent 4"
     },
