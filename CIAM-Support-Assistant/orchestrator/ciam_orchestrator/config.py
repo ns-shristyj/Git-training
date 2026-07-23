@@ -18,7 +18,12 @@ AGENT_2_ARN = os.getenv(
     "AGENT_2_ARN",
     "arn:aws:bedrock-agentcore:us-east-1:786063285476:runtime/ciamDatabaseAgent-rme27a8env",
 )
-AGENT_3_ARN = os.getenv("AGENT_3_ARN")  # Auth0 Agent — not yet deployed
+AGENT_3_ARN = os.getenv(
+    "AGENT_3_ARN",
+    "arn:aws:bedrock-agentcore:us-east-1:786063285476:runtime/ciamAuth0Agent-lVu70L5GK4",
+)  # Deployed, but Secrets Manager still holds placeholder credentials —
+# see agents/03-auth0-agent/README.md. Real invocations will return
+# error: "auth0_token_acquisition_failed" until real Auth0 M2M creds are set.
 AGENT_4_ARN = os.getenv("AGENT_4_ARN")  # Knowledge Base Agent — not yet deployed
 AGENT_5_ARN = os.getenv("AGENT_5_ARN")  # Response Synthesizer — not yet deployed
 
@@ -67,7 +72,7 @@ AGENT_REGISTRY = {
     "agent_3": {
         "name": "ciam-auth0-agent",
         "arn": AGENT_3_ARN,
-        "enabled": os.getenv("ENABLE_AGENT_3", "false").lower() == "true",
+        "enabled": os.getenv("ENABLE_AGENT_3", "true").lower() == "true",
         "routing_flag": "invoke_agent_3",
         "input_builder": _agent3_input_builder,
         "output_key": "auth0_payload",
