@@ -7,9 +7,9 @@ reviewers: [Peer]
 approver: Ritwik Mandal
 prd: https://confluence.netskope.example/display/GIS/ciam-auth0-agent-prd  # placeholder — link to docs/confluence/ciam-auth0-agent/prd.md until Phase 0 lands
 jira_epic: GIS-EPIC-CIAM  # placeholder — see docs/jira/ciam-auth0-agent-epic.md until Phase 0 lands
-version: 0.2.0
+version: 0.3.0
 created: 2026-06-23
-last_updated: 2026-06-30
+last_updated: 2026-07-23
 ---
 
 # spec.md — CIAM Auth0 Agent (Agent 3)
@@ -100,11 +100,16 @@ exact policy shape; no `*` action wildcards are permitted.
 | :--- | :--- | :--- |
 | Secrets Manager | `secretsmanager:GetSecretValue` | `arn:aws:secretsmanager:*:*:secret:ciam-agent/auth0-*` only |
 | KMS | `kms:Decrypt` | CIAM CMK ARN only (resource-conditioned; used to decrypt the Secrets Manager secret) |
-| Bedrock | `bedrock:InvokeModel` | Scoped to `claude-haiku-*` model ARN only |
 
-All other AWS service actions — DynamoDB, S3, SNS, SSM, STS, IAM, and all
-Secrets Manager paths outside `ciam-agent/auth0-*` — are **not permitted**
+All other AWS service actions — DynamoDB, S3, SNS, SSM, STS, IAM, Bedrock, and
+all Secrets Manager paths outside `ciam-agent/auth0-*` — are **not permitted**
 and are explicitly denied (see §5).
+
+> **No model inference.** Like Agent 2, Agent 3 performs deterministic Auth0
+> Management API lookups only — there is no ambiguity to resolve, so no LLM
+> reasoning step is needed. `BedrockAgentCoreApp` is used purely as the
+> AgentCore hosting framework; it does not imply a `bedrock:InvokeModel` call
+> happens inside. No Bedrock model-invocation permission is granted.
 
 External HTTPS calls permitted by the action-group allow-list (code layer):
 
@@ -227,6 +232,7 @@ invariants** — CI fails the PR if they are missing or weakened.
 | `sts:AssumeRole` | No cross-account or cross-service role assumption. |
 | `iam:*` | No IAM reads or writes. |
 | `sns:Publish` | The orchestrator, not this agent, owns alert fanout. |
+| `bedrock:InvokeModel` (any model ARN) | Agent 3 does no reasoning — it is a deterministic Auth0 lookup, not an LLM-backed agent. No Bedrock model invocation permission is granted. |
 | Auth0 `PATCH /api/v2/users/{id}` | No write to user records. `birthright` and `entitlements` must never be modified by this agent. |
 | Auth0 `DELETE /api/v2/users/{id}` | No user deletion. |
 | Auth0 `POST /api/v2/users` | No user creation. |
@@ -602,6 +608,15 @@ ACs marked **GATING** fail the PR in CI if they regress.
   no `Auth0Payload` is returned, and a `posture-violation` (CRITICAL) finding
   is emitted. **Gating in CI.**
 
+### AC-9b — Agent attempts `bedrock:InvokeModel` (GATING — posture invariant)
+
+- **Given** a malformed tool call or code path that attempts a Bedrock model
+  invocation from within this agent,
+- **When** the agent processes the invocation,
+- **Then** `PostureViolationError` is raised before any AWS SDK call is made,
+  no `Auth0Payload` is returned, and a `posture-violation` (CRITICAL) finding
+  is emitted. **Gating in CI.**
+
 ### AC-10 — Schema conformance (GATING — schema invariant)
 
 - **Given** any invocation that produces an `Auth0Payload`,
@@ -651,6 +666,7 @@ ACs marked **GATING** fail the PR in CI if they regress.
 | AC-7 | `evals/ciam-auth0-agent/cases/ac-7.yaml` | failure-mode | no |
 | AC-8 | `evals/ciam-auth0-agent/cases/ac-8.yaml` | posture-invariant | **yes** |
 | AC-9 | `evals/ciam-auth0-agent/cases/ac-9.yaml` | posture-invariant | **yes** |
+| AC-9b | `evals/ciam-auth0-agent/cases/ac-9b.yaml` | posture-invariant | **yes** |
 | AC-10 | `evals/ciam-auth0-agent/cases/ac-10.yaml` | schema-invariant | **yes** |
 | AC-11 | `evals/ciam-auth0-agent/cases/ac-11.yaml` | failure-mode | no |
 | AC-12 | `evals/ciam-auth0-agent/cases/ac-12.yaml` | failure-mode | no |
