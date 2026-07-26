@@ -7,9 +7,9 @@ reviewers: [Peer]
 approver: Ritwik Mandal
 prd: https://confluence.netskope.example/display/GIS/ciam-knowledge-base-agent-prd  # placeholder — link to docs/confluence/ciam-knowledge-base-agent/prd.md until Phase 0 lands
 jira_epic: GIS-EPIC-CIAM  # placeholder — see docs/jira/ciam-knowledge-base-agent-epic.md until Phase 0 lands
-version: 0.2.0
+version: 0.3.0
 created: 2026-06-23
-last_updated: 2026-06-30
+last_updated: 2026-07-23
 ---
 
 # spec.md — CIAM Knowledge Base Agent (Agent 4)
@@ -76,6 +76,14 @@ Knowledge Base.
 - Execute **Tool 2 (`query_knowledge_base`)**: call the Bedrock Knowledge Base
   `RetrieveAndGenerate` API to surface relevant SOPs, Confluence docs, and
   similar past resolved TQI tickets for the diagnosed issue.
+- Execute **Tool 4 (`identify_failing_workflow`)** — **PLACEHOLDER, NOT YET
+  IMPLEMENTED.** Once real Auth0 Action/Rule/Flow scripts are supplied, this
+  tool will map a failed step (from Agent 3's login-flow data or Tool 1's
+  gap analysis) to the *specific* Auth0 workflow script responsible, so
+  Agent 5 can point to the precise remediation location rather than just a
+  step name or missing keyword. Until those scripts are supplied, this tool
+  always returns a stub result (`workflow_identified: false`) and never
+  blocks or fails the invocation — see §4.1 Tool 4 and OQ-8.
 - Detect and flag **special conditions**: `no_access_configured`,
   `explicit_block_detected`, `sync_never_ran`, `sync_stale`, and
   `birthright_correct_but_access_denied`.
@@ -228,6 +236,40 @@ separated by source type based on the returned document metadata.
 A Knowledge Base query failure (Bedrock timeout, throttle, or service error)
 is **non-fatal** — see §8.
 
+#### Tool 4 — `identify_failing_workflow(failed_step: str | None) → WorkflowIdentification` — **PLACEHOLDER**
+
+**Pure local logic — zero external calls. NOT YET IMPLEMENTED.**
+
+This tool is scaffolded now with a stable output shape so downstream
+consumers (Agent 5, this payload's schema) don't need a breaking change
+later, but its body is intentionally a stub until the real Auth0
+Action/Rule/Flow source scripts for the `nskp` tenant are supplied (see
+OQ-8). Once supplied, this tool will:
+
+- Accept a `failed_step` identifier (e.g. from Agent 3's login-flow
+  telemetry, or derived from Tool 1's `missing_keywords`/`explicit_block_detected`)
+- Match it against the real Auth0 workflow source to identify the specific
+  Action/Rule/Flow responsible
+- Return the workflow's name and a reference (e.g. Auth0 dashboard deep
+  link, or a script file path) so Agent 5 can cite the exact remediation
+  location
+
+**Current stub behavior (until real scripts are supplied):**
+
+```python
+def identify_failing_workflow(failed_step: str | None) -> "WorkflowIdentification":
+    return WorkflowIdentification(
+        workflow_identified=False,
+        workflow_name=None,
+        workflow_script_ref=None,
+        note="Auth0 workflow scripts not yet provided -- placeholder only",
+    )
+```
+
+This tool is **always called** (it has no failure mode — it's a stub) and
+its result is always non-blocking: no `complexity` classification or
+routing decision depends on its output while it remains a placeholder.
+
 #### Tool 3 — `classify_fix_complexity(missing_keywords, extra_keywords, account_status, user_found_in_auth0, explicit_block_detected) → FixClassification`
 
 **Pure local logic — zero external calls.**
@@ -288,9 +330,11 @@ invariants** — CI fails the PR if they are missing or weakened.
 | `iam:*` | No IAM reads or writes. |
 
 Defense in depth: the code-layer action-group (`core/agentcore/action_group.py`)
-MUST contain an explicit allow-list of exactly three permitted tool names —
-`evaluate_birthright`, `query_knowledge_base`, and `classify_fix_complexity`.
-Any invocation of a tool name outside this list raises `PostureViolationError`
+MUST contain an explicit allow-list of exactly four permitted tool names —
+`evaluate_birthright`, `query_knowledge_base`, `classify_fix_complexity`, and
+`identify_failing_workflow` (the last is a local-only placeholder stub, but
+is still named explicitly rather than left implicit). Any invocation of a
+tool name outside this list raises `PostureViolationError`
 *before* any network or SDK call is issued, emits a `posture-violation` finding
 (CRITICAL), and aborts the invocation.
 
@@ -341,12 +385,19 @@ An invocation proceeds in the following deterministic steps:
    set `knowledge_base_results` to its null/empty default and populate
    `knowledge_base_error` — do **not** abort the invocation (see §8).
 
-6. **Assemble and validate payload.** Construct the `KnowledgeBasePayload`
+6. **Identify failing workflow (Tool 4 — placeholder).** Call
+   `identify_failing_workflow(failed_step)` where `failed_step` is derived
+   from `explicit_block_detected` or the first entry in `missing_keywords`
+   if present, else `null`. This call always succeeds (it is a stub) and its
+   result never affects `complexity` or any routing decision while
+   placeholder.
+
+7. **Assemble and validate payload.** Construct the `KnowledgeBasePayload`
    (schema in §7). Validate against Pydantic strict mode. On validation
    failure, return `error: "payload_validation_error"` with the validation
    message.
 
-7. **Return payload.** Return the complete `KnowledgeBasePayload` to the
+8. **Return payload.** Return the complete `KnowledgeBasePayload` to the
    orchestrator. No writes to any external system occur at any step.
 
 ### 6.1 Tool Call Order and Conditionality
@@ -409,6 +460,9 @@ class KnowledgeBasePayload(BaseModel):
     # --- Fix classification ---
     fix_classification: FixClassification
 
+    # --- Auth0 workflow identification (PLACEHOLDER -- see Tool 4) ---
+    workflow_identification: WorkflowIdentification
+
     # --- Knowledge Base results ---
     knowledge_base_results: KnowledgeBaseResults
     knowledge_base_error:   str | None           # non-null if Tool 2 failed
@@ -437,10 +491,19 @@ class BirthrightEvaluation(BaseModel):
 
 
 class FixClassification(BaseModel):
-    complexity:          Literal["SIMPLE_FIX", "ESCALATE_TO_L2"]
+    complexity:          Literal["SIMPLE_FIX", "ESCALATE_TO_L2", "NO_GAP"]
     reason:              str                     # human-readable explanation
     recommended_actions: list[str]
     confidence:          Literal["HIGH", "MEDIUM", "LOW"]
+
+
+class WorkflowIdentification(BaseModel):
+    """PLACEHOLDER schema -- see Tool 4. Always returns the stub values below
+    until real Auth0 Action/Rule/Flow scripts are supplied (OQ-8)."""
+    workflow_identified:   bool                    # always false until implemented
+    workflow_name:         str | None              # always null until implemented
+    workflow_script_ref:   str | None              # always null until implemented
+    note:                  str                     # explains placeholder status
 
 
 class KnowledgeBaseResults(BaseModel):
@@ -546,9 +609,9 @@ the PR in CI if they regress.
 - **Then** `birthright_evaluation.missing_keywords: []`,
   `birthright_evaluation.match: true`,
   `birthright_evaluation.entitlements_compensate: true`, and
-  `fix_classification.complexity: "SIMPLE_FIX"` is NOT returned — `match:
-  true` with no missing keywords means no fix is needed; `complexity` reflects
-  this with a `reason` of `"no_gap_detected"`.
+  `fix_classification.complexity: "NO_GAP"` (not `"SIMPLE_FIX"` — `match:
+  true` with no missing keywords means no fix is needed), with `reason:
+  "no_gap_detected"`.
 
 ### AC-3 — Prospect without tenant gets reduced expected birthright
 
@@ -559,7 +622,7 @@ the PR in CI if they regress.
 - **When** the agent runs,
 - **Then** `birthright_evaluation.expected_birthright: ["Community",
   "Academy", "Dashboard"]`, `birthright_evaluation.match: true`, and
-  `fix_classification.complexity` does not indicate a gap.
+  `fix_classification.complexity: "NO_GAP"`.
 
 ### AC-4 — Extra keywords in birthright force ESCALATE_TO_L2
 
@@ -669,6 +732,17 @@ the PR in CI if they regress.
   chunk), all `KBDocument` and `KBTicket` fields are non-null, and
   `knowledge_base_error: null`.
 
+### AC-15 — Workflow identification always returns the placeholder stub
+
+- **Given** any valid input, regardless of `missing_keywords` or
+  `explicit_block_detected` value,
+- **When** the agent runs,
+- **Then** `workflow_identification.workflow_identified: false`,
+  `workflow_identification.workflow_name: null`,
+  `workflow_identification.workflow_script_ref: null`, and
+  `fix_classification.complexity` is unaffected by this field (Tool 4 is
+  non-blocking while placeholder — see Tool 4 and OQ-8).
+
 ## 10. Eval Mapping Table
 
 | AC | Eval case file | Type | Gating |
@@ -687,6 +761,7 @@ the PR in CI if they regress.
 | AC-12 | `evals/ciam-knowledge-base-agent/cases/ac-12.yaml` | structured-assertion | no |
 | AC-13 | `evals/ciam-knowledge-base-agent/cases/ac-13.yaml` | structured-assertion | no |
 | AC-14 | `evals/ciam-knowledge-base-agent/cases/ac-14.yaml` | structured-assertion | no |
+| AC-15 | `evals/ciam-knowledge-base-agent/cases/ac-15.yaml` | structured-assertion | no |
 
 ## 11. Open Questions
 
@@ -734,3 +809,10 @@ the PR in CI if they regress.
   discrepancy is itself a finding worth raising with the platform team,
   separate from this spec). This is an open option, not yet exercised — track
   here so it isn't lost if the code is supplied in a future revision.
+- **OQ-8.** Auth0 workflow script source: Tool 4
+  (`identify_failing_workflow`) is currently a placeholder stub — see §4.1
+  Tool 4. It needs the actual Auth0 Action/Rule/Flow scripts for the `nskp`
+  tenant (the 9-step login-flow implementation) supplied and reconciled
+  before it can do real workflow-to-script mapping. Until then it always
+  returns `workflow_identified: false`. Track here so this isn't forgotten
+  once those scripts become available.
