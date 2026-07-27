@@ -765,10 +765,19 @@ the PR in CI if they regress.
 
 ## 11. Open Questions
 
-- **OQ-1.** Bedrock Knowledge Base ARN: this spec uses `ciam-kb-*` as the ARN
-  suffix pattern. Confirm the exact Knowledge Base ID and ARN with the platform
-  team before the CDK stack is authored, as it is hardcoded into the IAM
-  resource condition.
+- **OQ-1 (resolved).** Bedrock Knowledge Base ARN: the real KB is
+  `ciam-kb`, Knowledge Base ID `O4XMWIIEHS`, ARN
+  `arn:aws:bedrock:us-east-1:786063285476:knowledge-base/O4XMWIIEHS` --
+  matches the `ciam-kb-*` ARN pattern this spec already used. It was
+  provisioned as a **Managed Knowledge Base** (Bedrock's fully-managed
+  vector store) rather than a customer-managed OpenSearch Serverless
+  collection -- an account-level restriction blocked direct OpenSearch
+  Serverless index creation via CLI/API, but the AWS Console's "Quick
+  create a new vector store" flow succeeded using Bedrock's own internal
+  managed-vector-store automation instead. Functionally equivalent for
+  Tool 2's purposes (`bedrock:Retrieve` works identically either way);
+  noted here since it differs from the originally-assumed self-managed
+  OpenSearch Serverless architecture.
 - **OQ-2.** `top_k` ceiling: the spec permits the orchestrator to override
   `top_k` up to `10`. Confirm whether a higher ceiling is needed for the
   Response Generator (Agent 5) to produce high-quality recommendations, or

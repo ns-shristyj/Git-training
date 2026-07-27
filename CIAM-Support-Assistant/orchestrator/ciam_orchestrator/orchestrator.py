@@ -101,7 +101,7 @@ class CIAMOrchestrator:
             invoker = AgentInvoker(
                 agent_cfg["arn"], agent_cfg["name"], timeout_sec=AGENT_TIMEOUT_SECONDS
             )
-            payload = agent_cfg["input_builder"](envelope)
+            payload = agent_cfg["input_builder"](envelope, output_fields, ticket)
             logger.info(f"[{run_id}] Invoking {agent_cfg['name']}")
             result = invoker.invoke(payload)
             invocations.append(result)

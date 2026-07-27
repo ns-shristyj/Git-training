@@ -24,7 +24,11 @@ AGENT_3_ARN = os.getenv(
 )  # Deployed, but Secrets Manager still holds placeholder credentials —
 # see agents/03-auth0-agent/README.md. Real invocations will return
 # error: "auth0_token_acquisition_failed" until real Auth0 M2M creds are set.
-AGENT_4_ARN = os.getenv("AGENT_4_ARN")  # Knowledge Base Agent — not yet deployed
+AGENT_4_ARN = os.getenv(
+    "AGENT_4_ARN",
+    "arn:aws:bedrock-agentcore:us-east-1:786063285476:runtime/ciamKnowledgeBaseAgent-VdVt7x7TZ1",
+)  # Deployed and tested live. Knowledge Base still holds placeholder docs
+# only -- see agents/04-knowledge-base-agent/README.md.
 AGENT_5_ARN = os.getenv("AGENT_5_ARN")  # Response Synthesizer — not yet deployed
 
 # Confidence gating (SPEC-CIAM-0001 §6): below this, Agent 1 sets auto_escalate
@@ -39,16 +43,41 @@ AGENT_TIMEOUT_SECONDS = int(os.getenv("AGENT_TIMEOUT_SECONDS", "30"))
 ALLOWED_ORCHESTRATOR_ACTIONS = frozenset({"bedrock-agentcore:InvokeAgentRuntime"})
 
 
-def _agent2_input_builder(envelope: dict) -> dict:
+def _agent2_input_builder(envelope: dict, output_fields: dict, ticket) -> dict:
     return {"email": envelope.get("extracted_email"), "run_id": envelope.get("run_id", "")}
 
 
-def _agent3_input_builder(envelope: dict) -> dict:
+def _agent3_input_builder(envelope: dict, output_fields: dict, ticket) -> dict:
     return {"email": envelope.get("extracted_email")}
 
 
-def _agent4_input_builder(envelope: dict) -> dict:
-    return {"intent": envelope.get("intent"), "portal_hint": envelope.get("portal_hint")}
+def _agent4_input_builder(envelope: dict, output_fields: dict, ticket) -> dict:
+    """Agent 4 (SPEC-CIAM-0004 §3) needs fields from BOTH Agent 2's
+    account_payload and Agent 3's auth0_payload, not just Agent 1's
+    envelope -- this is why input_builder receives the accumulated
+    output_fields dict, unlike Agents 2/3 which only need the envelope."""
+    account_payload = output_fields.get("account_payload") or {}
+    auth0_payload = output_fields.get("auth0_payload") or {}
+
+    accounts = account_payload.get("accounts") or []
+    account = accounts[0] if accounts else {}
+
+    users = auth0_payload.get("users") or []
+    user = users[0] if users else {}
+    user_found = auth0_payload.get("user_found", False)
+
+    raw_input = " ".join(filter(None, [ticket.summary, ticket.description]))
+
+    return {
+        "account_status": account.get("account_status"),
+        "active_tenant_count": account.get("active_tenant_count"),
+        "actual_birthright": user.get("birthright", []) if user_found else [],
+        "entitlements": user.get("entitlements", []) if user_found else [],
+        "user_found_in_auth0": user_found,
+        "last_sync": user.get("last_sync") if user_found else None,
+        "intent": envelope.get("intent"),
+        "raw_input": raw_input,
+    }
 
 
 # Agent Registry — the single source of truth for "what downstream agents exist
@@ -58,7 +87,13 @@ def _agent4_input_builder(envelope: dict) -> dict:
 #   enabled         — feature flag; false skips invocation even if the routing
 #                     flag is true (useful for staged rollout of new agents)
 #   routing_flag    — key in Agent 1's RoutingEnvelope that gates this call
-#   input_builder   — function(envelope) -> dict payload to send to the agent
+#   input_builder   — function(envelope, output_fields, ticket) -> dict payload
+#                     to send to the agent. output_fields accumulates prior
+#                     agents' results *within this same dispatch loop*, so an
+#                     agent can depend on an earlier agent's output only if it
+#                     appears LATER in this dict (insertion order == dispatch
+#                     order). Agent 4 depends on Agent 2 and Agent 3's outputs
+#                     this way — it must stay after both in this dict.
 #   output_key      — field name on OrchestratorOutput to store the response under
 AGENT_REGISTRY = {
     "agent_2": {
@@ -80,7 +115,7 @@ AGENT_REGISTRY = {
     "agent_4": {
         "name": "ciam-kb-agent",
         "arn": AGENT_4_ARN,
-        "enabled": os.getenv("ENABLE_AGENT_4", "false").lower() == "true",
+        "enabled": os.getenv("ENABLE_AGENT_4", "true").lower() == "true",
         "routing_flag": "invoke_agent_4",
         "input_builder": _agent4_input_builder,
         "output_key": "kb_payload",

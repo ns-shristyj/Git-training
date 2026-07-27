@@ -26,6 +26,7 @@ bedrock:RetrieveAndGenerate, scoped to the CIAM Knowledge Base ARN only.
 No DynamoDB, no Auth0, no Secrets Manager, no writes of any kind.
 """
 
+import json
 import logging
 import re
 import time
@@ -34,13 +35,16 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional, Literal, List
 
 import boto3
+import requests
+from botocore.awsrequest import AWSRequest
+from botocore.auth import SigV4Auth
 from botocore.exceptions import ClientError
 from bedrock_agentcore import BedrockAgentCoreApp
 from pydantic import BaseModel
 
 # Configuration
 AWS_REGION = "us-east-1"
-KNOWLEDGE_BASE_ID = "PLACEHOLDER_KB_ID"  # set once the real KB is provisioned (see OQ-1)
+KNOWLEDGE_BASE_ID = "O4XMWIIEHS"  # ciam-kb -- Managed Knowledge Base (see OQ-1)
 DEFAULT_TOP_K = 3
 MAX_TOP_K = 10
 BEDROCK_TIMEOUT_SECONDS = 10
@@ -359,80 +363,95 @@ def identify_failing_workflow(failed_step: Optional[str]) -> WorkflowIdentificat
 
 
 # Tool 2 — query_knowledge_base (§4.1)
-_bedrock_agent_runtime_client = None
-
-
-def get_bedrock_agent_runtime_client():
-    global _bedrock_agent_runtime_client
-    if _bedrock_agent_runtime_client is None:
-        _bedrock_agent_runtime_client = boto3.client(
-            "bedrock-agent-runtime", region_name=AWS_REGION
-        )
-    return _bedrock_agent_runtime_client
+#
+# NOTE: this KB is a Managed Knowledge Base (Bedrock's fully-managed vector
+# store -- see spec OQ-1), which requires `managedSearchConfiguration` in
+# the retrieve request instead of `vectorSearchConfiguration`. As of the
+# latest boto3 (1.42.97), botocore's client-side parameter validator does
+# not yet recognize this new field -- calling client.retrieve() rejects it
+# before the request is ever sent. Until botocore ships support, this
+# issues a raw SigV4-signed HTTP request to the same API instead of going
+# through the boto3 client method. This is a temporary SDK-gap workaround,
+# not an architectural choice -- switch back to client.retrieve() once
+# botocore adds managedSearchConfiguration support.
+BEDROCK_AGENT_RUNTIME_HOST = f"bedrock-agent-runtime.{AWS_REGION}.amazonaws.com"
 
 
 def query_knowledge_base(query: str, top_k: int = DEFAULT_TOP_K) -> tuple:
-    """Tool 2 -- calls Bedrock Knowledge Base RetrieveAndGenerate (§4.1).
-    Returns (KnowledgeBaseResults, error)."""
+    """Tool 2 -- calls Bedrock Knowledge Base Retrieve (§4.1).
+    Returns (KnowledgeBaseResults, error).
+
+    Uses the plain `retrieve` API rather than `retrieve_and_generate` --
+    Agent 4 only needs the raw retrieved chunks (to build its own
+    relevant_docs / similar_past_tickets split), not an LLM-synthesized
+    answer, so retrieve_and_generate's extra model-invocation cost and
+    latency buys nothing here."""
     assert_tool_posture("query_knowledge_base")
-    assert_posture("bedrock:RetrieveAndGenerate")
+    assert_posture("bedrock:Retrieve")
 
     top_k = min(top_k, MAX_TOP_K)
-    client = get_bedrock_agent_runtime_client()
+    session = boto3.Session()
+    frozen_creds = session.get_credentials().get_frozen_credentials()
+
+    url = f"https://{BEDROCK_AGENT_RUNTIME_HOST}/knowledgebases/{KNOWLEDGE_BASE_ID}/retrieve"
+    body = json.dumps({
+        "retrievalQuery": {"text": query},
+        "retrievalConfiguration": {"managedSearchConfiguration": {"numberOfResults": top_k}},
+    })
 
     attempt = 0
     while True:
         attempt += 1
         try:
-            response = client.retrieve_and_generate(
-                input={"text": query},
-                retrieveAndGenerateConfiguration={
-                    "type": "KNOWLEDGE_BASE",
-                    "knowledgeBaseConfiguration": {
-                        "knowledgeBaseId": KNOWLEDGE_BASE_ID,
-                        "modelArn": "anthropic.claude-haiku-4-5-20251001-v1:0",
-                        "retrievalConfiguration": {
-                            "vectorSearchConfiguration": {"numberOfResults": top_k}
-                        },
-                    },
-                },
-            )
-            break
-        except ClientError as e:
-            error_code = e.response.get("Error", {}).get("Code", "")
-            if error_code == "ThrottlingException" and attempt < MAX_RETRIES:
+            request = AWSRequest(method="POST", url=url, data=body, headers={"Content-Type": "application/json"})
+            SigV4Auth(frozen_creds, "bedrock", AWS_REGION).add_auth(request)
+            resp = requests.post(url, headers=dict(request.headers), data=body, timeout=BEDROCK_TIMEOUT_SECONDS)
+
+            if resp.status_code == 429:
+                if attempt >= MAX_RETRIES:
+                    return KnowledgeBaseResults(), "bedrock_throttled"
                 time.sleep(2 ** (attempt - 1))
                 continue
-            if error_code == "ThrottlingException":
-                return KnowledgeBaseResults(), "bedrock_throttled"
-            return KnowledgeBaseResults(), "bedrock_error"
-        except Exception:
+
+            if resp.status_code >= 400:
+                return KnowledgeBaseResults(), "bedrock_error"
+
+            response = resp.json()
+            break
+        except requests.exceptions.Timeout:
             return KnowledgeBaseResults(), "bedrock_timeout"
+        except Exception:
+            return KnowledgeBaseResults(), "bedrock_error"
 
     relevant_docs = []
     similar_past_tickets = []
-    for citation in response.get("citations", []):
-        for ref in citation.get("retrievedReferences", []):
-            content = ref.get("content", {}).get("text", "")[:500]
-            metadata = ref.get("metadata", {})
-            source_type = metadata.get("source_type", "")
-            location = ref.get("location", {})
-            score = ref.get("score", 0.0)
+    for result in response.get("retrievalResults", []):
+        content = result.get("content", {}).get("text", "")[:500]
+        metadata = result.get("metadata", {})
+        location = result.get("location", {})
+        score = result.get("score", 0.0)
+        title = metadata.get("_document_title", "Untitled")
+        url = metadata.get("_source_uri") or location.get("s3Location", {}).get("uri")
 
-            if source_type == "tqi_ticket":
-                similar_past_tickets.append(KBTicket(
-                    ticket_key=metadata.get("ticket_key", "UNKNOWN"),
-                    summary=metadata.get("summary", content),
-                    resolution=metadata.get("resolution"),
-                    relevance_score=score,
-                ))
-            else:
-                relevant_docs.append(KBDocument(
-                    title=metadata.get("title", "Untitled"),
-                    url=location.get("s3Location", {}).get("uri"),
-                    excerpt=content,
-                    relevance_score=score,
-                ))
+        # Resolved TQI ticket exports are named/prefixed distinctly from SOPs
+        # and guides in the KB data source -- see spec OQ-3 for the exact
+        # convention to confirm once real ticket exports are ingested.
+        is_ticket = title.upper().startswith("TQI-") or "tqi-" in title.lower()
+
+        if is_ticket:
+            similar_past_tickets.append(KBTicket(
+                ticket_key=metadata.get("ticket_key", title),
+                summary=metadata.get("summary", content),
+                resolution=metadata.get("resolution"),
+                relevance_score=score,
+            ))
+        else:
+            relevant_docs.append(KBDocument(
+                title=title,
+                url=url,
+                excerpt=content,
+                relevance_score=score,
+            ))
 
     return KnowledgeBaseResults(relevant_docs=relevant_docs, similar_past_tickets=similar_past_tickets), None
 

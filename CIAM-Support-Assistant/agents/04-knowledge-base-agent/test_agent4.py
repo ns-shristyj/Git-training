@@ -6,6 +6,7 @@ there is no real KB provisioned yet.
 from unittest.mock import patch, MagicMock
 
 import pytest
+import requests
 
 from agent import (
     evaluate_ciam_case,
@@ -20,13 +21,20 @@ from agent import (
 
 
 def mock_empty_kb_response():
-    return {"citations": []}
+    return {"retrievalResults": []}
+
+
+def mock_response(json_body, status_code=200):
+    resp = MagicMock()
+    resp.status_code = status_code
+    resp.json.return_value = json_body
+    return resp
 
 
 # AC-1: Customer with missing Support keyword: SIMPLE_FIX classified
 def test_ac1_customer_missing_support_simple_fix():
-    with patch("agent.get_bedrock_agent_runtime_client") as mock_client:
-        mock_client.return_value.retrieve_and_generate.return_value = mock_empty_kb_response()
+    with patch("agent.requests.post") as mock_post:
+        mock_post.return_value = mock_response(mock_empty_kb_response())
         result = evaluate_ciam_case({
             "account_status": "Customer",
             "active_tenant_count": 2,
@@ -47,8 +55,8 @@ def test_ac1_customer_missing_support_simple_fix():
 
 # AC-2: Entitlements compensate for missing birthright keyword -> NO_GAP
 def test_ac2_entitlements_compensate_no_gap():
-    with patch("agent.get_bedrock_agent_runtime_client") as mock_client:
-        mock_client.return_value.retrieve_and_generate.return_value = mock_empty_kb_response()
+    with patch("agent.requests.post") as mock_post:
+        mock_post.return_value = mock_response(mock_empty_kb_response())
         result = evaluate_ciam_case({
             "account_status": "Customer",
             "active_tenant_count": 1,
@@ -72,8 +80,8 @@ def test_ac3_prospect_without_tenant():
     assert persona == "Prospect without Tenant"
     assert expected == ["Community", "Academy", "Dashboard"]
 
-    with patch("agent.get_bedrock_agent_runtime_client") as mock_client:
-        mock_client.return_value.retrieve_and_generate.return_value = mock_empty_kb_response()
+    with patch("agent.requests.post") as mock_post:
+        mock_post.return_value = mock_response(mock_empty_kb_response())
         result = evaluate_ciam_case({
             "account_status": "Prospect - Net New",
             "active_tenant_count": 0,
@@ -90,8 +98,8 @@ def test_ac3_prospect_without_tenant():
 
 # AC-4: Extra keywords in birthright force ESCALATE_TO_L2
 def test_ac4_extra_keywords_escalate():
-    with patch("agent.get_bedrock_agent_runtime_client") as mock_client:
-        mock_client.return_value.retrieve_and_generate.return_value = mock_empty_kb_response()
+    with patch("agent.requests.post") as mock_post:
+        mock_post.return_value = mock_response(mock_empty_kb_response())
         result = evaluate_ciam_case({
             "account_status": "Former Customer",
             "active_tenant_count": 0,
@@ -111,8 +119,8 @@ def test_ac4_extra_keywords_escalate():
 
 # AC-5: Block keyword detected forces ESCALATE_TO_L2
 def test_ac5_block_keyword_escalate():
-    with patch("agent.get_bedrock_agent_runtime_client") as mock_client:
-        mock_client.return_value.retrieve_and_generate.return_value = mock_empty_kb_response()
+    with patch("agent.requests.post") as mock_post:
+        mock_post.return_value = mock_response(mock_empty_kb_response())
         result = evaluate_ciam_case({
             "account_status": "Customer",
             "active_tenant_count": 1,
@@ -132,8 +140,8 @@ def test_ac5_block_keyword_escalate():
 
 # AC-6: User not found in Auth0 forces ESCALATE_TO_L2
 def test_ac6_user_not_found_escalate():
-    with patch("agent.get_bedrock_agent_runtime_client") as mock_client:
-        mock_client.return_value.retrieve_and_generate.return_value = mock_empty_kb_response()
+    with patch("agent.requests.post") as mock_post:
+        mock_post.return_value = mock_response(mock_empty_kb_response())
         result = evaluate_ciam_case({
             "account_status": "Customer",
             "active_tenant_count": 1,
@@ -151,8 +159,8 @@ def test_ac6_user_not_found_escalate():
 
 # AC-7: Birthright correct but ACCESS_DENIED forces ESCALATE_TO_L2
 def test_ac7_birthright_correct_but_access_denied():
-    with patch("agent.get_bedrock_agent_runtime_client") as mock_client:
-        mock_client.return_value.retrieve_and_generate.return_value = mock_empty_kb_response()
+    with patch("agent.requests.post") as mock_post:
+        mock_post.return_value = mock_response(mock_empty_kb_response())
         result = evaluate_ciam_case({
             "account_status": "Customer",
             "active_tenant_count": 1,
@@ -172,8 +180,8 @@ def test_ac7_birthright_correct_but_access_denied():
 
 # AC-8: Knowledge Base timeout is non-fatal; evaluation still returned
 def test_ac8_kb_timeout_non_fatal():
-    with patch("agent.get_bedrock_agent_runtime_client") as mock_client:
-        mock_client.return_value.retrieve_and_generate.side_effect = TimeoutError("timed out")
+    with patch("agent.requests.post") as mock_post:
+        mock_post.side_effect = requests.exceptions.Timeout("timed out")
         result = evaluate_ciam_case({
             "account_status": "Customer",
             "active_tenant_count": 1,
@@ -214,8 +222,8 @@ def test_tool_name_posture_denies_unknown_tool():
 
 # AC-12: Unknown account_status returns UNKNOWN persona and escalates
 def test_ac12_unknown_account_status_escalates():
-    with patch("agent.get_bedrock_agent_runtime_client") as mock_client:
-        mock_client.return_value.retrieve_and_generate.return_value = mock_empty_kb_response()
+    with patch("agent.requests.post") as mock_post:
+        mock_post.return_value = mock_response(mock_empty_kb_response())
         result = evaluate_ciam_case({
             "account_status": None,
             "active_tenant_count": None,
@@ -235,8 +243,8 @@ def test_ac12_unknown_account_status_escalates():
 
 # AC-13: no_access_configured flagged when both arrays are empty
 def test_ac13_no_access_configured():
-    with patch("agent.get_bedrock_agent_runtime_client") as mock_client:
-        mock_client.return_value.retrieve_and_generate.return_value = mock_empty_kb_response()
+    with patch("agent.requests.post") as mock_post:
+        mock_post.return_value = mock_response(mock_empty_kb_response())
         result = evaluate_ciam_case({
             "account_status": "Customer",
             "active_tenant_count": 1,
@@ -256,32 +264,28 @@ def test_ac13_no_access_configured():
 # AC-14: Bedrock Knowledge Base returns relevant docs and past tickets
 def test_ac14_kb_returns_docs_and_tickets():
     fake_response = {
-        "citations": [
+        "retrievalResults": [
             {
-                "retrievedReferences": [
-                    {
-                        "content": {"text": "Birthright guide excerpt"},
-                        "metadata": {"source_type": "confluence", "title": "Birthright Guide"},
-                        "location": {"s3Location": {"uri": "s3://kb/birthright.md"}},
-                        "score": 0.92,
-                    },
-                    {
-                        "content": {"text": "Resolved by adding Support keyword"},
-                        "metadata": {
-                            "source_type": "tqi_ticket",
-                            "ticket_key": "TQI-1234",
-                            "summary": "User missing Support access",
-                            "resolution": "Added Support to entitlements",
-                        },
-                        "location": {},
-                        "score": 0.85,
-                    },
-                ]
-            }
+                "content": {"text": "Birthright guide excerpt"},
+                "metadata": {"_document_title": "Birthright Guide"},
+                "location": {"s3Location": {"uri": "s3://kb/birthright.md"}},
+                "score": 0.92,
+            },
+            {
+                "content": {"text": "Resolved by adding Support keyword"},
+                "metadata": {
+                    "_document_title": "TQI-1234",
+                    "ticket_key": "TQI-1234",
+                    "summary": "User missing Support access",
+                    "resolution": "Added Support to entitlements",
+                },
+                "location": {},
+                "score": 0.85,
+            },
         ]
     }
-    with patch("agent.get_bedrock_agent_runtime_client") as mock_client:
-        mock_client.return_value.retrieve_and_generate.return_value = fake_response
+    with patch("agent.requests.post") as mock_post:
+        mock_post.return_value = mock_response(fake_response)
         result = evaluate_ciam_case({
             "account_status": "Customer",
             "active_tenant_count": 1,
@@ -307,8 +311,8 @@ def test_ac15_workflow_identification_placeholder():
     assert wf.workflow_script_ref is None
     assert "placeholder" in wf.note.lower()
 
-    with patch("agent.get_bedrock_agent_runtime_client") as mock_client:
-        mock_client.return_value.retrieve_and_generate.return_value = mock_empty_kb_response()
+    with patch("agent.requests.post") as mock_post:
+        mock_post.return_value = mock_response(mock_empty_kb_response())
         result = evaluate_ciam_case({
             "account_status": "Customer",
             "active_tenant_count": 1,
