@@ -7,9 +7,9 @@ reviewers: [Peer]
 approver: Ritwik Mandal
 prd: https://confluence.netskope.example/display/GIS/ciam-knowledge-base-agent-prd  # placeholder — link to docs/confluence/ciam-knowledge-base-agent/prd.md until Phase 0 lands
 jira_epic: GIS-EPIC-CIAM  # placeholder — see docs/jira/ciam-knowledge-base-agent-epic.md until Phase 0 lands
-version: 0.4.0
+version: 0.5.0
 created: 2026-06-23
-last_updated: 2026-07-27
+last_updated: 2026-07-28
 ---
 
 # spec.md — CIAM Knowledge Base Agent (Agent 4)
@@ -37,26 +37,17 @@ DynamoDB**, **does not generate the final L1 response**, and **does not write
 to any system**. Its only external call is a read-only query to the Bedrock
 Knowledge Base.
 
-> **⚠ Provisional rule table — pending source verification.** The
-> persona-derivation and expected-birthright table in §4.1 Tool 1 is
-> **not yet confirmed against an authoritative source** and MUST be treated
-> as provisional, not normative, until one of the following is supplied and
-> reconciled against it:
->
-> 1. The actual **Birthright & Entitlements Guide** (exported as a `.docx`
->    so it can be attached to this spec and reviewed line-by-line), and/or
-> 2. The actual **sync function source code** that computes birthright in
->    production — which, if supplied, is the higher-fidelity source of the
->    two, since code defines real runtime behavior whereas documentation can
->    drift out of date. Where the guide and the code disagree, the code wins
->    unless a reviewer determines the code itself has a bug.
->
-> The current table was drafted without either source and has already been
-> flagged as producing incorrect results (e.g. it previously listed a
-> `Prospect - Churned` account status that does not exist in the real data —
-> corrected in this revision, but this is exactly the class of error the
-> table is at risk of repeating elsewhere). Do not implement Tool 1 against
-> this table as-is; see OQ-6 and OQ-7.
+> **✅ Resolved (2026-07-28).** The persona-derivation and
+> expected-birthright table in §4.1 Tool 1 is now sourced from the real
+> **Birthright & Entitlements Guide** (Netskope Confluence, ISI space),
+> superseding the earlier fully-provisional table (see OQ-6/OQ-7,
+> retained below for history). `derive_persona()` in `agent.py` has been
+> rewritten to match this source exactly, and the block-keyword format
+> was corrected from an incorrect guess (`block_<FullName>`) to the real
+> format (`Block-<Abbrev>`, e.g. `Block-Supp`). Two sub-personas
+> (Customer Partner / MSP Partner / Service Provider-Telco Partner
+> label distinction, and Prime-partner detection for the `Prime`
+> keyword) remain not fully wired — see OQ-10 and OQ-11.
 
 ## 2. Goals / Non-Goals
 
@@ -163,37 +154,43 @@ Applies the Birthright & Entitlements Guide rules to derive the expected
 birthright array for the user's persona, compares it against the actual
 birthright and entitlements arrays, and returns a complete gap analysis.
 
-**Persona derivation and expected birthright (PROVISIONAL — see the caveat in
-§1; not yet verified against the real Birthright & Entitlements Guide or sync
-function source):**
+**Persona derivation and expected birthright — sourced from the real
+Birthright & Entitlements Guide (Netskope Confluence, ISI space, exported
+2026-07-28). This table is now normative, not provisional; see the §1
+resolution note.** The real source field is Salesforce's `Account_Status__c`.
+Some rows match by exact equality, others by substring ("Includes") — this
+distinction is preserved, not flattened:
 
-| `account_status` | `active_tenant_count` | Persona | Expected birthright |
-| :--- | :---: | :--- | :--- |
-| `Customer` | any | `Customer` | `["Support", "Community", "Academy", "Notification", "Dashboard"]` |
-| `Prospect - Net New` | `>= 1` | `Prospect with Tenant` | `["Support", "Community", "Academy", "Notification", "Dashboard"]` |
-| `Prospect - Net New` | `0` | `Prospect without Tenant` | `["Community", "Academy", "Dashboard"]` |
-| `Partner` | any | `Partner` | `["Partner", "Community", "Academy", "Dashboard"]` |
-| `Former Customer` | any | `Former Customer` | `["Community", "Academy", "Dashboard"]` |
-| any other / `null` | any | `UNKNOWN` | `[]` (cannot determine; escalate) |
+| `Account_Status__c` | Match Type | Other Values | Persona | Expected birthright |
+| :--- | :--- | :--- | :--- | :--- |
+| No Account Found | — | N/A | `Individual` | `["Community", "Dashboard"]` |
+| "Prospect" | Includes | N/A | `Prospect` | `["Community", "Academy", "Dashboard"]` |
+| "Prospect" | Includes | Active Tenant ≥ 1 | `Prospect (w/ Tenant)` | `["Community", "Academy", "Support", "Notification", "Dashboard"]` |
+| "Quarantine" or "Out of Business" | Includes | N/A | `QOB` | `["Community", "Dashboard"]` |
+| "Customer" | Equals | N/A | `Customer` | `["Community", "Academy", "Support", "Notification", "Dashboard"]` |
+| "Pending Partner" | Equals | N/A | `Pending Partner` | `["Community", "Academy", "Dashboard"]` |
+| "Pending Partner" | Equals | Active Tenant ≥ 1 | `Pending Partner (w/ Tenant)` | `["Community", "Academy", "Support", "Notification", "Dashboard"]` |
+| "Partner" | Equals | N/A | `Partner` | `["Support", "Community", "Academy", "Partner", "Notification", "Dashboard"]` (+`Prime`\*) |
+| "Partner" | Equals | Customer Status includes "Customer" AND "Partner" | `Customer Partner` | same as `Partner` (+`Prime`\*) |
+| "Partner" | Equals | Partner Type = "MSP" | `MSP Partner` | same as `Partner` (+`Prime`\*) |
+| "Partner" | Equals | Partner Type = "Service Provider/Telco" | `Service Provider/Telco Partner` | same as `Partner` (+`Prime`\*) |
+| "Churn" | Equals | Active Tenant ≥ 1 | `Churn (w/ Tenant)` | `["Community", "Academy", "Support", "Notification", "Dashboard"]` |
+| "Churn" | Equals | N/A | `Churn` | `["Community", "Dashboard"]` |
+| anything else | — | N/A | `UNKNOWN` | `[]` (cannot determine; escalate) |
 
-> **Note.** An earlier revision of this table included a row for
-> `account_status: "Prospect - Churned"`. This status **does not exist** in
-> the real account data and has been removed. This correction is itself
-> evidence that the rest of this table — including the four remaining named
-> statuses, the tenant-count branching, and the expected-birthright arrays —
-> has not been independently verified against the real Salesforce picklist
-> or the actual Birthright & Entitlements Guide, and should not be assumed
-> correct merely because this one error was caught. See OQ-6.
+\* `Prime` only added for Prime partners specifically — see OQ-11 (detection
+field not yet confirmed).
 
-> **Correction.** The `Partner` persona's expected birthright previously
-> omitted the `Partner` keyword itself — an inconsistency with Agent 1
-> (SPEC-CIAM-0001), which recognizes `Partner` as one of its 7 valid
-> extracted portals (`Support`, `Community`, `Academy`, `Partner`,
-> `Notification`, `Dashboard`, `Prime`). Fixed here; the underlying
-> `KNOWN_PORTAL_KEYWORDS` vocabulary (§4.1 block-keyword detection, §9 AC
-> criteria) is updated to match. Note that Agent 1's 7th portal, `Prime`,
-> is **not yet** reflected anywhere in this table or vocabulary — tracked
-> separately, not fixed in this pass (see OQ-9).
+> **Implementation note — persona-label granularity gap (see OQ-10).** All
+> four `Partner`-equals rows above (`Partner`, `Customer Partner`, `MSP
+> Partner`, `Service Provider/Telco Partner`) grant the **identical** keyword
+> set. `derive_persona()` in `agent.py` currently collapses all four to a
+> single `"Partner"` persona label — this does NOT affect the correctness of
+> the computed expected-birthright output, only the granularity of the
+> persona name surfaced in `BirthrightEvaluation.persona`. Distinguishing the
+> four labels would require Agent 2's `AccountPayload` and the orchestrator's
+> `_agent4_input_builder` to additionally supply `customer_status` and
+> `partner_type`, which they do not yet do.
 
 **Comparison logic:**
 
@@ -213,10 +210,17 @@ function source):**
 
 **Block keyword detection (pre-check before comparison):**
 
-Before the comparison in steps 1–5, scan `entitlements` for any string matching
-the pattern `"block_<Keyword>"` where `<Keyword>` is a known portal keyword
-(`Support`, `Community`, `Academy`, `Notification`, `Dashboard`, `Partner`). If
-any block keyword is found, set `explicit_block_detected: true` and treat the blocked
+> **Corrected 2026-07-28 against the real Birthright & Entitlements Guide.**
+> Block keywords use a hyphenated abbreviation format — `Block-Supp`,
+> `Block-Acad`, `Block-Comm`, `Block-Notif`, `Block-Partner`, `Block-Prime`,
+> `Block-Dash`, plus legacy `Block-CAcad`/`Block-PAcad` (sunset 2025-11-17,
+> but still assignable per the source doc) — **not** `"block_<FullName>"` as
+> an earlier revision of this spec incorrectly assumed. `agent.py`'s
+> `BLOCK_KEYWORD_TO_PORTAL` dict is the normative mapping.
+
+Before the comparison in steps 1–5, scan `entitlements` for any string
+exactly matching one of the real block keywords above. If any block keyword
+is found, set `explicit_block_detected: true` and treat the blocked
 portal as inaccessible regardless of birthright (block keywords override grants
 per Gatekeeper logic). This condition always sets `complexity: "ESCALATE_TO_L2"`
 in Tool 3 (see §4.1 Tool 3).
@@ -372,7 +376,8 @@ An invocation proceeds in the following deterministic steps:
    Knowledge Base availability. Detect all special conditions:
    - If `actual_birthright == [] and entitlements == []` → set
      `no_access_configured: true`.
-   - If any `"block_<Keyword>"` pattern is found in `entitlements` → set
+   - If any real block keyword (e.g. `"Block-Supp"` — see `agent.py`'s
+     `BLOCK_KEYWORD_TO_PORTAL`) is found in `entitlements` → set
      `explicit_block_detected: true` (handled inside Tool 1; surfaced in
      the returned `BirthrightEvaluation`).
    - If `match: true` but `intent` is `"ACCESS_DENIED"` → set
@@ -803,31 +808,20 @@ the PR in CI if they regress.
   unambiguous, `LOW` when either is null). Define the confidence scoring
   rubric before Phase 1 implementation to ensure eval AC cases can assert
   against it.
-- **OQ-5.** Block keyword vocabulary: this spec defines block keywords as
-  `"block_<Keyword>"` for the five known portal keywords. Confirm with the
-  CIAM platform team whether any other block keyword patterns exist in the
-  `nskp` tenant's `entitlements` data before finalising the pre-check regex
-  in Tool 1.
-- **OQ-6.** Birthright & Entitlements Guide as source of truth: §4.1 Tool 1's
-  persona/expected-birthright table is currently **provisional** (see the
-  caveat in §1) and was not derived from the actual Birthright & Entitlements
-  Guide. The guide should be exported as a `.docx`, attached to this spec
-  (or linked from `docs/` per the placement-guide convention), and used to
-  re-derive the persona table line-by-line before Tool 1 is implemented. Any
-  discrepancy between the current provisional table and the real guide is
-  assumed to be a defect in the table, not the guide, until reviewed.
-- **OQ-7.** Sync function source code as a higher-fidelity reference: in
-  addition to the guide (OQ-6), the actual source code of the function that
-  computes/provisions birthright in production may be available to supply as
-  additional context. If supplied, it should be treated as the higher-
-  priority source of the two for resolving Tool 1's logic, since the guide
-  is documentation that can drift from what the code actually does, while the
-  code defines real runtime behavior directly. If the guide and the code
-  disagree on any point, default to the code's actual behavior unless a
-  reviewer identifies the code itself as buggy (in which case that
-  discrepancy is itself a finding worth raising with the platform team,
-  separate from this spec). This is an open option, not yet exercised — track
-  here so it isn't lost if the code is supplied in a future revision.
+- **OQ-5 (resolved).** Block keyword vocabulary: confirmed against the real
+  Birthright & Entitlements Guide. Real format is `Block-<Abbrev>`
+  (`Block-Supp`, `Block-Acad`, `Block-Comm`, `Block-Notif`, `Block-Partner`,
+  `Block-Prime`, `Block-Dash`, plus legacy `Block-CAcad`/`Block-PAcad`) — not
+  `"block_<Keyword>"` as originally guessed. `agent.py`'s
+  `BLOCK_KEYWORD_TO_PORTAL` is now the normative mapping.
+- **OQ-6 (resolved).** Birthright & Entitlements Guide as source of truth:
+  the real guide was obtained (Confluence export, 2026-07-28) and
+  `derive_persona()` has been rewritten line-by-line against it. See the
+  updated persona table in §4.1 Tool 1.
+- **OQ-7 (moot).** Sync function source code: not supplied, but no longer
+  needed for Tool 1's core logic now that OQ-6 is resolved from the guide
+  directly. Would still be useful to independently verify the guide's
+  accuracy if it ever becomes available, but is not blocking.
 - **OQ-8.** Auth0 workflow script source: Tool 4
   (`identify_failing_workflow`) is currently a placeholder stub — see §4.1
   Tool 4. It needs the actual Auth0 Action/Rule/Flow scripts for the `nskp`
@@ -835,14 +829,26 @@ the PR in CI if they regress.
   before it can do real workflow-to-script mapping. Until then it always
   returns `workflow_identified: false`. Track here so this isn't forgotten
   once those scripts become available.
-- **OQ-9.** `Prime` portal: Agent 1 (SPEC-CIAM-0001) recognizes `Prime`
-  (Prime Okta Tenant / Prime Partner Okta) as a 7th valid extracted
-  portal, distinct from `Partner`. Neither the persona/expected-birthright
-  table in §4.1 Tool 1 nor `KNOWN_PORTAL_KEYWORDS` currently account for
-  it — a ticket whose gap involves the `Prime` portal would currently be
-  treated as an "unrecognized keyword" and forced to `ESCALATE_TO_L2`
-  rather than potentially being a `SIMPLE_FIX`. Needs the real Birthright
-  & Entitlements Guide (OQ-6) to confirm which persona(s), if any, should
-  expect `Prime` in their birthright array before this can be added
-  correctly — flagged here so it isn't missed alongside the `Partner` fix
-  in this revision.
+- **OQ-9 (resolved).** `Prime` portal: confirmed as a real, distinct
+  keyword/resource (`Prime` → Netskope Prime Okta Tenant) in the real
+  Birthright & Entitlements Guide. Added to `KNOWN_PORTAL_KEYWORDS` and
+  `BLOCK_KEYWORD_TO_PORTAL`. Not yet added to any persona's *expected*
+  birthright array, since the guide notes `Prime` is only granted to
+  "Prime partners" specifically — see OQ-11 for the remaining detection gap.
+- **OQ-10.** Partner sub-persona labels: the real guide distinguishes four
+  Partner-type personas (`Partner`, `Customer Partner`, `MSP Partner`,
+  `Service Provider/Telco Partner`) that all grant the **identical** keyword
+  set, differing only by additional Salesforce fields (`customer_status`,
+  `partner_type`) that Agent 2's `AccountPayload` schema and the
+  orchestrator's `_agent4_input_builder` do not currently supply.
+  `derive_persona()` currently collapses all four to a single `"Partner"`
+  label — correct for birthright *computation*, but coarser than the real
+  model for persona *labeling*. Wire in `customer_status`/`partner_type` if
+  finer-grained persona labels become valuable for Agent 5's response
+  generation or reporting.
+- **OQ-11.** Prime-partner detection: the real guide notes `Prime` is
+  additionally granted "only for Prime partners," but does not specify
+  which Salesforce field/value identifies a Prime partner (distinct from
+  the other Partner Type values already tracked under OQ-10). Confirm this
+  detection field with the CIAM platform team before adding `Prime` to any
+  persona's expected birthright array.

@@ -50,7 +50,24 @@ MAX_TOP_K = 10
 BEDROCK_TIMEOUT_SECONDS = 10
 MAX_RETRIES = 3
 
-KNOWN_PORTAL_KEYWORDS = frozenset({"Support", "Community", "Academy", "Notification", "Dashboard", "Partner"})
+KNOWN_PORTAL_KEYWORDS = frozenset({"Support", "Community", "Academy", "Notification", "Dashboard", "Partner", "Prime"})
+
+# Real block-keyword format from the Birthright & Entitlements Guide --
+# hyphenated abbreviations (e.g. "Block-Supp"), NOT "block_<FullKeywordName>"
+# as an earlier revision of this code incorrectly assumed. C-Academy/P-Academy
+# are legacy, sunset 2025-11-17, but their block keywords remain assignable
+# per the source doc's own footnote ("*Not released, but still assignable").
+BLOCK_KEYWORD_TO_PORTAL = {
+    "Block-Supp": "Support",
+    "Block-Acad": "Academy",
+    "Block-Comm": "Community",
+    "Block-Notif": "Notification",
+    "Block-Partner": "Partner",
+    "Block-Prime": "Prime",
+    "Block-Dash": "Dashboard",
+    "Block-CAcad": "C-Academy",
+    "Block-PAcad": "P-Academy",
+}
 
 # Logging
 logging.basicConfig(
@@ -157,18 +174,64 @@ class KnowledgeBasePayload(BaseModel):
 
 
 # Tool 1 — evaluate_birthright (§4.1)
+#
+# Persona/expected-birthright table -- sourced from the real "Birthright &
+# Entitlements Guide" (Confluence, Netskope ISI space, p.106-112 of the
+# 2026-07-28 export). This REPLACES the earlier provisional table entirely --
+# the two do not agree on several rows (e.g. the real "Partner" persona gets
+# nearly the full portal set, not just 3 keywords as previously guessed).
+#
+# Real source field name is `Account_Status__c` (Salesforce). Some rows match
+# by EXACT equality, others by SUBSTRING ("Includes") per the source table --
+# this distinction is preserved below, not flattened to equality-only.
+#
+# NOT YET WIRED: "Customer Partner" / "MSP Partner" / "Service Provider/Telco
+# Partner" personas require additional fields (customer_status, partner_type)
+# that Agent 2's AccountPayload and the orchestrator's _agent4_input_builder
+# do not currently supply. Until those are added, any account with
+# Account_Status__c == "Partner" resolves to the plain "Partner" row --
+# functionally identical to "Customer Partner"/"MSP Partner"/"Service
+# Provider/Telco Partner" for birthright purposes (all four grant the same
+# keyword set), so this is NOT a correctness gap for Tool 1's output today,
+# only a persona-label granularity gap. The `(Prime)` keyword noted for
+# Partner-type personas is also not yet added -- source distinguishes "Prime
+# partners" via a value not yet identified in Agent 2's schema (see OQ-10).
 def derive_persona(account_status: Optional[str], active_tenant_count: Optional[int]) -> tuple:
-    """Persona/expected-birthright table -- PROVISIONAL, see spec §1/OQ-6/OQ-7."""
+    has_tenant = (active_tenant_count or 0) >= 1
+
+    if account_status is None:
+        return "Individual", ["Community", "Dashboard"]
+
+    status_lower = account_status.lower()
+
+    if "quarantine" in status_lower or "out of business" in status_lower:
+        return "QOB", ["Community", "Dashboard"]
+
+    if "prospect" in status_lower:
+        if has_tenant:
+            return "Prospect (w/ Tenant)", ["Community", "Academy", "Support", "Notification", "Dashboard"]
+        return "Prospect", ["Community", "Academy", "Dashboard"]
+
     if account_status == "Customer":
-        return "Customer", ["Support", "Community", "Academy", "Notification", "Dashboard"]
-    if account_status == "Prospect - Net New":
-        if (active_tenant_count or 0) >= 1:
-            return "Prospect with Tenant", ["Support", "Community", "Academy", "Notification", "Dashboard"]
-        return "Prospect without Tenant", ["Community", "Academy", "Dashboard"]
+        return "Customer", ["Community", "Academy", "Support", "Notification", "Dashboard"]
+
+    if account_status == "Pending Partner":
+        if has_tenant:
+            return "Pending Partner (w/ Tenant)", ["Community", "Academy", "Support", "Notification", "Dashboard"]
+        return "Pending Partner", ["Community", "Academy", "Dashboard"]
+
     if account_status == "Partner":
-        return "Partner", ["Partner", "Community", "Academy", "Dashboard"]
-    if account_status == "Former Customer":
-        return "Former Customer", ["Community", "Academy", "Dashboard"]
+        # Covers plain Partner, Customer Partner, MSP Partner, and Service
+        # Provider/Telco Partner -- all four grant the same keyword set per
+        # the source table; only the persona *label* would differ if
+        # customer_status/partner_type were wired in (see docstring above).
+        return "Partner", ["Support", "Community", "Academy", "Partner", "Notification", "Dashboard"]
+
+    if account_status == "Churn":
+        if has_tenant:
+            return "Churn (w/ Tenant)", ["Community", "Academy", "Support", "Notification", "Dashboard"]
+        return "Churn", ["Community", "Dashboard"]
+
     return "UNKNOWN", []
 
 
@@ -183,13 +246,11 @@ def evaluate_birthright(
 
     persona, expected_birthright = derive_persona(account_status, active_tenant_count)
 
-    # Block keyword detection (pre-check, §4.1)
-    block_keywords_found = [
-        e for e in entitlements
-        if e.startswith("block_") and e[len("block_"):] in KNOWN_PORTAL_KEYWORDS
-    ]
+    # Block keyword detection (pre-check, §4.1) -- real format is
+    # "Block-<Abbrev>" (e.g. "Block-Supp"), not "block_<FullName>".
+    block_keywords_found = [e for e in entitlements if e in BLOCK_KEYWORD_TO_PORTAL]
     explicit_block_detected = len(block_keywords_found) > 0
-    blocked_portals = {b[len("block_"):] for b in block_keywords_found}
+    blocked_portals = {BLOCK_KEYWORD_TO_PORTAL[b] for b in block_keywords_found}
 
     # Union semantics (§6.2), then block keywords override the grant
     effective_access = (set(actual_birthright) | set(entitlements)) - blocked_portals
@@ -327,7 +388,9 @@ def classify_fix_complexity(
 
     # SIMPLE_FIX -- all criteria met (§4.1 Tool 3)
     account_ok = account_status == "Customer" or (
-        account_status == "Prospect - Net New" and (active_tenant_count or 0) >= 1
+        account_status is not None
+        and "prospect" in account_status.lower()
+        and (active_tenant_count or 0) >= 1
     )
     if account_ok:
         return FixClassification(

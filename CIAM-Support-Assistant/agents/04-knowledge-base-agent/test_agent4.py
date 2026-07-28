@@ -76,14 +76,14 @@ def test_ac2_entitlements_compensate_no_gap():
 
 # AC-3: Prospect without tenant gets reduced expected birthright
 def test_ac3_prospect_without_tenant():
-    persona, expected = derive_persona("Prospect - Net New", 0)
-    assert persona == "Prospect without Tenant"
+    persona, expected = derive_persona("Prospect", 0)
+    assert persona == "Prospect"
     assert expected == ["Community", "Academy", "Dashboard"]
 
     with patch("agent.requests.post") as mock_post:
         mock_post.return_value = mock_response(mock_empty_kb_response())
         result = evaluate_ciam_case({
-            "account_status": "Prospect - Net New",
+            "account_status": "Prospect",
             "active_tenant_count": 0,
             "actual_birthright": ["Community", "Academy", "Dashboard"],
             "entitlements": [],
@@ -96,14 +96,39 @@ def test_ac3_prospect_without_tenant():
     assert result["fix_classification"]["complexity"] == "NO_GAP"
 
 
+def test_prospect_with_tenant_gets_full_set():
+    persona, expected = derive_persona("Prospect", 1)
+    assert persona == "Prospect (w/ Tenant)"
+    assert set(expected) == {"Community", "Academy", "Support", "Notification", "Dashboard"}
+
+
+def test_churn_personas():
+    persona, expected = derive_persona("Churn", 0)
+    assert persona == "Churn"
+    assert expected == ["Community", "Dashboard"]
+
+    persona, expected = derive_persona("Churn", 1)
+    assert persona == "Churn (w/ Tenant)"
+    assert set(expected) == {"Community", "Academy", "Support", "Notification", "Dashboard"}
+
+
+def test_qob_persona_matches_by_substring():
+    persona, expected = derive_persona("Quarantine", None)
+    assert persona == "QOB"
+    assert expected == ["Community", "Dashboard"]
+
+    persona, expected = derive_persona("Out of Business", None)
+    assert persona == "QOB"
+
+
 # AC-4: Extra keywords in birthright force ESCALATE_TO_L2
 def test_ac4_extra_keywords_escalate():
     with patch("agent.requests.post") as mock_post:
         mock_post.return_value = mock_response(mock_empty_kb_response())
         result = evaluate_ciam_case({
-            "account_status": "Former Customer",
+            "account_status": "Churn",
             "active_tenant_count": 0,
-            "actual_birthright": ["Community", "Academy", "Dashboard", "Support"],
+            "actual_birthright": ["Community", "Dashboard", "Support"],
             "entitlements": [],
             "user_found_in_auth0": True,
             "intent": "GENERAL_INQUIRY",
@@ -117,7 +142,8 @@ def test_ac4_extra_keywords_escalate():
     assert "over-provision" in fc["reason"].lower()
 
 
-# AC-5: Block keyword detected forces ESCALATE_TO_L2
+# AC-5: Block keyword detected forces ESCALATE_TO_L2 -- real format is
+# "Block-Supp" (hyphenated abbreviation), not "block_Support".
 def test_ac5_block_keyword_escalate():
     with patch("agent.requests.post") as mock_post:
         mock_post.return_value = mock_response(mock_empty_kb_response())
@@ -125,7 +151,7 @@ def test_ac5_block_keyword_escalate():
             "account_status": "Customer",
             "active_tenant_count": 1,
             "actual_birthright": ["Support", "Community", "Academy", "Notification", "Dashboard"],
-            "entitlements": ["block_Support"],
+            "entitlements": ["Block-Supp"],
             "user_found_in_auth0": True,
             "intent": "ACCESS_DENIED",
         })
@@ -133,9 +159,20 @@ def test_ac5_block_keyword_escalate():
     be = result["birthright_evaluation"]
     fc = result["fix_classification"]
     assert be["explicit_block_detected"] is True
-    assert be["block_keywords_found"] == ["block_Support"]
+    assert be["block_keywords_found"] == ["Block-Supp"]
     assert fc["complexity"] == "ESCALATE_TO_L2"
     assert "block" in fc["reason"].lower()
+
+
+def test_all_real_block_keywords_recognized():
+    from agent import BLOCK_KEYWORD_TO_PORTAL
+    for block_kw, portal in [
+        ("Block-Supp", "Support"), ("Block-Acad", "Academy"),
+        ("Block-Comm", "Community"), ("Block-Notif", "Notification"),
+        ("Block-Partner", "Partner"), ("Block-Prime", "Prime"),
+        ("Block-Dash", "Dashboard"),
+    ]:
+        assert BLOCK_KEYWORD_TO_PORTAL[block_kw] == portal
 
 
 # AC-6: User not found in Auth0 forces ESCALATE_TO_L2
@@ -220,8 +257,14 @@ def test_tool_name_posture_denies_unknown_tool():
 # other tests -- if the schema were invalid, model construction would raise.
 
 
-# AC-12: Unknown account_status returns UNKNOWN persona and escalates
-def test_ac12_unknown_account_status_escalates():
+# AC-12 (updated): null account_status maps to the real "Individual" persona
+# (per the Birthright Guide's "No Account Found" row), NOT an "UNKNOWN"
+# persona with an empty expected set as an earlier provisional table assumed.
+# It still escalates -- classify_fix_complexity treats "no account at all" as
+# needing human review regardless of birthright accuracy -- but for the
+# correct reason (account_status_unknown), and persona/expected_birthright
+# now reflect real data instead of a placeholder empty state.
+def test_ac12_no_account_found_maps_to_individual_persona_and_escalates():
     with patch("agent.requests.post") as mock_post:
         mock_post.return_value = mock_response(mock_empty_kb_response())
         result = evaluate_ciam_case({
@@ -235,10 +278,16 @@ def test_ac12_unknown_account_status_escalates():
 
     be = result["birthright_evaluation"]
     fc = result["fix_classification"]
-    assert be["persona"] == "UNKNOWN"
-    assert be["expected_birthright"] == []
+    assert be["persona"] == "Individual"
+    assert be["expected_birthright"] == ["Community", "Dashboard"]
     assert fc["complexity"] == "ESCALATE_TO_L2"
     assert result["error"] is None
+
+
+def test_genuinely_unrecognized_account_status_is_unknown():
+    persona, expected = derive_persona("Some Future Status Nobody Has Seen Yet", 1)
+    assert persona == "UNKNOWN"
+    assert expected == []
 
 
 # AC-13: no_access_configured flagged when both arrays are empty
@@ -261,19 +310,20 @@ def test_ac13_no_access_configured():
     assert fc["complexity"] == "SIMPLE_FIX"
 
 
-# Regression test: "Partner" persona's expected_birthright previously omitted
-# the "Partner" keyword itself, and KNOWN_PORTAL_KEYWORDS didn't recognize it
-# -- an inconsistency with Agent 1, which treats "Partner" as a valid portal.
-def test_partner_persona_includes_partner_keyword():
+# Real Partner persona (per the actual Birthright & Entitlements Guide) gets
+# nearly the FULL portal set -- Support, Community, Academy, Partner,
+# Notification, Dashboard (6 keywords) -- not the reduced 3-4 keyword set an
+# earlier provisional table assumed.
+def test_partner_persona_gets_real_keyword_set():
     persona, expected = derive_persona("Partner", 0)
     assert persona == "Partner"
-    assert "Partner" in expected
-    assert set(expected) == {"Partner", "Community", "Academy", "Dashboard"}
+    assert set(expected) == {"Support", "Community", "Academy", "Partner", "Notification", "Dashboard"}
 
 
 def test_partner_is_a_known_portal_keyword():
     from agent import KNOWN_PORTAL_KEYWORDS
     assert "Partner" in KNOWN_PORTAL_KEYWORDS
+    assert "Prime" in KNOWN_PORTAL_KEYWORDS
 
 
 def test_partner_missing_keyword_does_not_trigger_unrecognized_escalation():
@@ -282,7 +332,7 @@ def test_partner_missing_keyword_does_not_trigger_unrecognized_escalation():
         result = evaluate_ciam_case({
             "account_status": "Partner",
             "active_tenant_count": 0,
-            "actual_birthright": ["Community", "Academy", "Dashboard"],
+            "actual_birthright": ["Support", "Community", "Academy", "Notification", "Dashboard"],
             "entitlements": [],
             "user_found_in_auth0": True,
             "intent": "ACCESS_DENIED",
