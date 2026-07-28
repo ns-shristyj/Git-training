@@ -1,55 +1,91 @@
-# Migration Known Issues (Nov 1 CIAM Migration)
+# Migration & Platform Known Issues
 
-> **DRAFT — needs real input from whoever ran/owns the Nov 1 migration
-> project.** This draft is a placeholder structure only — it does
-> **not** contain verified real migration bugs, since that information
-> wasn't available in this session. It's included so the document's
-> *shape* exists and can be filled in, and because this document has
-> already proven useful even near-empty: a test ticket mentioning "Nov
-> 1 migration" correctly caused Agent 4's KB search to surface this
-> exact document (relevance score 0.35) purely from the filename/title
-> match, before any real content existed.
+> **Sourced from real Unified Login / Identity Dashboard release notes**
+> (Netskope Confluence, ISI space, versions v1.4.0 through v2.8.1,
+> exported 2026-07-28). Replaces the earlier empty template — this is
+> real, dated, versioned known-issue data, not a guess. Note the scope
+> is broader than just "the Nov 1 migration" — it's the ongoing
+> known-issues/fixes history of the whole Unified Login platform, which
+> is more useful for Agent 4's KB retrieval anyway (a support ticket
+> rarely cares whether a bug is migration-era or just a later platform
+> bug).
 
-## Purpose
+## Currently Open Known Issues (as of v2.8.1)
 
-A dated list of specific, confirmed bugs or gaps introduced by the
-Nov 1 CIAM migration, so Agent 4 can immediately recognize "this
-matches a known migration issue" instead of treating a migration-
-adjacent ticket as a fresh, unexplained problem.
+### Partner Portal registrations not allowed via Auth0 sign-up (v1.4.0+)
 
-## Structure to Fill In (Template)
+Users are confused by a Sign-Up link shown on the Partner Portal login
+screen, but Partner Portal registrations are **not** actually allowed
+through that Auth0 form (registration requires the separate Partner
+Registration flow — see `Netskope Partner Portal: Registration
+Process`). Planned fix (redirect users to the correct registration
+page) has no confirmed release date as of this export.
 
-For each known migration issue, capture:
+### Federated users cannot log into the Identity Dashboard (v1.5.0+)
 
-```
-### Issue: <short title>
-- Reported: <date range>
-- Symptom: <what the user/L1 sees>
-- Affected segment: <which persona/account type, if known>
-- Root cause: <what actually broke during/after migration>
-- Status: Fixed | Workaround available | Open
-- Fix/workaround: <what to do about it, if anything>
-```
+Even with the `Dashboard` keyword present in birthright or
+entitlements, federated (non-`NetskopeID` connection) users cannot log
+into the Netskope Identity Dashboard. No fix confirmed as of this
+export — cross-reference with `Support Portal Access Tile` UX changes
+in later releases, which suggest this area is under active work.
 
-## What We Know Is True (Confirmed Context, Not a Bug List)
+### New federated users need manual Salesforce account creation (v2.0.0+)
 
-- A hard migration date of **November 1** is referenced consistently
-  across tickets tested this session — this appears to be a real,
-  significant cutover date worth anchoring all migration-era issue
-  reports against.
-- Tickets that explicitly mention the migration in their raw text
-  should be expected to correlate with genuine post-migration gaps more
-  often than tickets that don't — this is exactly the kind of signal
-  Agent 4's KB query (`build_kb_query()` in `agent.py`) is designed to
-  pick up on, since it includes the raw ticket text verbatim.
+No SAML Just-In-Time (JIT) provisioning exists yet for federated users
+— new federated users still require a manually-created Salesforce
+account. A SAML JIT Provisioning APEX Class is the planned long-term
+fix; not confirmed shipped as of this export.
 
-## Open Questions to Resolve
+### Duplicate accounts visible to Organization Admins (v2.0.0+)
 
-1. Is there an existing migration retro/postmortem document this can
-   be built from directly, rather than reconstructed from ticket
-   patterns?
-2. Is there a **cutoff date** after which migration-era issues should
-   be considered resolved, so this document doesn't stay "relevant"
-   indefinitely?
-3. What are the actual confirmed bugs/gaps from the migration (this
-   draft has none — it's a template only)?
+Org admins using federated services may see **duplicate** accounts in
+the Identity Dashboard's Manage Users section — old pre-federation
+NetskopeID (username/password) accounts remain listed alongside the
+newer federated accounts for the same person.
+
+### Orphaned DynamoDB records on federated connection deletion (v2.0.0+)
+
+Deleting a federated SSO connection does **not** trigger the
+`Federated-User-Deletion-Sync` action, so federated users created under
+that connection remain in the `NetskopeID` DynamoDB table indefinitely.
+**Documented workaround:** before deleting a federated connection, take
+note of all federated users under it so the corresponding records can
+be manually purged afterward.
+
+## Historical Bugs — Already Fixed (Useful Context for "Is this a known pattern?")
+
+These are **resolved**, but valuable for Agent 4/5 to recognize "this
+matches a bug that was already fixed in version X" when a ticket
+describes a symptom that matches:
+
+| Version | Bug | Symptom | Fix |
+| :--- | :--- | :--- | :--- |
+| v2.0.0 | Stale Prime-level access retention | A demoted user could incorrectly **keep** Prime-level access because sequential permission updates were each computed from outdated data (race condition) | Access is now recomputed as a single, up-to-date decision on every login |
+| v2.0.0 | Access wiped on transient Salesforce lookup failure | A temporary Salesforce lookup failure could **overwrite** a user's existing access data with empty values, downgrading their access for no real reason | Access data is now left untouched until a lookup completes successfully |
+| v2.0.0 | Hourly sync over-triggering for native users | The hourly sync check for native `NetskopeID` users referenced the wrong tracking field, causing sync to run more often than intended | Fixed to reference the correct field |
+| v2.0.0 | Academy lookups matched wrong record for federated users | Netskope Academy attribute lookups only matched **native** `NetskopeID` users correctly; federated users could be matched against the wrong `NetskopeID` table record entirely | Fixed matching logic; also removed a duplicate attribute assignment |
+| v2.5.0 | Entitlement drift after Auth0 script sync (GIS-33767) | User entitlement/permission changes were written only to the Auth0 database; a subsequent Auth0 script-based sync could **silently overwrite** those changes, causing drift and unexpected reversions | Updates now perform a coordinated write to both the Identity Dashboard database and Auth0 |
+| v2.7.1 | Name updates not reflected in Auth0 (GIS-3788) | When a user's name was updated in the Identity Dashboard, the change wasn't always correctly propagated to Auth0 | An additional database field now ensures name-update consistency between both systems |
+
+## Deferred / In-Progress Items
+
+- **GIS-3777 (Support Portal Access Tile warning removed)** — first
+  announced in v2.6.0, then **deferred to the v2.7.0 release** per this
+  export's own tracking, and finally confirmed shipped in v2.7.1. Shows
+  this kind of feature can slip a release or two — worth checking the
+  *latest* release notes rather than assuming the first-announced
+  version if a ticket references this specific behavior.
+- **Identity Dashboard self-service federation configuration** — as of
+  v2.6.0, explicitly **disabled due to a discovered issue**; team was
+  "working diligently" to re-enable in a later release. Not confirmed
+  re-enabled as of v2.8.1 (the latest release note in this export,
+  which only covers a Beta-tag removal with no functional changes).
+
+## Open Questions
+
+1. Confirm whether any of the "currently open" issues above have since
+   been fixed in a release newer than v2.8.1 (this export's latest).
+2. Is there a dedicated migration retro/postmortem document separate
+   from these release notes, with more specifically Nov-1-migration-era
+   content (as opposed to the ongoing platform release history covered
+   here)?
