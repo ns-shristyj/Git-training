@@ -1,58 +1,102 @@
-# Auth0 Login Flow Steps
+# Auth0 `app_metadata` Fields & Common SOPs
 
-> **DRAFT — needs verification against the real Auth0 Action/Rule/Flow
-> scripts for the `nskp` tenant (spec OQ-8).** This draft reconstructs
-> the flow from what was described earlier in this project and from
-> Agent 3's Auth0Payload schema (`birthright`, `entitlements`,
-> `last_sync`, `last_daily_sync` fields). Step names, order, and field
-> mappings below are **unverified** until the real scripts are supplied.
+> **Sourced from the real Confluence export** (Netskope ISI space,
+> 2026-07-28) — specifically the "Assigning Organization Admin", "Force
+> Password Reset", "Block & Unblock Users", "Helping a User That
+> Declined Migration Acknowledgment", and "Force A NetskopeID Sync -
+> Update Birthright & Community Provisioning" pages. This replaces the
+> earlier hypothetical "9-step login flow" draft, which was not derived
+> from a real source — that draft's step numbering/names are NOT
+> confirmed anywhere in the real docs and should be discarded rather
+> than reconciled.
 
-## Purpose
+## Confirmed Real `app_metadata` Fields
 
-Documents the ordered pipeline a user's login/provisioning request
-passes through in Auth0, so a failure can be traced to a specific step
-rather than left as a generic "access denied." This is the reference
-Tool 4 (`identify_failing_workflow`, currently a placeholder — see spec
-OQ-8) will eventually be implemented against.
-
-## The Pipeline (Draft Order)
-
-| # | Step | What It Checks | Failure Category (if broken) |
-| :---: | :--- | :--- | :--- |
-| 1 | Email Verification | `email_verified` flag | `ACCESS_DENIED` |
-| 2 | Registration Forms | Required profile fields completed | `ACCOUNT_LOCKOUT` |
-| 3 | Migration Acknowledgement | User has acknowledged the Nov 1 CIAM migration notice | `ACCOUNT_LOCKOUT` |
-| 4 | Privacy Policy Acceptance | `privacy_policy_accepted_at` is non-null | `ACCOUNT_LOCKOUT` |
-| 5 | NetskopeID-Sync-1 (Salesforce → Auth0) | Populates `app_metadata.birthright` and `app_metadata.entitlements` from Salesforce account data | `ENTITLEMENT_MISSING` |
-| 6 | NetskopeID-Sync-2 (DynamoDB → Auth0) | Populates `app_metadata.tenant_id`; resolves `pending_community_user` | `SYNC_STALE` |
-| 7 | RBAC Consolidated | Assigns `app_metadata.roles` based on birthright + entitlements | `BIRTHRIGHT_MISMATCH` |
-| 8 | Gatekeeper | Final portal-access decision — checks `birthright` ∪ `entitlements` against the requested portal's required keyword (see `portal-access-requirements.md`) | `SSO_FAILURE` |
-| 9 | MFA Consolidated | Enforces MFA enrollment if required for the persona | `ACCOUNT_LOCKOUT` |
-
-## Fields Referenced (Cross-check Against Agent 3's Schema)
-
-| Field | Populated By Step | Agent 3's `Auth0UserRecord` equivalent |
+| Field | Type | Purpose |
 | :--- | :--- | :--- |
-| `app_metadata.birthright` | Step 5 (Sync-1) | `birthright` |
-| `app_metadata.entitlements` | Step 5 (Sync-1) | `entitlements` |
-| `app_metadata.last_sync` | Step 5 (Sync-1) | `last_sync` |
-| `app_metadata.last_daily_sync` | Step 6 (Sync-2) | `last_daily_sync` |
+| `birthright` | array of strings | Auto-set by NetskopeID-Sync hourly. Do not modify manually — see `birthright-entitlement-matrix.md`. |
+| `entitlements` | array of strings | Manually assigned overrides + block keywords. |
+| `permissions` | array of strings | e.g. `["o-admin"]` for Organization Admin (Identity Dashboard). Manually assigned. |
+| `send_id` / `sendId` | boolean | Controls whether the user's Auth0 `user_id` gets pushed to IMPartner on Partner Portal login (new/old schema names for the same flag). |
+| `last_sync` | epoch timestamp | Last NetskopeID-Sync run. Clearing to `""` forces a resync on next login. |
+| `last_daily_sync` | epoch timestamp | Last daily sync run. Same clear-to-force-resync behavior. |
+| `pending_community_user` | boolean | `true` blocks Community access even if `Community` keyword is present — see common issue #4 in `ciam-l1-common-issues.md`. |
+| `pending_support_user` | boolean | Analogous flag observed for Support provisioning (seen in real `app_metadata` example; exact gating behavior not yet documented as thoroughly as `pending_community_user`). |
+| `privacy_policy` | boolean | Privacy policy acceptance status. |
+| `nskp-prime` (under `permissions` or similar) | — | Seen in one real example tied to a `federated: true` user — exact semantics not fully confirmed, likely related to Prime tenant assignment. |
 
-## Diagnostic Signals Already Computed by Agent 3
+## Confirmed Real SOPs (Not Hypothetical)
 
-- `sync_stale` (true if `last_sync` > 7 days ago, or never ran) — points
-  at Step 5/6 as the likely broken step.
-- `sync_never_ran` — same, but stronger signal (user's account may be
-  brand new or Sync-1 never fired at all).
-- `failed_logins_last_7_days` + `last_failed_login_reason` — the actual
-  Auth0 log description often names which step failed (e.g. "Access
-  Denied: missing 'Support' in birthright" implicates Step 8, Gatekeeper).
+### Assigning Organization Admin (`o-admin`)
 
-## Open Questions to Resolve With the Real Scripts
+Two distinct paths depending on user type:
 
-1. Is this 9-step order and naming accurate, or does the real Auth0
-   tenant have a different/additional set of Actions?
-2. Are the failure-category mappings (right column) correct, or does a
-   single step actually map to multiple intents depending on context?
-3. What does the real `pending_community_user` flag actually gate, and
-   which step sets/clears it?
+- **Partner users** (connection ≠ `Netskope-Partners`... actually the
+  reverse — see note below): via the **ImPartner Admin Console**
+  (`https://prod.impartner.live/`) → Users → find user → Edit →
+  Delegated Administration Privileges → enable **Member
+  Administrator** → Update. Takes effect on the user's next successful
+  login to Partner Portal or the Identity Dashboard.
+- **Non-Partner users**: directly in Auth0 → User Management → Users →
+  find user (must NOT be on the `Netskope-Partners` connection) → edit
+  `app_metadata.permissions` array to include `"o-admin"` → Save.
+
+> Note: step 5 of the real SOP says "make sure the user is not within
+> the Netskope-Partners connection; any other connection is fine" for
+> **both** paths' user-lookup step — the Partner-specific path is
+> selected based on whether the user is found in ImPartner at all, not
+> strictly by Auth0 connection name. Worth clarifying with the CIAM
+> platform team if this seems ambiguous in practice.
+
+### Force Password Reset
+
+Auth0 → User Management → Users → find user (must be on **NetskopeID**
+connection) → `•••` → **Change Password** → set a new password
+(1Password generator recommended) → tell the user to use "Forgot
+Password" on next login to claim it themselves.
+
+### Block & Unblock Users
+
+Auth0 → User Management → Users → find user (must be on **NetskopeID**
+connection) → **Actions** → **Block** or **Unblock**.
+
+> **Blocking affects ALL Auth0-authenticated apps for that user** —
+> Partner Portal, Partner Academy, Netskope Prime Okta Tenant, **and**
+> the partner login path for Netskope Community. This is broader than
+> just one portal — treat as a full-account lockout, not a
+> single-resource block.
+
+### Helping a User That Declined Migration Acknowledgment
+
+If a user accidentally declines the Migration Acknowledgement form,
+they get blocked. Fix: Auth0 → find user (**NetskopeID** connection) →
+Actions → **Unblock**. They'll then see the acknowledgement form again
+on next login attempt.
+
+> **Time-sensitive:** if the user doesn't log in within **90 days**
+> AND still hasn't accepted the migration acknowledgement, their
+> account is **deleted**. Don't let this SOP sit unresolved.
+
+### Force A NetskopeID Sync (Birthright & Community Provisioning Refresh)
+
+Also pulls fresh Salesforce Contact/Account assignment data, not just
+birthright. Auth0 → find user (**NetskopeID** connection) →
+`app_metadata` → clear both `last_sync` and `last_daily_sync` to an
+empty string `""` → Save. **Changes are visible after the user's next
+login** — this doesn't take effect immediately/server-side, the user
+must actually log in again to trigger the refresh.
+
+## Open Questions
+
+1. Real end-to-end login pipeline step names/order (the earlier "9-step
+   flow" draft was never confirmed against a real source — needs an
+   actual Auth0 Action/Rule/Flow script export, or a platform-team
+   walkthrough, not just SOP pages like these).
+2. Exact semantics of `pending_support_user` and the `nskp-prime` value
+   seen under one federated user's `app_metadata` — neither is
+   documented as thoroughly in the source as `pending_community_user`.
+3. Minor date inconsistency in the source itself: the Birthright Guide
+   states C-Academy/P-Academy sunset as `11/17/2025`, while the Assign
+   & Revoke Entitlement page states `09/25` for the same two legacy
+   keywords. Likely the same event described with different precision,
+   but worth a one-line confirmation with whoever owns the doc.
