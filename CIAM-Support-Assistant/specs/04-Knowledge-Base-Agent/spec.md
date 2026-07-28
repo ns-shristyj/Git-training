@@ -7,9 +7,9 @@ reviewers: [Peer]
 approver: Ritwik Mandal
 prd: https://confluence.netskope.example/display/GIS/ciam-knowledge-base-agent-prd  # placeholder — link to docs/confluence/ciam-knowledge-base-agent/prd.md until Phase 0 lands
 jira_epic: GIS-EPIC-CIAM  # placeholder — see docs/jira/ciam-knowledge-base-agent-epic.md until Phase 0 lands
-version: 0.3.0
+version: 0.4.0
 created: 2026-06-23
-last_updated: 2026-07-23
+last_updated: 2026-07-27
 ---
 
 # spec.md — CIAM Knowledge Base Agent (Agent 4)
@@ -172,7 +172,7 @@ function source):**
 | `Customer` | any | `Customer` | `["Support", "Community", "Academy", "Notification", "Dashboard"]` |
 | `Prospect - Net New` | `>= 1` | `Prospect with Tenant` | `["Support", "Community", "Academy", "Notification", "Dashboard"]` |
 | `Prospect - Net New` | `0` | `Prospect without Tenant` | `["Community", "Academy", "Dashboard"]` |
-| `Partner` | any | `Partner` | `["Community", "Academy", "Dashboard"]` |
+| `Partner` | any | `Partner` | `["Partner", "Community", "Academy", "Dashboard"]` |
 | `Former Customer` | any | `Former Customer` | `["Community", "Academy", "Dashboard"]` |
 | any other / `null` | any | `UNKNOWN` | `[]` (cannot determine; escalate) |
 
@@ -184,6 +184,16 @@ function source):**
 > has not been independently verified against the real Salesforce picklist
 > or the actual Birthright & Entitlements Guide, and should not be assumed
 > correct merely because this one error was caught. See OQ-6.
+
+> **Correction.** The `Partner` persona's expected birthright previously
+> omitted the `Partner` keyword itself — an inconsistency with Agent 1
+> (SPEC-CIAM-0001), which recognizes `Partner` as one of its 7 valid
+> extracted portals (`Support`, `Community`, `Academy`, `Partner`,
+> `Notification`, `Dashboard`, `Prime`). Fixed here; the underlying
+> `KNOWN_PORTAL_KEYWORDS` vocabulary (§4.1 block-keyword detection, §9 AC
+> criteria) is updated to match. Note that Agent 1's 7th portal, `Prime`,
+> is **not yet** reflected anywhere in this table or vocabulary — tracked
+> separately, not fixed in this pass (see OQ-9).
 
 **Comparison logic:**
 
@@ -205,8 +215,8 @@ function source):**
 
 Before the comparison in steps 1–5, scan `entitlements` for any string matching
 the pattern `"block_<Keyword>"` where `<Keyword>` is a known portal keyword
-(`Support`, `Community`, `Academy`, `Notification`, `Dashboard`). If any block
-keyword is found, set `explicit_block_detected: true` and treat the blocked
+(`Support`, `Community`, `Academy`, `Notification`, `Dashboard`, `Partner`). If
+any block keyword is found, set `explicit_block_detected: true` and treat the blocked
 portal as inaccessible regardless of birthright (block keywords override grants
 per Gatekeeper logic). This condition always sets `complexity: "ESCALATE_TO_L2"`
 in Tool 3 (see §4.1 Tool 3).
@@ -284,7 +294,7 @@ Applies a deterministic decision tree to classify the identified issue as
 | `missing_keywords` | Non-empty (there is something to add) |
 | `extra_keywords` | Empty (no over-provisioning) |
 | `explicit_block_detected` | `false` |
-| `missing_keywords` values | All within `["Support", "Community", "Academy", "Notification", "Dashboard"]` |
+| `missing_keywords` values | All within `["Support", "Community", "Academy", "Notification", "Dashboard", "Partner"]` |
 | `account_status` | `"Customer"` or `"Prospect - Net New"` with `active_tenant_count >= 1` |
 | `user_found_in_auth0` | `true` |
 | Fix action | Add keywords to `entitlements` array only (reversible) |
@@ -825,3 +835,14 @@ the PR in CI if they regress.
   before it can do real workflow-to-script mapping. Until then it always
   returns `workflow_identified: false`. Track here so this isn't forgotten
   once those scripts become available.
+- **OQ-9.** `Prime` portal: Agent 1 (SPEC-CIAM-0001) recognizes `Prime`
+  (Prime Okta Tenant / Prime Partner Okta) as a 7th valid extracted
+  portal, distinct from `Partner`. Neither the persona/expected-birthright
+  table in §4.1 Tool 1 nor `KNOWN_PORTAL_KEYWORDS` currently account for
+  it — a ticket whose gap involves the `Prime` portal would currently be
+  treated as an "unrecognized keyword" and forced to `ESCALATE_TO_L2`
+  rather than potentially being a `SIMPLE_FIX`. Needs the real Birthright
+  & Entitlements Guide (OQ-6) to confirm which persona(s), if any, should
+  expect `Prime` in their birthright array before this can be added
+  correctly — flagged here so it isn't missed alongside the `Partner` fix
+  in this revision.

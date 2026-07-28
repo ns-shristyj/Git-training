@@ -261,6 +261,43 @@ def test_ac13_no_access_configured():
     assert fc["complexity"] == "SIMPLE_FIX"
 
 
+# Regression test: "Partner" persona's expected_birthright previously omitted
+# the "Partner" keyword itself, and KNOWN_PORTAL_KEYWORDS didn't recognize it
+# -- an inconsistency with Agent 1, which treats "Partner" as a valid portal.
+def test_partner_persona_includes_partner_keyword():
+    persona, expected = derive_persona("Partner", 0)
+    assert persona == "Partner"
+    assert "Partner" in expected
+    assert set(expected) == {"Partner", "Community", "Academy", "Dashboard"}
+
+
+def test_partner_is_a_known_portal_keyword():
+    from agent import KNOWN_PORTAL_KEYWORDS
+    assert "Partner" in KNOWN_PORTAL_KEYWORDS
+
+
+def test_partner_missing_keyword_does_not_trigger_unrecognized_escalation():
+    with patch("agent.requests.post") as mock_post:
+        mock_post.return_value = mock_response(mock_empty_kb_response())
+        result = evaluate_ciam_case({
+            "account_status": "Partner",
+            "active_tenant_count": 0,
+            "actual_birthright": ["Community", "Academy", "Dashboard"],
+            "entitlements": [],
+            "user_found_in_auth0": True,
+            "intent": "ACCESS_DENIED",
+        })
+
+    be = result["birthright_evaluation"]
+    fc = result["fix_classification"]
+    assert be["missing_keywords"] == ["Partner"]
+    # Partner accounts still escalate per spec's SIMPLE_FIX criteria (only
+    # Customer / Prospect-with-tenant qualify) -- but the reason should NOT
+    # be "unrecognized keyword", since Partner is now a known keyword.
+    assert fc["complexity"] == "ESCALATE_TO_L2"
+    assert "unrecognized" not in fc["reason"].lower()
+
+
 # AC-14: Bedrock Knowledge Base returns relevant docs and past tickets
 def test_ac14_kb_returns_docs_and_tickets():
     fake_response = {

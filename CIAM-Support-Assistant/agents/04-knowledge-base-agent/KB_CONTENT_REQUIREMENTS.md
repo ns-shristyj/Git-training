@@ -129,10 +129,11 @@ this persona have," this answers "what does this specific portal
 actually check for." The two should agree, and any mismatch between
 them is itself a finding worth surfacing. It also directly validates the
 `KNOWN_PORTAL_KEYWORDS` frozenset hardcoded in `agent.py` (currently:
-`Support, Community, Academy, Notification, Dashboard` — confirm this is
-the complete and correct list; `Partner` is notably referenced elsewhere
-in this project's specs but is **not** currently in that frozenset,
-which may itself be a bug worth checking once this doc exists).
+`Support, Community, Academy, Notification, Dashboard, Partner` — **fixed
+2026-07-27**: `Partner` was previously missing despite being a valid
+Agent 1 portal, now added; confirm this 6-item list is complete once this
+doc exists — Agent 1 also recognizes a 7th portal, `Prime`, which is
+**still not** reflected here, tracked as spec OQ-9).
 
 ### How Agent 4 uses it
 

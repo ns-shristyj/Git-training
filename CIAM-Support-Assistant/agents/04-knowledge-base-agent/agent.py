@@ -50,7 +50,7 @@ MAX_TOP_K = 10
 BEDROCK_TIMEOUT_SECONDS = 10
 MAX_RETRIES = 3
 
-KNOWN_PORTAL_KEYWORDS = frozenset({"Support", "Community", "Academy", "Notification", "Dashboard"})
+KNOWN_PORTAL_KEYWORDS = frozenset({"Support", "Community", "Academy", "Notification", "Dashboard", "Partner"})
 
 # Logging
 logging.basicConfig(
@@ -166,7 +166,7 @@ def derive_persona(account_status: Optional[str], active_tenant_count: Optional[
             return "Prospect with Tenant", ["Support", "Community", "Academy", "Notification", "Dashboard"]
         return "Prospect without Tenant", ["Community", "Academy", "Dashboard"]
     if account_status == "Partner":
-        return "Partner", ["Community", "Academy", "Dashboard"]
+        return "Partner", ["Partner", "Community", "Academy", "Dashboard"]
     if account_status == "Former Customer":
         return "Former Customer", ["Community", "Academy", "Dashboard"]
     return "UNKNOWN", []
