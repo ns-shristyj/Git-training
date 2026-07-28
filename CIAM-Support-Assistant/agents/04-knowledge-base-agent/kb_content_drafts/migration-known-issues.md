@@ -75,16 +75,22 @@ describes a symptom that matches:
   this kind of feature can slip a release or two — worth checking the
   *latest* release notes rather than assuming the first-announced
   version if a ticket references this specific behavior.
-- **Identity Dashboard self-service federation configuration** — as of
-  v2.6.0, explicitly **disabled due to a discovered issue**; team was
-  "working diligently" to re-enable in a later release. Not confirmed
-  re-enabled as of v2.8.1 (the latest release note in this export,
-  which only covers a Beta-tag removal with no functional changes).
+- **Identity Dashboard self-service federation configuration
+  (GIS-3789) — genuinely unstable, not just "pending."** This feature
+  has cycled through **added → reverted → reapplied → reverted again**
+  across four consecutive releases: added in v2.8.0, reverted in
+  v2.8.1, reapplied in v2.9.0, reverted *again* in v2.9.1 (the latest
+  release in this export). If a ticket references self-service
+  federation setup, **check the org's exact platform version before
+  assuming the feature is even present** — its availability has
+  flip-flopped repeatedly and the team's own FAQ describes it as
+  something they'll "reintroduce once outstanding items are resolved,"
+  with no committed date.
 
 ## Open Questions
 
 1. Confirm whether any of the "currently open" issues above have since
-   been fixed in a release newer than v2.8.1 (this export's latest).
+   been fixed in a release newer than v2.9.1 (this export's latest).
 2. Is there a dedicated migration retro/postmortem document separate
    from these release notes, with more specifically Nov-1-migration-era
    content (as opposed to the ongoing platform release history covered
