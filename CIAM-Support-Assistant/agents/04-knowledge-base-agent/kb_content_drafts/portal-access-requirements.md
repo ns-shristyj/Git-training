@@ -1,54 +1,65 @@
 # Portal Access Requirements
 
-> **DRAFT — needs verification against the real Gatekeeper Action logic
-> (spec §4.1 Tool 1, OQ-9).** This draft is the inverse view of
-> `birthright-entitlement-matrix.md` — that doc answers "what should
-> this persona have," this answers "what does this specific portal
-> actually check for." The two should agree; any mismatch found during
-> review is itself a finding worth raising.
+> **Sourced from the real Birthright & Entitlements Guide** (Netskope
+> Confluence, ISI space, exported 2026-07-28). This is the **inverse
+> view** of `birthright-entitlement-matrix.md` — that doc answers "what
+> should this persona have?", this answers "what does each portal
+> actually check for?" and "which personas should see each portal in
+> their nav bar?"
 
 ## Purpose
 
-Documents, per portal, the exact keyword(s) — and any additional RBAC
-role — required for access. Directly validates the
-`KNOWN_PORTAL_KEYWORDS` constant hardcoded in `agent.py`.
+Documents, per portal, the access requirement — which keyword(s) in the
+`birthright` or `entitlements` array grant access. Validates the
+`KNOWN_PORTAL_KEYWORDS` constant in `agent.py` and supports Agent 4's
+Tool 1 (`evaluate_birthright`) comparisons.
 
-## Portal → Required Access Table
+## Portal → Access Persona Matrix
 
-| Portal | Required `birthright`/`entitlements` keyword | Additional RBAC role required? | Notes |
-| :--- | :--- | :--- | :--- |
-| Support | `Support` | Unconfirmed | Netskope Support Portal |
-| Community | `Community` | Unconfirmed | Cloud Security & Cybersecurity Forum |
-| Academy | `Academy` | Unconfirmed | Training/learning portal |
-| Partner | `Partner` | Unconfirmed | Partner-facing portal — distinct from the `Netskope-Partners` Auth0 *connection* (Agent 3), which is a legacy identity source, not a portal permission |
-| Notification | `Notification` | Unconfirmed | Notification Center |
-| Dashboard | `Dashboard` | Unconfirmed | — |
-| Prime | Unconfirmed — not in Agent 4's current `KNOWN_PORTAL_KEYWORDS` (spec OQ-9) | Unconfirmed | Prime Okta Tenant / Prime Partner Okta context — distinct from the generic `Partner` portal per Agent 1's spec explicit note (§6.2) |
+**The inverse of the birthright table:** shows, for each portal, which
+personas have it in their expected keyword set.
 
-## Gatekeeper Union Logic (Confirmed From Code)
+| Portal | Access Granted To Personas | Required Keyword |
+| :--- | :--- | :--- |
+| **Support** | Prospect (w/ Tenant), Customer, Pending Partner (w/ Tenant), Partner (all types), Churn (w/ Tenant) | `Support` |
+| **Community** | All personas except Churn (without Tenant) and QOB; explicitly includes: Individual, Prospect, Prospect (w/ Tenant), Customer, Pending Partner, Pending Partner (w/ Tenant), Partner (all), Churn (w/ Tenant) | `Community` |
+| **Academy** | Prospect, Prospect (w/ Tenant), Customer, Pending Partner, Pending Partner (w/ Tenant), Partner (all), Churn (w/ Tenant) — excludes Individual and QOB | `Academy` |
+| **Notification** | Prospect (w/ Tenant), Customer, Pending Partner (w/ Tenant), Partner (all types), Churn (w/ Tenant) — same set as Support | `Notification` |
+| **Partner** | Partner (all types only) — Customers, Prospects, and Pending Partners do **not** receive this keyword even with tenants | `Partner` |
+| **Dashboard** | All personas except none — Dashboard access is **universal**: Individual, Prospect, QOB, Customer, Pending Partner, Partner (all), Churn (all). | `Dashboard` |
+| **Prime** | Partner (types only) — specifically, only the subset of Partners marked as "Prime partners" (detection method not yet confirmed) | `Prime` |
+| **C-Academy** | Same set as Academy, but sunset 2025-11-17 — Legacy keyword, still assignable but being phased out. | `C-Academy` |
+| **P-Academy** | Same set as Academy, but sunset 2025-11-17 — Legacy keyword, still assignable but being phased out. | `P-Academy` |
 
-The Gatekeeper Action grants access if the required keyword is present
-in **either** the `birthright` array or the `entitlements` array (OR
-logic, not AND) — Agent 4's Tool 1 mirrors this with
-`effective_access = birthright ∪ entitlements`.
+## Access Control Logic (From Gatekeeper & Agent 4)
 
-## Block Keyword Override (Confirmed From Code)
+1. **Union grant:** Gatekeeper checks `(birthright ∪ entitlements)` — a
+   keyword in **either** array grants access (OR logic).
+2. **Block override:** A block keyword (e.g., `Block-Supp`) in
+   `entitlements` **overrides any grant** from `birthright` — this is
+   the security-sensitive manual override path.
+3. **Birthright only:** Most access is via birthright (auto-set by
+   NetskopeID-Sync hourly, derived from Salesforce Account_Status__c).
+4. **Entitlements override/extend:** Manually assigned by Auth0 admins;
+   used for ad-hoc access grants, block keywords, or corrections when
+   birthright sync is stale.
 
-A keyword like `block_Support` in `entitlements` overrides any grant
-from `birthright`, even if `Support` is present there — the user is
-treated as blocked from that portal. This is a manual, security-
-sensitive override; Agent 4 always escalates when detected rather than
-attempting auto-remediation.
+## Known Gaps
 
-## Open Questions to Resolve
+1. **Prime partner detection:** The source table flags that Partners
+   additionally get `Prime`, but the exact field used to identify a
+   "Prime partner" is not yet confirmed (noted as OQ-11 in spec).
+2. **Dashboard universality:** Dashboard appears to grant to all personas
+   in the real table — this is broader than typical portal access (no
+   restrictions), worth confirming is intentional and not a doc error.
+3. **Legacy academy keywords:** C-Academy and P-Academy are being sunset
+   2025-11-17; users assigned these keywords after that date will lose
+   access. Confirm rundown plan.
 
-1. Does any portal require **more than one** keyword (AND logic), or a
-   specific RBAC role in addition to the birthright/entitlements
-   keyword? (All "Additional RBAC role required?" cells above are
-   currently unconfirmed guesses.)
-2. Is the 6-portal + Prime list (7 total) exhaustive, or are there
-   other portals not yet surfaced anywhere in this project's specs?
-3. Confirm the exact distinction between `Partner` (portal keyword) and
-   `Netskope-Partners` (Auth0 connection name) doesn't confuse anyone
-   reading tickets — these are unrelated concepts that happen to share
-   a word.
+## Open Questions
+
+1. Is Dashboard access truly universal (all personas including Individual
+   and QOB), or is the source table incomplete?
+2. What is the exact field/logic for detecting "Prime partners" to assign
+   the `Prime` keyword?
+3. Are there any other portals not listed here (beyond the 9 documented)?
