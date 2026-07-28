@@ -122,9 +122,19 @@ credentials.
    apps (e.g. SkillJar) so display name/profile details actually
    update.
 
-A documented edge-case workaround exists for Support users with a
-username mismatch specifically ("Project Starling: Phase 2") — check
-that first if this is a Support-specific case.
+**Edge Case — Support users with Username mismatch (Project Starling: Phase 2):**
+For approximately **178 Support users** with mismatched Username/Email in
+Salesforce, a custom workaround has been implemented:
+- The NetskopeID Login script's Salesforce SOAP API call now accepts
+  **username as an alternative login identifier** (not just email).
+- The second API call (User object query) now queries by Username value,
+  instead of Email value.
+- During post-login automation (RBAC - Consolidated action), the retrieved
+  Username is sent to Salesforce as the `nameidentifier` SAML attribute so
+  Salesforce receives the expected Username value for the user.
+This allows users whose Salesforce Username differs from their Email to
+migrate and log in successfully without a password reset. **Check this
+workaround first if a Support-specific Username mismatch case is reported.**
 
 ---
 
