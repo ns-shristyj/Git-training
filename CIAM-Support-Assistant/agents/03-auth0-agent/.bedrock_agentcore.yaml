@@ -16,4 +16,4 @@ bedrock_agentcore:
   # ciam-agent/auth0 -- real invocations will return
   # error: "auth0_token_acquisition_failed" until real credentials are set.
   # See README.md for exact setup steps needed.
-  auth0_credentials_status: PLACEHOLDER_NEEDS_REAL_VALUES
+  auth0_credentials_status: CONFIGURED
