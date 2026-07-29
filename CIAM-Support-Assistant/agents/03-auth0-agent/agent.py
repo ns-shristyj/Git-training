@@ -42,7 +42,7 @@ from pydantic import BaseModel
 
 # Configuration
 AWS_REGION = "us-east-1"
-AUTH0_DOMAIN = "netskope-dev.auth0.com"
+AUTH0_DOMAIN = "netskope-dev.us.auth0.com"
 AUTH0_SECRET_PATH = "ciam-agent/auth0"
 SYNC_STALE_DAYS = 7
 DEFAULT_LOGIN_HISTORY_DAYS = 30
