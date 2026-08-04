@@ -390,6 +390,45 @@ def test_ac14_kb_returns_docs_and_tickets():
     assert result["knowledge_base_error"] is None
 
 
+def test_kb_excerpt_never_leaks_source_code():
+    """The KB now indexes raw Auth0 Action scripts (auth0-action-*.md) --
+    a retrieved chunk can land mid-function with no surrounding markdown
+    fence. Any excerpt that looks like code must be replaced with a safe
+    placeholder before it can reach a user-facing (e.g. Jira) response."""
+    code_chunk = (
+        "const UPDATED = await update_netskopeid_user(dbKey, build_hourly_updates(roles, birthright));\n"
+        "            if (UPDATED !== true) {\n"
+        "                const errorCode = await error_code_generator(new Error(), \"1061\");\n"
+        "            }\n"
+        "            api.user.setAppMetadata('birthright', birthright);\n"
+    )
+    fake_response = {
+        "retrievalResults": [
+            {
+                "content": {"text": code_chunk},
+                "metadata": {"_document_title": "auth0-action-netskopeid-sync-2.md"},
+                "location": {"s3Location": {"uri": "s3://kb/auth0-action-netskopeid-sync-2.md"}},
+                "score": 0.44,
+            },
+        ]
+    }
+    with patch("agent.requests.post") as mock_post:
+        mock_post.return_value = mock_response(fake_response)
+        result = evaluate_ciam_case({
+            "account_status": "Customer",
+            "active_tenant_count": 1,
+            "actual_birthright": ["Community"],
+            "entitlements": [],
+            "user_found_in_auth0": True,
+            "intent": "ACCESS_DENIED",
+        })
+
+    excerpt = result["knowledge_base_results"]["relevant_docs"][0]["excerpt"]
+    assert "const " not in excerpt
+    assert "setAppMetadata" not in excerpt
+    assert "omitted" in excerpt.lower()
+
+
 # AC-15: Workflow identification always returns the placeholder stub
 def test_ac15_workflow_identification_resolved():
     """Tool 4 now maps failures to real Auth0 Actions fetched from the nskp

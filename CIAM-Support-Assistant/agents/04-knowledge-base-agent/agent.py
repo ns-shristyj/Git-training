@@ -500,6 +500,28 @@ def identify_failing_workflow(failed_step: Optional[str]) -> WorkflowIdentificat
 # botocore adds managedSearchConfiguration support.
 BEDROCK_AGENT_RUNTIME_HOST = f"bedrock-agent-runtime.{AWS_REGION}.amazonaws.com"
 
+# KB now indexes raw Auth0 Action source (auth0-action-*.md, see
+# auth0_workflow_scripts/) alongside prose docs. A retrieved chunk can land
+# mid-function with no surrounding markdown fence to strip, so fence-based
+# stripping isn't enough -- this must never surface literal script code in
+# a response an L1 agent or Jira ticket ultimately sees.
+_CODE_TOKEN_PATTERN = re.compile(
+    r'(=>|\bconst\s+\w+\s*=|\blet\s+\w+\s*=|\bfunction\s*\(|\bawait\s+\w+\(|'
+    r'\brequire\(|\bexports\.\w+|\bapi\.\w+\(|\.setAppMetadata\(|;\s*$|^\s*}\s*$)',
+    re.MULTILINE,
+)
+_CODE_TOKEN_MIN_HITS = 3  # a few isolated hits can occur in prose examples; require several
+
+
+def _sanitize_kb_excerpt(text: str) -> str:
+    """Replace an excerpt with a safe placeholder if it looks like source
+    code rather than prose -- code must never reach a user-facing response."""
+    if not text:
+        return text
+    if len(_CODE_TOKEN_PATTERN.findall(text)) >= _CODE_TOKEN_MIN_HITS:
+        return "[Implementation detail omitted from excerpt -- see linked document for the underlying script.]"
+    return text
+
 
 def query_knowledge_base(query: str, top_k: int = DEFAULT_TOP_K) -> tuple:
     """Tool 2 -- calls Bedrock Knowledge Base Retrieve (§4.1).
@@ -550,7 +572,7 @@ def query_knowledge_base(query: str, top_k: int = DEFAULT_TOP_K) -> tuple:
     relevant_docs = []
     similar_past_tickets = []
     for result in response.get("retrievalResults", []):
-        content = result.get("content", {}).get("text", "")[:500]
+        content = _sanitize_kb_excerpt(result.get("content", {}).get("text", "")[:500])
         metadata = result.get("metadata", {})
         location = result.get("location", {})
         score = result.get("score", 0.0)
