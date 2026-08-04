@@ -17,6 +17,8 @@ import os
 import re
 import subprocess
 import tempfile
+import time
+import uuid
 
 AGENT_RUNTIME_ARN = "arn:aws:bedrock-agentcore:us-east-1:786063285476:runtime/ciamKnowledgeBaseAgent-VdVt7x7TZ1"
 REGION = "us-east-1"
@@ -104,7 +106,12 @@ print()
 print("Step 2: Invoking live Agent 4 (AgentCore runtime)")
 print("-" * 80)
 
-result = invoke_live_agent(payload, "test-ciam-4602-partner-portal")
+# A fresh, unique session ID every run -- AgentCore can pin a session ID to a
+# persistent warm container (idle timeout 900s), so reusing the same ID
+# across runs risks silently talking to a container still running the
+# PREVIOUS deployed version instead of whatever's live now.
+session_id = f"test-ciam-4602-{uuid.uuid4().hex}-{int(time.time())}"
+result = invoke_live_agent(payload, session_id)
 
 be = result["birthright_evaluation"]
 fc = result["fix_classification"]

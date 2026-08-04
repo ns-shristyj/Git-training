@@ -25,6 +25,8 @@ import subprocess
 import sys
 import tempfile
 import os
+import time
+import uuid
 
 AGENT_RUNTIME_ARN = "arn:aws:bedrock-agentcore:us-east-1:786063285476:runtime/ciamKnowledgeBaseAgent-VdVt7x7TZ1"
 REGION = "us-east-1"
@@ -35,8 +37,11 @@ def invoke_live_agent(payload: dict, session_id: str) -> dict:
     encoded_payload = base64.b64encode(json.dumps(payload).encode()).decode()
     out_file = os.path.join(tempfile.gettempdir(), "agent4_live_verification_response.json")
 
-    # runtimeSessionId must be >= 33 chars -- pad with zeros
-    padded_session_id = session_id.ljust(33, "0")
+    # AgentCore can pin a session ID to a persistent warm container (idle
+    # timeout 900s) -- always append a fresh unique suffix so re-running
+    # this script never risks silently hitting a container still running a
+    # previously deployed version. Also satisfies the >= 33 char minimum.
+    padded_session_id = f"{session_id}-{uuid.uuid4().hex}-{int(time.time())}"
 
     result = subprocess.run(
         [
