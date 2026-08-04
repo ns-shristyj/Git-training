@@ -11,7 +11,8 @@ bedrock_agentcore:
 
   agent_id: ciamKnowledgeBaseAgent-VdVt7x7TZ1
   agent_arn: arn:aws:bedrock-agentcore:us-east-1:786063285476:runtime/ciamKnowledgeBaseAgent-VdVt7x7TZ1
-  agent_runtime_version: '2'
+  agent_runtime_version: '5'
+  last_deployed: '2026-08-04T11:10:05Z'
   status: READY
 
   knowledge_base:
@@ -20,5 +21,7 @@ bedrock_agentcore:
     type: managed_vector_store
     data_source_s3: s3://ciam-agent4-kb-docs-786063285476-us-east-1/docs/
     note: >-
-      8 placeholder documents only -- real Birthright & Entitlements Guide,
-      SOPs, and resolved TQI ticket content still needed. See README.md.
+      26 real documents synced (8 core CIAM docs + 18 live Auth0 Action
+      scripts fetched via the workflow-reader M2M app). Tool 4
+      (identify_failing_workflow) resolved -- maps failures to
+      NetskopeID-Sync-2 (birthright source) and Gatekeeper (enforcement).
