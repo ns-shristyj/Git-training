@@ -11,12 +11,14 @@ bedrock_agentcore:
 
   agent_id: ciamKnowledgeBaseAgent-VdVt7x7TZ1
   agent_arn: arn:aws:bedrock-agentcore:us-east-1:786063285476:runtime/ciamKnowledgeBaseAgent-VdVt7x7TZ1
-  agent_runtime_version: '6'
-  last_deployed: '2026-08-04T11:51:18Z'
+  agent_runtime_version: '7'
+  last_deployed: '2026-08-04T12:05:29Z'
   status: READY
-  # v6: query_knowledge_base (Tool 2) now sanitizes retrieved excerpts --
-  # code-like chunks (e.g. from auth0-action-*.md) are replaced with a
-  # placeholder before they can reach a user-facing (Jira/L1) response.
+  # v7: query_knowledge_base (Tool 2) replaces code-like excerpts (e.g. from
+  # auth0-action-*.md) with a curated plain-English summary of what that
+  # Action actually does -- informed by the real script, zero literal code
+  # ever reaches a user-facing (Jira/L1) response. Falls back to a generic
+  # (still code-free) note for actions not yet characterized.
 
   knowledge_base:
     id: O4XMWIIEHS

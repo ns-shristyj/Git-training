@@ -393,8 +393,9 @@ def test_ac14_kb_returns_docs_and_tickets():
 def test_kb_excerpt_never_leaks_source_code():
     """The KB now indexes raw Auth0 Action scripts (auth0-action-*.md) --
     a retrieved chunk can land mid-function with no surrounding markdown
-    fence. Any excerpt that looks like code must be replaced with a safe
-    placeholder before it can reach a user-facing (e.g. Jira) response."""
+    fence. A code-like excerpt from a characterized action must be replaced
+    with its curated plain-English summary (informative, but zero literal
+    code) before it can reach a user-facing (e.g. Jira) response."""
     code_chunk = (
         "const UPDATED = await update_netskopeid_user(dbKey, build_hourly_updates(roles, birthright));\n"
         "            if (UPDATED !== true) {\n"
@@ -426,7 +427,39 @@ def test_kb_excerpt_never_leaks_source_code():
     excerpt = result["knowledge_base_results"]["relevant_docs"][0]["excerpt"]
     assert "const " not in excerpt
     assert "setAppMetadata" not in excerpt
+    assert "birthright engine" in excerpt.lower()
+    assert "Salesforce" in excerpt
+
+
+def test_kb_excerpt_falls_back_for_uncharacterized_action():
+    """An action code leak with no curated summary yet still must not print
+    code -- falls back to a generic note that at least names the doc."""
+    code_chunk = "const x = await foo(); let y = 1; api.user.setUserMetadata('z', y); exports.bar = () => {};"
+    fake_response = {
+        "retrievalResults": [
+            {
+                "content": {"text": code_chunk},
+                "metadata": {"_document_title": "auth0-action-some-future-action.md"},
+                "location": {},
+                "score": 0.30,
+            },
+        ]
+    }
+    with patch("agent.requests.post") as mock_post:
+        mock_post.return_value = mock_response(fake_response)
+        result = evaluate_ciam_case({
+            "account_status": "Customer",
+            "active_tenant_count": 1,
+            "actual_birthright": ["Community"],
+            "entitlements": [],
+            "user_found_in_auth0": True,
+            "intent": "ACCESS_DENIED",
+        })
+
+    excerpt = result["knowledge_base_results"]["relevant_docs"][0]["excerpt"]
+    assert "const " not in excerpt
     assert "omitted" in excerpt.lower()
+    assert "auth0-action-some-future-action.md" in excerpt
 
 
 # AC-15: Workflow identification always returns the placeholder stub

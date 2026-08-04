@@ -512,15 +512,116 @@ _CODE_TOKEN_PATTERN = re.compile(
 )
 _CODE_TOKEN_MIN_HITS = 3  # a few isolated hits can occur in prose examples; require several
 
+# Plain-English summaries of each real Auth0 Action, derived by reading the
+# actual fetched script bodies (see auth0_workflow_scripts/*.md) -- used in
+# place of raw code so Tool 2 stays *informed by* the real implementation
+# without ever printing a line of it. Keyed by the KB document title.
+_AUTH0_ACTION_SUMMARIES = {
+    "auth0-action-netskopeid-sync-2.md": (
+        "NetskopeID-Sync-2 (post-login) is the core birthright engine: it computes a "
+        "user's birthright access array from Salesforce Account Status and Tenant "
+        "Requests on every login and writes the result (plus last_sync) back to the "
+        "user's app_metadata."
+    ),
+    "auth0-action-netskopeid-sync-1.md": (
+        "NetskopeID-Sync-1 (post-login) bootstraps a user's app_metadata on first "
+        "login, initializing an empty birthright array if one doesn't exist yet."
+    ),
+    "auth0-action-gatekeeper.md": (
+        "Gatekeeper (post-login) enforces per-portal access at login: it checks "
+        "whether the user's birthright/entitlements include the portal's required "
+        "keyword (and denies access if a Block-<Portal> keyword is present), producing "
+        "the 'insufficient permissions' denial the user sees."
+    ),
+    "auth0-action-rbac-consolidated.md": (
+        "RBAC - Consolidated (post-login) grants portal-specific roles (e.g. Partner "
+        "Portal, Support) at login based on which birthright/entitlement keywords the "
+        "user holds, mapping keyword combinations to the client's role IDs."
+    ),
+    "auth0-action-federated-user-to-netskopeid-sync.md": (
+        "Federated-User-To-NetskopeID-Sync (event-stream) syncs federated (SSO) user "
+        "profile data into the internal NetskopeID database. It explicitly does not "
+        "write birthright/roles back -- those are Salesforce-derived and owned by "
+        "NetskopeID-Sync-2 at login time."
+    ),
+    "auth0-action-federated-user-deletion-sync.md": (
+        "Federated-User-Deletion-Sync (event-stream) reacts to Auth0's user.deleted "
+        "event for federated users and removes the corresponding row from the "
+        "external NetskopeID database, since Auth0 deletions don't cascade to it "
+        "automatically."
+    ),
+    "auth0-action-provisioner.md": (
+        "Provisioner (pre-user-registration) runs before a new user is created via "
+        "self-service sign-up: it validates and sanitizes the submitted email address "
+        "before allowing the sign-up to proceed."
+    ),
+    "auth0-action-impartner-org-admin-sync.md": (
+        "ImPartner-Org-Admin-Sync (event-stream) syncs a user's org-admin permission "
+        "state to Impartner's Administrative_Privileges custom field."
+    ),
+    "auth0-action-mfa-consolidated.md": (
+        "MFA - Consolidated (post-login) enforces or skips multi-factor authentication "
+        "at login (skipped for a specific internal client and for migration-script "
+        "logins), and includes a self-service MFA opt-in flow backed by DynamoDB."
+    ),
+    "auth0-action-registration-forms.md": (
+        "Registration-Forms (post-login) retrieves the user's profile from the "
+        "NetskopeID table and drives Auth0's registration/onboarding forms flow; "
+        "bypasses migration-script-driven logins."
+    ),
+    "auth0-action-account-migration-acknowledgement.md": (
+        "Account Migration Acknowledgement (post-login) records a one-time "
+        "acknowledgement for users migrated from the legacy system before allowing "
+        "login to proceed; bypasses migration-script-driven logins."
+    ),
+    "auth0-action-privacy-policy-acknowledgement.md": (
+        "Privacy Policy Acknowledgement (post-login) requires the user to acknowledge "
+        "the current privacy policy at login before proceeding; bypasses "
+        "migration-script-driven logins."
+    ),
+    "auth0-action-email-verification-v2.md": (
+        "Email Verification v2 (post-login) presents/enforces the email verification "
+        "form at login and triggers Auth0's verification email if the user isn't yet "
+        "verified; bypasses migration-script-driven logins."
+    ),
+    "auth0-action-send-mail.md": (
+        "Send Mail (post-login) checks whether the user's email is verified and, if "
+        "not, triggers Auth0's verification email via the Management API."
+    ),
+    "auth0-action-custom-phone-provider.md": (
+        "Custom Phone Provider (custom-phone-provider) sends OTP codes for MFA/"
+        "verification via AWS End User Messaging Notify, replacing Auth0's built-in "
+        "SMS provider; only handles otp_verify and otp_enroll message types."
+    ),
+    "auth0-action-custom-email-provider.md": (
+        "Custom Email Provider (custom-email-provider) is Auth0's custom SMTP hook -- "
+        "it sends the actual email content for auth-related notifications (verification, "
+        "password reset, etc.) instead of Auth0's default sender."
+    ),
+    "auth0-action-sms-mfa-ack.md": (
+        "SMS-MFA-Ack (post-login) presents an acknowledgement form tied to SMS-based MFA."
+    ),
+    "auth0-action-password-rotation-v1.md": (
+        "Password Rotation v1 (post-login) is registered but has no retrievable script "
+        "body via the Management API -- may be disabled or not yet implemented."
+    ),
+}
 
-def _sanitize_kb_excerpt(text: str) -> str:
-    """Replace an excerpt with a safe placeholder if it looks like source
-    code rather than prose -- code must never reach a user-facing response."""
+
+def _sanitize_kb_excerpt(text: str, title: Optional[str] = None) -> str:
+    """Replace an excerpt with a curated, code-free summary if it looks like
+    source code rather than prose -- literal code must never reach a
+    user-facing response, but the excerpt should stay as informative as
+    possible rather than a dead-end placeholder. Falls back to a generic
+    note (still naming the doc) only for actions not yet characterized."""
     if not text:
         return text
-    if len(_CODE_TOKEN_PATTERN.findall(text)) >= _CODE_TOKEN_MIN_HITS:
-        return "[Implementation detail omitted from excerpt -- see linked document for the underlying script.]"
-    return text
+    if len(_CODE_TOKEN_PATTERN.findall(text)) < _CODE_TOKEN_MIN_HITS:
+        return text
+    if title and title in _AUTH0_ACTION_SUMMARIES:
+        return _AUTH0_ACTION_SUMMARIES[title]
+    doc_ref = f" ({title})" if title else ""
+    return f"[Implementation not yet summarized{doc_ref} -- code omitted from excerpt.]"
 
 
 def query_knowledge_base(query: str, top_k: int = DEFAULT_TOP_K) -> tuple:
@@ -572,12 +673,12 @@ def query_knowledge_base(query: str, top_k: int = DEFAULT_TOP_K) -> tuple:
     relevant_docs = []
     similar_past_tickets = []
     for result in response.get("retrievalResults", []):
-        content = _sanitize_kb_excerpt(result.get("content", {}).get("text", "")[:500])
         metadata = result.get("metadata", {})
         location = result.get("location", {})
         score = result.get("score", 0.0)
         title = metadata.get("_document_title", "Untitled")
         url = metadata.get("_source_uri") or location.get("s3Location", {}).get("uri")
+        content = _sanitize_kb_excerpt(result.get("content", {}).get("text", "")[:500], title)
 
         # Resolved TQI ticket exports are named/prefixed distinctly from SOPs
         # and guides in the KB data source -- see spec OQ-3 for the exact
