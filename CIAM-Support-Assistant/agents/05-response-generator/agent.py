@@ -51,10 +51,12 @@ logging.basicConfig(
 logger = logging.getLogger("ciam-response-generator")
 
 # Initialize Bedrock AgentCore app
-app = BedrockAgentCoreApp(
-    agent_name="ciam-response-generator",
-    agent_version="0.2.0",
-)
+# The real SDK's constructor only accepts debug/lifespan/middleware -- it
+# does not take agent_name/agent_version (that was never a valid kwarg on
+# the actual BedrockAgentCoreApp class, only on the conftest.py test stub
+# that accepted **kwargs and silently ignored them). Calling it with those
+# kwargs against the real SDK raises TypeError before the app can start.
+app = BedrockAgentCoreApp()
 
 # ============================================================================
 # INPUT SCHEMAS (from Agents 2/3/4)
@@ -756,7 +758,7 @@ class ResponseGenerator:
 # BEDROCK AGENTCORE HANDLER
 # ============================================================================
 
-@app.agent_handler
+@app.entrypoint
 def handle_response_generation(
     payload: Dict[str, Any],
 ) -> ResponseGeneratorPayload:

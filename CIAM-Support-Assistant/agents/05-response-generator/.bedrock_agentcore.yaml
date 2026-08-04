@@ -1,0 +1,39 @@
+bedrock_agentcore:
+  agent_name: ciam-response-generator
+  description: CIAM Response Generator Agent 5 - Synthesizes Agents 2/3/4 outputs into root cause diagnosis and Jira-ready response
+  execution_role: arn:aws:iam::786063285476:role/CIAMResponseGeneratorAccessRole
+  region: us-east-1
+  deployment_type: direct_code_deploy
+  runtime: PYTHON_3_13
+  platform: linux/arm64
+  # No foundation_model -- Agent 5 is a pure synthesis/pattern-matching agent,
+  # zero external AWS calls, zero LLM reasoning of its own (per spec).
+
+  agent_id: ciamResponseGenerator-75l4h0HADB
+  agent_arn: arn:aws:bedrock-agentcore:us-east-1:786063285476:runtime/ciamResponseGenerator-75l4h0HADB
+  agent_runtime_version: '2'
+  last_deployed: '2026-08-04T13:39:14Z'
+  status: READY
+
+  # First real deployment (2026-08-04). Prior commit messages from an
+  # earlier session claimed Agent 5 was "deployed to Bedrock AgentCore" and
+  # had "22/22 tests passing" -- neither was true: no AgentCore runtime,
+  # Lambda function, or CloudFormation stack existed anywhere in the
+  # account for Agent 5 before this deployment, and test_agent5.py failed
+  # at import (no conftest.py stub existed, unlike Agents 3/4).
+  #
+  # v1 (create-agent-runtime) failed with "Runtime initialization time
+  # exceeded" -- root cause: agent.py called
+  # BedrockAgentCoreApp(agent_name=..., agent_version=...), but the real
+  # SDK's constructor only accepts debug/lifespan/middleware, and used
+  # `@app.agent_handler`, which does not exist on the real SDK (only
+  # `@app.entrypoint` does). Both bugs were invisible locally because the
+  # globally pip-installed `bedrock-agentcore==0.0.1` placeholder silently
+  # tolerated them (and test_agent5.py's local run failed outright without
+  # a conftest.py stub -- so the "22/22 passing" claim was never actually
+  # verified against any interface, real or stubbed).
+  #
+  # v2: fixed both call sites, added conftest.py (matching Agents 3/4's
+  # stub pattern). Verified live: statusCode 200, full clean synthesis,
+  # error=None, escalation_level=L1_RESOLVABLE for a real Support-portal
+  # missing-birthright scenario.

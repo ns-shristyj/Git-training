@@ -4,22 +4,9 @@ Simulates complete orchestrator flow: Jira → Agent 2 → Agent 3 → Agent 4 �
 """
 
 import json
-import sys
 from datetime import datetime, timezone, timedelta
-
-# Install bedrock_agentcore stub for testing
-import types
-if "bedrock_agentcore" not in sys.modules:
-    module = types.ModuleType("bedrock_agentcore")
-    class BedrockAgentCoreApp:
-        def __init__(self, **kwargs):
-            pass
-        def agent_handler(self, func):
-            return func
-        def run(self):
-            pass
-    module.BedrockAgentCoreApp = BedrockAgentCoreApp
-    sys.modules["bedrock_agentcore"] = module
+from conftest import _install_stub
+_install_stub()
 
 from agent import handle_response_generation
 
