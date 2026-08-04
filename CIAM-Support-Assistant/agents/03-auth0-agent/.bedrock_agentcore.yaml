@@ -9,11 +9,16 @@ bedrock_agentcore:
 
   agent_id: ciamAuth0Agent-lVu70L5GK4
   agent_arn: arn:aws:bedrock-agentcore:us-east-1:786063285476:runtime/ciamAuth0Agent-lVu70L5GK4
-  agent_runtime_version: '2'
+  agent_runtime_version: '3'
+  last_deployed: '2026-08-04T14:06:37Z'
   status: READY
 
-  # Placeholder Auth0 M2M credentials are in Secrets Manager at
-  # ciam-agent/auth0 -- real invocations will return
-  # error: "auth0_token_acquisition_failed" until real credentials are set.
-  # See README.md for exact setup steps needed.
+  # v2 (deployed 2026-07-23) was NEVER updated after the Auth0 domain fix
+  # landed later that week (nskp.auth0.com -> netskope-dev.us.auth0.com,
+  # 2026-07-29) -- confirmed via a full 1-5 agent live chain test on
+  # 2026-08-04 that the deployed runtime still returned
+  # "auth0_token_acquisition_failed" despite local code and local terminal
+  # tests having worked correctly since the fix. Redeployed as v3 with
+  # current code; verified live: user_found=true, correct birthright data
+  # for vshah@netskope.com.
   auth0_credentials_status: CONFIGURED
