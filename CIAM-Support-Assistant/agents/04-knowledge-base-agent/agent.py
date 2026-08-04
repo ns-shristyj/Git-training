@@ -441,10 +441,18 @@ _BIRTHRIGHT_SOURCE_WORKFLOW = ("NetskopeID-Sync-2", "bb237d59-6ef7-420e-881a-345
 _ENFORCEMENT_WORKFLOW = ("Gatekeeper", "35d76097-24c1-4b5b-b3cc-e853e286b7e6")
 
 
-def identify_failing_workflow(failed_step: Optional[str]) -> WorkflowIdentification:
+def identify_failing_workflow(
+    failed_step: Optional[str], all_missing_keywords: Optional[List[str]] = None
+) -> WorkflowIdentification:
     """Tool 4 -- pure local logic, zero external calls at runtime (the Auth0
     Action/Rule data was fetched offline and is hardcoded here + indexed in
-    the KB as auth0-action-*.md for Tool 2 to surface alongside this)."""
+    the KB as auth0-action-*.md for Tool 2 to surface alongside this).
+
+    `failed_step` is the single value used for backward-compat call sites and
+    the "explicit_block_detected" sentinel. When there's more than one
+    missing keyword, `all_missing_keywords` drives the note text so a
+    ticket about e.g. "Partner Portal" doesn't get a note that only
+    mentions the alphabetically-first gap (e.g. "Academy")."""
     assert_tool_posture("identify_failing_workflow")
 
     if not failed_step:
@@ -468,8 +476,13 @@ def identify_failing_workflow(failed_step: Optional[str]) -> WorkflowIdentificat
             ),
         )
 
-    # Any missing birthright keyword (e.g. "Support", "Academy") traces to
-    # the Salesforce-driven birthright calculation, then is enforced by Gatekeeper.
+    keywords = all_missing_keywords or [failed_step]
+    keywords_str = ", ".join(f"'{k}'" for k in keywords)
+    plural = "s" if len(keywords) > 1 else ""
+    was_were = "weren't" if len(keywords) > 1 else "wasn't"
+
+    # Any missing birthright keyword(s) (e.g. "Support", "Partner") trace to
+    # the Salesforce-driven birthright calculation, then are enforced by Gatekeeper.
     return WorkflowIdentification(
         workflow_identified=True,
         workflow_name=source_name,
@@ -478,10 +491,10 @@ def identify_failing_workflow(failed_step: Optional[str]) -> WorkflowIdentificat
         enforcement_workflow_script_ref=enforce_ref,
         note=(
             f"{source_name}'s set_birthright_access() computes birthright from Salesforce "
-            f"Account Status/Tenant Requests -- investigate why '{failed_step}' wasn't granted "
-            f"there. {enforce_name} is what enforces the resulting gap at login (denies the "
-            f"portal because '{failed_step}' is absent from entitlements/birthright). "
-            "See auth0-action-netskopeid-sync-2.md and auth0-action-gatekeeper.md."
+            f"Account Status/Tenant Requests -- investigate why keyword{plural} {keywords_str} "
+            f"{was_were} granted there. {enforce_name} is what enforces the resulting gap at "
+            f"login (denies each portal whose required keyword is absent from entitlements/"
+            f"birthright). See auth0-action-netskopeid-sync-2.md and auth0-action-gatekeeper.md."
         ),
     )
 
@@ -672,6 +685,9 @@ def query_knowledge_base(query: str, top_k: int = DEFAULT_TOP_K) -> tuple:
 
     relevant_docs = []
     similar_past_tickets = []
+    seen_doc_excerpts = set()  # (title, excerpt) -- distinct raw chunks can sanitize to the
+    # same curated summary (e.g. two code chunks from the same Action), which would otherwise
+    # surface as duplicate entries eating into a small top_k
     for result in response.get("retrievalResults", []):
         metadata = result.get("metadata", {})
         location = result.get("location", {})
@@ -679,6 +695,11 @@ def query_knowledge_base(query: str, top_k: int = DEFAULT_TOP_K) -> tuple:
         title = metadata.get("_document_title", "Untitled")
         url = metadata.get("_source_uri") or location.get("s3Location", {}).get("uri")
         content = _sanitize_kb_excerpt(result.get("content", {}).get("text", "")[:500], title)
+
+        dedup_key = (title, content)
+        if dedup_key in seen_doc_excerpts:
+            continue
+        seen_doc_excerpts.add(dedup_key)
 
         # Resolved TQI ticket exports are named/prefixed distinctly from SOPs
         # and guides in the KB data source -- see spec OQ-3 for the exact
@@ -790,7 +811,7 @@ def evaluate_ciam_case(payload: dict) -> dict:
         "explicit_block_detected" if evaluation.explicit_block_detected
         else (evaluation.missing_keywords[0] if evaluation.missing_keywords else None)
     )
-    workflow_id = identify_failing_workflow(failed_step)
+    workflow_id = identify_failing_workflow(failed_step, evaluation.missing_keywords)
 
     logger.info(f"[{run_id}] Done. persona={evaluation.persona} complexity={classification.complexity}")
 

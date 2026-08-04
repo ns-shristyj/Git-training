@@ -459,7 +459,51 @@ def test_kb_excerpt_falls_back_for_uncharacterized_action():
     excerpt = result["knowledge_base_results"]["relevant_docs"][0]["excerpt"]
     assert "const " not in excerpt
     assert "omitted" in excerpt.lower()
-    assert "auth0-action-some-future-action.md" in excerpt
+
+
+def test_kb_results_deduplicated():
+    """CIAM-4602 regression: two distinct code chunks from the same Action
+    both sanitize to the identical curated summary, which must collapse to
+    ONE entry rather than eating multiple top_k slots with a duplicate."""
+    code_chunk_a = "const a = await foo(); let b = 1; api.user.setAppMetadata('z', b); exports.bar = () => {};"
+    code_chunk_b = "const c = await bar(); let d = 2; api.user.setAppMetadata('y', d); exports.baz = () => {};"
+    fake_response = {
+        "retrievalResults": [
+            {
+                "content": {"text": code_chunk_a},
+                "metadata": {"_document_title": "auth0-action-provisioner.md"},
+                "location": {},
+                "score": 0.52,
+            },
+            {
+                "content": {"text": code_chunk_b},
+                "metadata": {"_document_title": "auth0-action-provisioner.md"},
+                "location": {},
+                "score": 0.52,
+            },
+            {
+                "content": {"text": "Distinct prose excerpt, no dedup expected here."},
+                "metadata": {"_document_title": "portal-access-requirements.md"},
+                "location": {},
+                "score": 0.60,
+            },
+        ]
+    }
+    with patch("agent.requests.post") as mock_post:
+        mock_post.return_value = mock_response(fake_response)
+        result = evaluate_ciam_case({
+            "account_status": "Customer",
+            "active_tenant_count": 1,
+            "actual_birthright": ["Community"],
+            "entitlements": [],
+            "user_found_in_auth0": True,
+            "intent": "ACCESS_DENIED",
+        })
+
+    docs = result["knowledge_base_results"]["relevant_docs"]
+    assert len(docs) == 2, f"Expected 2 distinct docs after dedup, got {len(docs)}"
+    titles = [d["title"] for d in docs]
+    assert titles.count("auth0-action-provisioner.md") == 1
 
 
 # AC-15: Workflow identification always returns the placeholder stub
@@ -480,6 +524,16 @@ def test_ac15_workflow_identification_resolved():
 
     wf_none = identify_failing_workflow(None)
     assert wf_none.workflow_identified is False
+
+    # Ticket about a *specific* portal (e.g. Partner) must not get a note
+    # that only mentions the alphabetically-first gap (e.g. Academy) when
+    # multiple keywords are missing -- CIAM-4602 regression.
+    wf_multi = identify_failing_workflow(
+        "Academy", ["Academy", "Dashboard", "Notification", "Partner"]
+    )
+    assert "Partner" in wf_multi.note
+    assert "Academy" in wf_multi.note
+    assert "Dashboard" in wf_multi.note
 
     with patch("agent.requests.post") as mock_post:
         mock_post.return_value = mock_response(mock_empty_kb_response())

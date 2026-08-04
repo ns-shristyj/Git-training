@@ -11,9 +11,15 @@ bedrock_agentcore:
 
   agent_id: ciamKnowledgeBaseAgent-VdVt7x7TZ1
   agent_arn: arn:aws:bedrock-agentcore:us-east-1:786063285476:runtime/ciamKnowledgeBaseAgent-VdVt7x7TZ1
-  agent_runtime_version: '7'
-  last_deployed: '2026-08-04T12:05:29Z'
+  agent_runtime_version: '8'
+  last_deployed: '2026-08-04T12:55:27Z'
   status: READY
+  # v8: fixes 2 CIAM-4602 findings --
+  #   1. Tool 4's note now references ALL missing keywords (e.g. Partner),
+  #      not just the alphabetically-first one (e.g. Academy)
+  #   2. Tool 2 dedupes KB results by (title, sanitized excerpt) so two
+  #      code chunks from the same Action that sanitize to an identical
+  #      curated summary no longer eat multiple top_k slots
   # v7: query_knowledge_base (Tool 2) replaces code-like excerpts (e.g. from
   # auth0-action-*.md) with a curated plain-English summary of what that
   # Action actually does -- informed by the real script, zero literal code
@@ -26,7 +32,8 @@ bedrock_agentcore:
     type: managed_vector_store
     data_source_s3: s3://ciam-agent4-kb-docs-786063285476-us-east-1/docs/
     note: >-
-      26 real documents synced (8 core CIAM docs + 18 live Auth0 Action
-      scripts fetched via the workflow-reader M2M app). Tool 4
-      (identify_failing_workflow) resolved -- maps failures to
-      NetskopeID-Sync-2 (birthright source) and Gatekeeper (enforcement).
+      27 real documents synced (8 core CIAM docs + 18 live Auth0 Action
+      scripts + 1 post-login flow execution order doc, all fetched via the
+      workflow-reader M2M app). Tool 4 (identify_failing_workflow)
+      resolved -- maps failures to NetskopeID-Sync-2 (birthright source)
+      and Gatekeeper (enforcement).
