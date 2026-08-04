@@ -391,12 +391,23 @@ def test_ac14_kb_returns_docs_and_tickets():
 
 
 # AC-15: Workflow identification always returns the placeholder stub
-def test_ac15_workflow_identification_placeholder():
-    wf = identify_failing_workflow("step_6_netskopeid_sync_2")
-    assert wf.workflow_identified is False
-    assert wf.workflow_name is None
-    assert wf.workflow_script_ref is None
-    assert "placeholder" in wf.note.lower()
+def test_ac15_workflow_identification_resolved():
+    """Tool 4 now maps failures to real Auth0 Actions fetched from the nskp
+    tenant (see fetch_auth0_workflow_scripts.py) -- resolves former OQ-8
+    placeholder."""
+    wf = identify_failing_workflow("Support")
+    assert wf.workflow_identified is True
+    assert wf.workflow_name == "NetskopeID-Sync-2"
+    assert wf.workflow_script_ref == "bb237d59-6ef7-420e-881a-345c8d0bc3a2"
+    assert wf.enforcement_workflow_name == "Gatekeeper"
+    assert "Support" in wf.note
+
+    wf_block = identify_failing_workflow("explicit_block_detected")
+    assert wf_block.workflow_identified is True
+    assert wf_block.workflow_name == "Gatekeeper"
+
+    wf_none = identify_failing_workflow(None)
+    assert wf_none.workflow_identified is False
 
     with patch("agent.requests.post") as mock_post:
         mock_post.return_value = mock_response(mock_empty_kb_response())
@@ -410,8 +421,9 @@ def test_ac15_workflow_identification_placeholder():
         })
 
     wi = result["workflow_identification"]
-    assert wi["workflow_identified"] is False
-    # complexity is unaffected by the placeholder
+    assert wi["workflow_identified"] is True
+    assert wi["workflow_name"] == "NetskopeID-Sync-2"
+    # complexity classification is unaffected by workflow identification
     assert result["fix_classification"]["complexity"] == "SIMPLE_FIX"
 
 

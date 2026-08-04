@@ -129,11 +129,14 @@ class FixClassification(BaseModel):
 
 
 class WorkflowIdentification(BaseModel):
-    """PLACEHOLDER schema -- see Tool 4. Always returns stub values until
-    real Auth0 Action/Rule/Flow scripts are supplied (OQ-8)."""
+    """Maps a failure symptom to the real Auth0 Action(s) responsible,
+    fetched live from the nskp tenant's Management API (see
+    fetch_auth0_workflow_scripts.py). Resolved OQ-8."""
     workflow_identified: bool = False
     workflow_name: Optional[str] = None
     workflow_script_ref: Optional[str] = None
+    enforcement_workflow_name: Optional[str] = None
+    enforcement_workflow_script_ref: Optional[str] = None
     note: str = "Auth0 workflow scripts not yet provided -- placeholder only"
 
 
@@ -416,13 +419,71 @@ def classify_fix_complexity(
     )
 
 
-# Tool 4 — identify_failing_workflow (PLACEHOLDER, §4.1 Tool 4, OQ-8)
+# Tool 4 — identify_failing_workflow (§4.1 Tool 4, resolves OQ-8)
+#
+# Real Auth0 Actions fetched live from the nskp tenant (18 actions,
+# see fetch_auth0_workflow_scripts.py, indexed in the KB as
+# auth0-action-*.md). Root cause of a birthright/entitlement gap traces to
+# two distinct Actions:
+#
+#   1. NetskopeID-Sync-2 (`set_birthright_access`, action ID
+#      bb237d59-6ef7-420e-881a-345c8d0bc3a2) computes the user's birthright
+#      array from Salesforce Account Status + Tenant Requests at login.
+#      A missing keyword almost always originates here -- the SF-derived
+#      calculation didn't grant it.
+#   2. Gatekeeper (action ID 35d76097-24c1-4b5b-b3cc-e853e286b7e6) is the
+#      enforcement point: it checks
+#      `entitlements.includes(block) || !(entitlements.includes(x) || birthright.includes(x))`
+#      per portal at login and is what actually produces the "insufficient
+#      permissions" denial the user sees -- including explicit Block-<X>
+#      keyword checks.
+_BIRTHRIGHT_SOURCE_WORKFLOW = ("NetskopeID-Sync-2", "bb237d59-6ef7-420e-881a-345c8d0bc3a2")
+_ENFORCEMENT_WORKFLOW = ("Gatekeeper", "35d76097-24c1-4b5b-b3cc-e853e286b7e6")
+
+
 def identify_failing_workflow(failed_step: Optional[str]) -> WorkflowIdentification:
-    """PLACEHOLDER -- not yet implemented. Always returns the stub result
-    until real Auth0 Action/Rule/Flow scripts for the nskp tenant are
-    supplied (see spec OQ-8). Never blocks or fails."""
+    """Tool 4 -- pure local logic, zero external calls at runtime (the Auth0
+    Action/Rule data was fetched offline and is hardcoded here + indexed in
+    the KB as auth0-action-*.md for Tool 2 to surface alongside this)."""
     assert_tool_posture("identify_failing_workflow")
-    return WorkflowIdentification()
+
+    if not failed_step:
+        return WorkflowIdentification(
+            workflow_identified=False,
+            note="No failing step to map -- birthright matched expected, no workflow implicated.",
+        )
+
+    source_name, source_ref = _BIRTHRIGHT_SOURCE_WORKFLOW
+    enforce_name, enforce_ref = _ENFORCEMENT_WORKFLOW
+
+    if failed_step == "explicit_block_detected":
+        return WorkflowIdentification(
+            workflow_identified=True,
+            workflow_name=enforce_name,
+            workflow_script_ref=enforce_ref,
+            note=(
+                f"{enforce_name} checks entitlements against the client's Block-<Portal> "
+                "metadata at login and denies access when a block keyword is present. "
+                "See auth0-action-gatekeeper.md for the exact check."
+            ),
+        )
+
+    # Any missing birthright keyword (e.g. "Support", "Academy") traces to
+    # the Salesforce-driven birthright calculation, then is enforced by Gatekeeper.
+    return WorkflowIdentification(
+        workflow_identified=True,
+        workflow_name=source_name,
+        workflow_script_ref=source_ref,
+        enforcement_workflow_name=enforce_name,
+        enforcement_workflow_script_ref=enforce_ref,
+        note=(
+            f"{source_name}'s set_birthright_access() computes birthright from Salesforce "
+            f"Account Status/Tenant Requests -- investigate why '{failed_step}' wasn't granted "
+            f"there. {enforce_name} is what enforces the resulting gap at login (denies the "
+            f"portal because '{failed_step}' is absent from entitlements/birthright). "
+            "See auth0-action-netskopeid-sync-2.md and auth0-action-gatekeeper.md."
+        ),
+    )
 
 
 # Tool 2 — query_knowledge_base (§4.1)
