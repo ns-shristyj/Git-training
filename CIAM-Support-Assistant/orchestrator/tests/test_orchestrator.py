@@ -145,3 +145,54 @@ def test_agent2_not_invoked_when_flag_false():
             mock_invoke.assert_not_called()
 
     assert output.account_payload is None
+
+
+def test_agent5_invoked_after_agent4_succeeds():
+    """Agent 5 has no routing_flag (unlike Agents 2/3/4) -- it's a final,
+    unconditional synthesis step gated only on Agent 4 having succeeded."""
+    orchestrator = CIAMOrchestrator()
+
+    def fake_invoke(self, payload):
+        if self.agent_name == "ciam-kb-agent":
+            return AgentInvocationResult(
+                agent_name="ciam-kb-agent", agent_arn="arn:test:agent4",
+                status="success", response_payload={"birthright_evaluation": {"match": False}},
+            )
+        if self.agent_name == "ciam-response-generator":
+            # Assert Agent 5 receives the kb_payload Agent 4 just produced
+            assert payload["kb_payload"] == {"birthright_evaluation": {"match": False}}
+            return AgentInvocationResult(
+                agent_name="ciam-response-generator", agent_arn="arn:test:agent5",
+                status="success", response_payload={"jira_summary": "Missing Support"},
+            )
+        # Agents 2/3 aren't this test's focus -- return a generic success
+        return AgentInvocationResult(
+            agent_name=self.agent_name, agent_arn="arn:test:generic",
+            status="success", response_payload={},
+        )
+
+    with patch.object(orchestrator.invoker_1, "invoke", return_value=make_agent1_result(invoke_agent_4=True)):
+        with patch("ciam_orchestrator.orchestrator.AgentInvoker.invoke", fake_invoke):
+            output = orchestrator.orchestrate(SAMPLE_TICKET)
+
+    assert output.synthesis_payload == {"jira_summary": "Missing Support"}
+    agent_names_invoked = [inv.agent_name for inv in output.agent_invocations]
+    assert "ciam-response-generator" in agent_names_invoked
+
+
+def test_agent5_not_invoked_when_agent4_not_run():
+    """Without a kb_payload (Agent 4 disabled/not routed to), there's nothing
+    for Agent 5 to synthesize -- it must not be invoked."""
+    orchestrator = CIAMOrchestrator()
+
+    with patch.object(
+        orchestrator.invoker_1, "invoke",
+        return_value=make_agent1_result(invoke_agent_2=False, invoke_agent_4=False),
+    ):
+        with patch("ciam_orchestrator.orchestrator.AgentInvoker.invoke") as mock_invoke:
+            output = orchestrator.orchestrate(SAMPLE_TICKET)
+            mock_invoke.assert_not_called()
+
+    assert output.synthesis_payload is None
+    agent_names_invoked = [inv.agent_name for inv in output.agent_invocations]
+    assert "ciam-response-generator" not in agent_names_invoked

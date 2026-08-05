@@ -93,7 +93,13 @@ class Auth0UserRecord(BaseModel):
     user_id: str
     email: str
     connection: str
-    created_at: datetime
+    # Optional, not required: the orchestrator's AgentInvoker strips
+    # datetime(...) values from Agent 3's response to None when parsing its
+    # dict-repr payload (they aren't needed downstream by any consumer of
+    # that parsed dict), and created_at is never used in synthesis logic
+    # below -- only carried through as passthrough metadata. Matches
+    # last_login's existing Optional pattern.
+    created_at: Optional[datetime] = None
     last_login: Optional[datetime] = None
     logins_count: int
     birthright: List[str] = []
@@ -761,7 +767,7 @@ class ResponseGenerator:
 @app.entrypoint
 def handle_response_generation(
     payload: Dict[str, Any],
-) -> ResponseGeneratorPayload:
+) -> dict:
     """
     Bedrock AgentCore handler for Agent 5.
 
@@ -778,7 +784,15 @@ def handle_response_generation(
             - run_id: Optional[str] (from AgentCore header)
 
     Returns:
-        ResponseGeneratorPayload with diagnosis and recommendations
+        ResponseGeneratorPayload.model_dump() -- a plain dict, matching the
+        return convention every other agent uses (Agents 2/3/4 all call
+        .model_dump() too). Returning the raw Pydantic model here previously
+        serialized as its str()/repr() form (`field=val field=val ...`)
+        instead of JSON -- confirmed via a live orchestrator run where
+        synthesis_payload fell back to {"_raw": ...} in AgentInvoker because
+        the response body wasn't valid dict-literal syntax at all (unlike
+        Agents 2/3/4's model_dump() output, which at least parses as a
+        Python dict literal even with embedded datetime(...) calls).
     """
     try:
         # Extract inputs
@@ -799,7 +813,7 @@ def handle_response_generation(
             ticket_intent=ticket_intent,
         )
 
-        return result
+        return result.model_dump()
 
     except Exception as e:
         logger.error(f"Synthesis failed: {e}", exc_info=True)
@@ -836,7 +850,7 @@ def handle_response_generation(
                 reasoning_notes=["Synthesis handler exception"],
             ),
             error=str(e),
-        )
+        ).model_dump()
 
 
 # ============================================================================

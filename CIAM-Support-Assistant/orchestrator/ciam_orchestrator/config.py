@@ -29,7 +29,13 @@ AGENT_4_ARN = os.getenv(
     "arn:aws:bedrock-agentcore:us-east-1:786063285476:runtime/ciamKnowledgeBaseAgent-VdVt7x7TZ1",
 )  # Deployed and tested live. Knowledge Base still holds placeholder docs
 # only -- see agents/04-knowledge-base-agent/README.md.
-AGENT_5_ARN = os.getenv("AGENT_5_ARN")  # Response Synthesizer — not yet deployed
+AGENT_5_ARN = os.getenv(
+    "AGENT_5_ARN",
+    "arn:aws:bedrock-agentcore:us-east-1:786063285476:runtime/ciamResponseGenerator-75l4h0HADB",
+)  # Deployed and verified live 2026-08-04. Unlike Agents 2/3/4, Agent 5 has no
+# routing_flag in Agent 1's envelope -- it's the final synthesis step, run
+# unconditionally after the dispatch loop whenever Agent 4 succeeded (see
+# orchestrator.py's dedicated Agent 5 call after the AGENT_REGISTRY loop).
 
 # Confidence gating (SPEC-CIAM-0001 §6): below this, Agent 1 sets auto_escalate
 # itself, but the orchestrator re-checks independently as defense-in-depth.
@@ -77,6 +83,26 @@ def _agent4_input_builder(envelope: dict, output_fields: dict, ticket) -> dict:
         "last_sync": user.get("last_sync") if user_found else None,
         "intent": envelope.get("intent"),
         "raw_input": raw_input,
+    }
+
+
+def build_agent5_input(envelope: dict, output_fields: dict, ticket) -> dict:
+    """Agent 5 (Response Generator) needs the RAW dicts Agents 2/3/4 already
+    returned (account_payload/auth0_payload/kb_payload), plus the ticket
+    email/intent from Agent 1's envelope -- it does not use output_key
+    dispatch like the AGENT_REGISTRY entries since it has no routing_flag
+    (it's an unconditional final step, not one Agent 1 opts into per-ticket).
+
+    NOTE: orchestrator/agent5_builder.py exists but is unimportable (wrong
+    module paths -- `agents.agent2_database_agent` doesn't exist; real dirs
+    are `agents/02-database-agent` etc., not valid Python package names
+    either way). This function replaces it for actual orchestrator use."""
+    return {
+        "account_payload": output_fields.get("account_payload") or {},
+        "auth0_payload": output_fields.get("auth0_payload") or {},
+        "kb_payload": output_fields.get("kb_payload") or {},
+        "ticket_email": envelope.get("extracted_email"),
+        "ticket_intent": envelope.get("intent"),
     }
 
 

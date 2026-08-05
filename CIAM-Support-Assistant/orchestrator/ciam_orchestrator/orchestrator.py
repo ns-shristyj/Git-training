@@ -12,9 +12,11 @@ import uuid
 from .agent_invoker import AgentInvoker
 from .config import (
     AGENT_1_ARN,
+    AGENT_5_ARN,
     AGENT_REGISTRY,
     CONFIDENCE_THRESHOLD,
     AGENT_TIMEOUT_SECONDS,
+    build_agent5_input,
 )
 from .errors import ValidationError
 from .schemas import JiraTicket, OrchestratorOutput, AgentInvocationResult, now_utc
@@ -110,6 +112,27 @@ class CIAMOrchestrator:
                 output_fields[agent_cfg["output_key"]] = result.response_payload
             else:
                 warnings.append(f"{agent_cfg['name']} {result.status}: {result.error_message}")
+
+        # Step 5: Agent 5 (Response Generator) -- unconditional final synthesis
+        # step, not gated by a routing_flag like Agents 2/3/4 (Agent 1's
+        # envelope has no "invoke_agent_5" concept; synthesis always runs once
+        # the diagnostic agents have). Only run it if Agent 4 actually
+        # succeeded -- without a kb_payload there's no diagnosis to synthesize.
+        if "kb_payload" in output_fields:
+            agent5_invoker = AgentInvoker(
+                AGENT_5_ARN, "ciam-response-generator", timeout_sec=AGENT_TIMEOUT_SECONDS
+            )
+            agent5_payload = build_agent5_input(envelope, output_fields, ticket)
+            logger.info(f"[{run_id}] Invoking ciam-response-generator")
+            agent5_result = agent5_invoker.invoke(agent5_payload)
+            invocations.append(agent5_result)
+
+            if agent5_result.status == "success":
+                output_fields["synthesis_payload"] = agent5_result.response_payload
+            else:
+                warnings.append(
+                    f"ciam-response-generator {agent5_result.status}: {agent5_result.error_message}"
+                )
 
         return OrchestratorOutput(
             run_id=run_id,

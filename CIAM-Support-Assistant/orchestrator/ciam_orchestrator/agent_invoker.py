@@ -6,9 +6,10 @@ call — the same API we've been calling manually via the AWS CLI throughout
 testing, just wrapped for programmatic use inside the orchestrator.
 """
 
-import datetime
+import ast
 import json
 import logging
+import re
 import time
 from typing import Optional
 
@@ -119,9 +120,18 @@ class AgentInvoker:
         the same way) return `AccountPayload.model_dump()`'s dict *repr* — i.e.
         a JSON string whose content is a Python dict literal containing
         `datetime.datetime(...)` constructor calls, which `json.loads` alone
-        can't parse and `ast.literal_eval` rejects (it only handles literals,
-        not calls). We eval it with `datetime` in scope instead, same approach
-        used when parsing these responses manually during CLI testing."""
+        can't parse and plain `ast.literal_eval` rejects (it only handles
+        literals, not calls). Strip the datetime(...) calls out (they're not
+        needed downstream -- every consumer here only reads specific fields,
+        never the timestamp itself) and literal_eval the rest, rather than
+        eval()'ing untrusted-shaped agent output with the interpreter open.
+
+        Timezone-aware datetimes nest a `TzInfo(0)` call INSIDE the
+        datetime.datetime(...) args (e.g. `datetime.datetime(2025, 1, 1,
+        tzinfo=TzInfo(0))`) -- a naive `[^)]*` stops at TzInfo's closing
+        paren, not the outer one, corrupting the string. Strip the inner
+        TzInfo(...) call first so the outer datetime.datetime(...) match
+        has no nested parens left to trip on."""
         try:
             parsed = json.loads(body_raw)
         except json.JSONDecodeError:
@@ -131,8 +141,10 @@ class AgentInvoker:
             return parsed
 
         if isinstance(parsed, str):
+            sanitized = re.sub(r"TzInfo\([^)]*\)", "None", parsed)
+            sanitized = re.sub(r"datetime\.datetime\([^)]*\)", "None", sanitized)
             try:
-                return eval(parsed, {"datetime": datetime})
+                return ast.literal_eval(sanitized)
             except Exception:
                 return {"_raw": parsed}
 
