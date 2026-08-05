@@ -490,8 +490,26 @@ class ResponseGenerator:
         evidence = []
         confidence = "LOW"
 
+        # Pattern 0: Over-provisioned / security escalation from Agent 4 (checked FIRST,
+        # ahead of every other pattern including account-not-found). Agent 4 already
+        # classifies this ESCALATE_TO_L2 with HIGH confidence specifically because it's a
+        # security risk that must not be auto-remediated -- a data-completeness issue like
+        # "no account record" must never silently downgrade that into an L1 sync-refresh
+        # recommendation (confirmed regression: CIAM-5001/CIAM-6010 both had this pattern
+        # and were incorrectly downgraded to L1_RESOLVABLE before this fix).
+        if (
+            kb_facts.get("fix", {}).get("complexity") == "ESCALATE_TO_L2"
+            and kb_facts.get("birthright", {}).get("extra")
+        ):
+            extra = kb_facts["birthright"]["extra"]
+            primary_cause = f"Over-provisioned access: {', '.join(extra)}"
+            evidence.append(f"Extra keywords not expected for persona: {extra}")
+            if kb_facts["fix"].get("reason"):
+                evidence.append(kb_facts["fix"]["reason"])
+            confidence = kb_facts["fix"].get("confidence", "HIGH")
+
         # Pattern 2A: No account found in database (check first)
-        if account_facts.get("error") == "No account found":
+        elif account_facts.get("error") == "No account found":
             primary_cause = "Account not found in Netskope or Salesforce"
             evidence.append("Database lookup returned no account")
             confidence = "HIGH"
@@ -566,8 +584,32 @@ class ResponseGenerator:
         estimated_time = "unknown"
         fallback = None
 
+        # Pattern 0: Over-provisioned / security escalation (matches the new Pattern 0 in
+        # _diagnose_root_cause). Must be checked before any other pattern -- in particular
+        # before the stale-sync elif below, which this used to silently fall through into,
+        # producing a misleading "trigger sync refresh" / L1_RESOLVABLE recommendation for
+        # what Agent 4 explicitly flagged as a security risk requiring L2 review.
+        if "Over-provisioned access" in root_cause.primary_cause:
+            recommended = kb_facts.get("fix", {}).get("recommended_actions") or [
+                "Review over-provisioned keywords",
+                "Do not modify entitlements without L2 approval",
+            ]
+            for action_text in recommended:
+                actions.append(
+                    RecommendedAction(
+                        priority="IMMEDIATE",
+                        action=action_text,
+                        rationale="Security risk -- user has more access than entitled; must not auto-remediate",
+                        complexity="COMPLEX",
+                        estimated_effort="review required",
+                    )
+                )
+            escalation = "ESCALATE_TO_L2"
+            fallback = "CIAM Security / L2 Team"
+            estimated_time = "1-2 hours"
+
         # Pattern 1: Missing birthright keywords (L1 resolvable)
-        if "Missing portal access" in root_cause.primary_cause:
+        elif "Missing portal access" in root_cause.primary_cause:
             missing = kb_facts.get("birthright", {}).get("missing", [])
             for portal in missing:
                 actions.append(

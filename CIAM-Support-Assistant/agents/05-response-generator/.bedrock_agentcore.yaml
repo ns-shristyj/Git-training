@@ -11,8 +11,8 @@ bedrock_agentcore:
 
   agent_id: ciamResponseGenerator-75l4h0HADB
   agent_arn: arn:aws:bedrock-agentcore:us-east-1:786063285476:runtime/ciamResponseGenerator-75l4h0HADB
-  agent_runtime_version: '2'
-  last_deployed: '2026-08-04T13:39:14Z'
+  agent_runtime_version: '5'
+  last_deployed: '2026-08-05T11:20:22Z'
   status: READY
 
   # First real deployment (2026-08-04). Prior commit messages from an
@@ -37,3 +37,27 @@ bedrock_agentcore:
   # stub pattern). Verified live: statusCode 200, full clean synthesis,
   # error=None, escalation_level=L1_RESOLVABLE for a real Support-portal
   # missing-birthright scenario.
+  #
+  # v3: return .model_dump() instead of the raw Pydantic object (found via
+  # a real orchestrator run -- was serializing as str()/repr() instead of
+  # JSON).
+  #
+  # v4: Auth0UserRecord.created_at made Optional (found via the same real
+  # orchestrator run -- required a datetime but the orchestrator's response
+  # parser nulls timestamps it doesn't need downstream).
+  #
+  # v5: fixed a real diagnostic priority bug (CIAM-5001/CIAM-6010): Agent 4's
+  # ESCALATE_TO_L2 classification for over-provisioned/security-risk access
+  # was being silently downgraded to L1_RESOLVABLE whenever Agent 2 also
+  # reported no account found -- _diagnose_root_cause had NO pattern at all
+  # for extra_keywords/over-provisioning, and the "account not found" check
+  # ran first unconditionally, then _recommend_resolution had no case for
+  # "account not found" either and silently fell through into the
+  # stale-sync branch, producing a misleading "trigger sync refresh"
+  # recommendation for what should have been an L2 security escalation.
+  # Added a Pattern 0 in both functions, checked before everything else,
+  # keyed off kb_facts["fix"]["complexity"] == "ESCALATE_TO_L2" +
+  # extra_keywords present. Verified live: CIAM-6010 now correctly
+  # synthesizes "Over-provisioned access: Academy, Notification, Support" /
+  # ESCALATE_TO_L2 / "CIAM Security / L2 Team" instead of "Account not
+  # found" / L1_RESOLVABLE / sync refresh.

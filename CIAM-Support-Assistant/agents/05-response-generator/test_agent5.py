@@ -98,6 +98,7 @@ def make_auth0_payload(
 
 def make_kb_payload(
     birthright_eval: BirthrightEvaluation = None,
+    fix_classification: FixClassification = None,
 ) -> KnowledgeBasePayloadInput:
     """Helper to create KnowledgeBasePayloadInput."""
     if birthright_eval is None:
@@ -117,6 +118,7 @@ def make_kb_payload(
     return KnowledgeBasePayloadInput(
         agent="ciam-knowledge-base-agent",
         birthright_evaluation=birthright_eval,
+        fix_classification=fix_classification,
         knowledge_base_results=KnowledgeBaseResults(),
     )
 
@@ -206,6 +208,48 @@ class TestDiagnosisSynthesis:
 
         assert "not found" in result.root_cause.primary_cause.lower()
         assert result.root_cause.confidence == "HIGH"
+
+    def test_over_provisioned_escalation_not_downgraded_by_missing_account(self, response_generator):
+        """Regression (CIAM-5001 / CIAM-6010): when Agent 2 finds no account AND Agent 4
+        flags over-provisioned access as ESCALATE_TO_L2, Agent 5 must NOT downgrade this to
+        an L1 "account not found" / stale-sync recommendation -- the security concern takes
+        priority over the data-completeness issue."""
+        account = make_account_payload(found=False)
+        auth0 = make_auth0_payload(
+            found=True,
+            birthright=["Support", "Academy", "Notification", "Dashboard"],
+            sync_stale=True,
+        )
+        kb = make_kb_payload(
+            birthright_eval=BirthrightEvaluation(
+                match=False,
+                persona="Individual",
+                expected_birthright=["Community", "Dashboard"],
+                actual_birthright=["Support", "Academy", "Notification", "Dashboard"],
+                entitlements=[],
+                missing_keywords=["Community"],
+                extra_keywords=["Academy", "Notification", "Support"],
+                explicit_block_detected=False,
+                block_keywords_found=[],
+                no_access_configured=False,
+            ),
+            fix_classification=FixClassification(
+                complexity="ESCALATE_TO_L2",
+                reason="User has more access than entitled (over-provisioned) -- security risk, must not auto-remediate.",
+                recommended_actions=[
+                    "Review over-provisioned keywords",
+                    "Do not modify entitlements without L2 approval",
+                ],
+                confidence="HIGH",
+            ),
+        )
+
+        result = response_generator.synthesize(account, auth0, kb, "vshah@netskope.com")
+
+        assert "over-provisioned" in result.root_cause.primary_cause.lower()
+        assert "account not found" not in result.root_cause.primary_cause.lower()
+        assert result.resolution_path.escalation_level == "ESCALATE_TO_L2"
+        assert "sync refresh" not in result.jira_description.lower()
 
     def test_salesforce_user_missing(self, response_generator):
         """Salesforce user object doesn't exist"""
