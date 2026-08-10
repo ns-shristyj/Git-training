@@ -11,9 +11,18 @@ bedrock_agentcore:
 
   agent_id: ciamKnowledgeBaseAgent-VdVt7x7TZ1
   agent_arn: arn:aws:bedrock-agentcore:us-east-1:786063285476:runtime/ciamKnowledgeBaseAgent-VdVt7x7TZ1
-  agent_runtime_version: '8'
-  last_deployed: '2026-08-04T12:55:27Z'
+  agent_runtime_version: '9'
+  last_deployed: '2026-08-10T08:59:44Z'
   status: READY
+  # v9: CIAM ops feedback -- classify_fix_complexity's SIMPLE_FIX reason/
+  # recommended_actions now explicitly state the hard rule that birthright is
+  # Salesforce-computed by NetskopeID-Sync-2 and must NEVER be edited
+  # directly; only entitlements is the manually-editable compensating field.
+  # (Root bug was actually in Agent 5, which re-derived its own conflated
+  # "add to birthright entitlements" wording instead of reusing this
+  # function's recommended_actions -- see Agent 5's v6 changelog. This
+  # change strengthens Agent 4's own text as defense in depth and documents
+  # the rule inline so it can't silently drift again.)
   # v8: fixes 2 CIAM-4602 findings --
   #   1. Tool 4's note now references ALL missing keywords (e.g. Partner),
   #      not just the alphabetically-first one (e.g. Academy)

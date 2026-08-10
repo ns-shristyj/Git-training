@@ -394,6 +394,71 @@ class TestResolutionPaths:
         assert len(result.resolution_path.actions) > 0
         assert any("Support" in str(a.action) for a in result.resolution_path.actions)
 
+    def test_missing_portal_never_recommends_editing_birthright(self, response_generator):
+        """Regression test for a real bug: Pattern 1 used to emit the undefined,
+        conflated phrase "Add 'X' to birthright entitlements" (CIAM ops feedback:
+        birthright is Salesforce-computed/read-only, only entitlements is manually
+        editable). No recommended action may ever say "birthright entitlements" or
+        otherwise imply birthright itself should be edited -- only "entitlements"."""
+        account = make_account_payload()
+        auth0 = make_auth0_payload(birthright=["Community"])
+        kb = make_kb_payload(
+            BirthrightEvaluation(
+                match=False,
+                persona="Customer",
+                expected_birthright=["Community", "Support"],
+                actual_birthright=["Community"],
+                entitlements=[],
+                missing_keywords=["Support"],
+                extra_keywords=[],
+                explicit_block_detected=False,
+                block_keywords_found=[],
+                no_access_configured=False,
+            )
+        )
+
+        result = response_generator.synthesize(account, auth0, kb, "test@example.com")
+
+        action_texts = [str(a.action) for a in result.resolution_path.actions]
+        assert action_texts, "expected at least one recommended action"
+        for text in action_texts:
+            assert "birthright entitlements" not in text.lower()
+        assert any("entitlements" in text.lower() for text in action_texts)
+
+    def test_missing_portal_reuses_agent4_recommended_actions(self, response_generator):
+        """When Agent 4 supplies fix_classification.recommended_actions, Agent 5 must
+        reuse that text verbatim (same approach as the over-provisioned Pattern 0)
+        instead of re-deriving its own wording -- re-deriving is what caused the
+        birthright/entitlements phrasing to drift out of sync with Agent 4 in the
+        first place."""
+        account = make_account_payload()
+        auth0 = make_auth0_payload(birthright=["Community"])
+        kb = make_kb_payload(
+            BirthrightEvaluation(
+                match=False,
+                persona="Customer",
+                expected_birthright=["Community", "Support"],
+                actual_birthright=["Community"],
+                entitlements=[],
+                missing_keywords=["Support"],
+                extra_keywords=[],
+                explicit_block_detected=False,
+                block_keywords_found=[],
+                no_access_configured=False,
+            ),
+            fix_classification=FixClassification(
+                complexity="SIMPLE_FIX",
+                reason="test reason from Agent 4",
+                recommended_actions=["AGENT4-SUPPLIED ACTION TEXT MARKER"],
+                confidence="HIGH",
+            ),
+        )
+
+        result = response_generator.synthesize(account, auth0, kb, "test@example.com")
+
+        action_texts = [str(a.action) for a in result.resolution_path.actions]
+        assert "AGENT4-SUPPLIED ACTION TEXT MARKER" in action_texts
+
     def test_l2_escalation_block_keyword(self, response_generator):
         """Block keyword requires L2 escalation"""
         account = make_account_payload()

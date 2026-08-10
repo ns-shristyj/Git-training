@@ -11,8 +11,23 @@ bedrock_agentcore:
 
   agent_id: ciamResponseGenerator-75l4h0HADB
   agent_arn: arn:aws:bedrock-agentcore:us-east-1:786063285476:runtime/ciamResponseGenerator-75l4h0HADB
-  agent_runtime_version: '5'
-  last_deployed: '2026-08-05T11:20:22Z'
+  agent_runtime_version: '6'
+  last_deployed: '2026-08-10T09:02:43Z'
+  status: READY
+  # v6: fixed a real terminology/logic bug (CIAM ops feedback, found via
+  # CIAM-7501): Pattern 1 in _recommend_resolution (missing portal access)
+  # re-derived its own action text -- "Add '{portal}' to birthright
+  # entitlements" -- a made-up hybrid term that doesn't exist in the actual
+  # data model and implied birthright itself is directly editable. Birthright
+  # is computed by the NetskopeID-Sync-2 Auth0 Action from Salesforce Account
+  # Status/Tenant Requests at every login and is NEVER manually edited; only
+  # entitlements is the manually-editable compensating field. Fix: Pattern 1
+  # now reuses Agent 4's own fix_classification.recommended_actions (same
+  # approach Pattern 0 already used for the over-provisioned case), so the
+  # wording can't drift out of sync with Agent 4's classification again.
+  # Verified live: CIAM-7501 retest now recommends "Add ['Academy',
+  # 'Notification'] to the ENTITLEMENTS array" instead of "birthright
+  # entitlements".
   status: READY
 
   # First real deployment (2026-08-04). Prior commit messages from an

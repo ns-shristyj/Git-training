@@ -288,6 +288,13 @@ def evaluate_birthright(
 
 
 # Tool 3 — classify_fix_complexity (§4.1)
+#
+# HARD RULE (per CIAM ops policy, confirmed against the Birthright & Entitlements Guide):
+# BIRTHRIGHT is computed by the NetskopeID-Sync-2 Auth0 Action from Salesforce Account
+# Status/Tenant Requests at every login -- it is NEVER manually edited, under any
+# circumstance. The only manually-editable field for compensating a birthright gap is
+# ENTITLEMENTS. No recommended_actions text below may ever suggest adding to or
+# modifying "birthright" directly; every SIMPLE_FIX path must say "entitlements".
 def classify_fix_complexity(
     missing_keywords: List[str],
     extra_keywords: List[str],
@@ -398,11 +405,22 @@ def classify_fix_complexity(
     if account_ok:
         return FixClassification(
             complexity="SIMPLE_FIX",
-            reason="Missing entitlements can be safely added; no over-provisioning or provisioning issues detected.",
+            reason=(
+                "Missing keyword(s) can be safely compensated via entitlements; no "
+                "over-provisioning or provisioning issues detected. NOTE: birthright itself is "
+                "computed by NetskopeID-Sync-2 from Salesforce Account Status/Tenant Requests at "
+                "login and must NEVER be edited directly -- any direct edit would be silently "
+                "overwritten on the user's next login regardless."
+            ),
             recommended_actions=[
-                f"Add {missing_keywords} to entitlements array via Auth0 Management API",
-                "Verify access after update",
-                "Monitor next sync to confirm birthright recalculation does not remove entitlement",
+                f"Do NOT modify birthright directly. Add {missing_keywords} to the ENTITLEMENTS "
+                "array via Auth0 Management API instead -- entitlements is the only "
+                "manually-editable field for compensating a birthright gap",
+                "Verify access after the entitlements update",
+                "This is a compensating control, not a root-cause fix: if the same keyword goes "
+                "missing again after a future login/sync, escalate to check the Salesforce "
+                "Account Status/Tenant Requests feeding NetskopeID-Sync-2 instead of re-adding "
+                "the entitlement repeatedly",
             ],
             confidence="HIGH",
         )

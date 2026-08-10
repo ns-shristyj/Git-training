@@ -608,15 +608,29 @@ class ResponseGenerator:
             fallback = "CIAM Security / L2 Team"
             estimated_time = "1-2 hours"
 
-        # Pattern 1: Missing birthright keywords (L1 resolvable)
+        # Pattern 1: Missing portal access -- compensate via ENTITLEMENTS, never birthright.
+        # Birthright is Salesforce-computed (by NetskopeID-Sync-2) and is recalculated/
+        # overwritten on every login; it is never manually edited (see Agent 4's classify_fix_
+        # complexity docstring for the same hard rule). This reuses Agent 4's own
+        # recommended_actions text -- same approach as Pattern 0 above -- instead of re-deriving
+        # separate wording here, which is what previously produced the incorrect and undefined
+        # "Add '{portal}' to birthright entitlements" phrasing (birthright and entitlements are
+        # two distinct fields; that phrase conflated them and implied birthright is editable).
         elif "Missing portal access" in root_cause.primary_cause:
             missing = kb_facts.get("birthright", {}).get("missing", [])
-            for portal in missing:
+            recommended = kb_facts.get("fix", {}).get("recommended_actions") or [
+                f"Add {missing} to the entitlements array via Auth0 Management API "
+                "(entitlements, not birthright -- birthright is Salesforce-computed and read-only)"
+            ]
+            for action_text in recommended:
                 actions.append(
                     RecommendedAction(
                         priority="IMMEDIATE",
-                        action=f"Add '{portal}' to birthright entitlements",
-                        rationale=f"User's account status entitles them to {portal} access",
+                        action=action_text,
+                        rationale=(
+                            f"Missing portal(s) {', '.join(missing)} can be compensated via "
+                            "entitlements; birthright itself is not directly editable"
+                        ),
                         complexity="SIMPLE",
                         estimated_effort="2 minutes",
                     )

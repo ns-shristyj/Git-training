@@ -53,6 +53,31 @@ def test_ac1_customer_missing_support_simple_fix():
     assert any("Support" in a for a in fc["recommended_actions"])
 
 
+# Regression test (CIAM ops feedback): birthright is Salesforce-computed by
+# NetskopeID-Sync-2 and must NEVER be recommended for direct manual edits --
+# only entitlements is the manually-editable compensating field. A prior
+# version of Agent 5 (not this function) derived its own conflated
+# "add to birthright entitlements" wording; this locks down that Agent 4's
+# own SIMPLE_FIX text always says "entitlements" and never implies birthright
+# itself should be modified.
+def test_simple_fix_never_recommends_editing_birthright_directly():
+    fc = classify_fix_complexity(
+        missing_keywords=["Support"],
+        extra_keywords=[],
+        account_status="Customer",
+        active_tenant_count=2,
+        user_found_in_auth0=True,
+        explicit_block_detected=False,
+        intent="ACCESS_DENIED",
+        birthright_correct_but_access_denied=False,
+    )
+    assert fc.complexity == "SIMPLE_FIX"
+    combined_text = " ".join(fc.recommended_actions).lower() + " " + fc.reason.lower()
+    assert "birthright entitlements" not in combined_text
+    assert "to birthright" not in combined_text
+    assert "entitlements" in combined_text
+
+
 # AC-2: Entitlements compensate for missing birthright keyword -> NO_GAP
 def test_ac2_entitlements_compensate_no_gap():
     with patch("agent.requests.post") as mock_post:
