@@ -11,9 +11,34 @@ bedrock_agentcore:
 
   agent_id: ciamKnowledgeBaseAgent-VdVt7x7TZ1
   agent_arn: arn:aws:bedrock-agentcore:us-east-1:786063285476:runtime/ciamKnowledgeBaseAgent-VdVt7x7TZ1
-  agent_runtime_version: '11'
-  last_deployed: '2026-08-10T10:32:11Z'
+  agent_runtime_version: '12'
+  last_deployed: '2026-08-10T12:11:24Z'
   status: READY
+  # v12: CIAM ops feedback, fix 3 of 3 -- a birthright gap looked identical
+  # whether it was (a) a real gap, (b) a pending sync (user hasn't logged in
+  # since the Salesforce-side change, and birthright only recalculates at
+  # login), or (c) accounts[0]/users[0] being the wrong record entirely
+  # because multiple accounts/Auth0 users exist for this email. Added two
+  # new helpers: derive_pending_login_refresh() compares Agent 2's
+  # recent_changes timestamps against Agent 3's last_login; derive_multi_
+  # account_ambiguity() checks Agent 2/3's own ambiguity warnings plus raw
+  # account/user counts. Both feed into classify_fix_complexity (new
+  # multi_account_ambiguity/code_drift_detected/pending_login_refresh
+  # params) and a new SyncDiagnostics field on KnowledgeBasePayload.
+  # Priority: multi-account ambiguity checked FIRST (undermines every other
+  # signal), then code drift (Tool 5, wired in from v10 -- previously only
+  # fed Tool 4's note text, now actually escalates the classification
+  # itself), then the existing extra_keywords/block/etc. checks, with
+  # pending_login_refresh changing the SIMPLE_FIX recommended action (try a
+  # fresh login first) rather than the complexity.
+  #
+  # Required a fix to the orchestrator's response parser
+  # (agent_invoker.py): it previously nulled EVERY datetime.datetime(...)
+  # value from every agent's response on the theory that nothing downstream
+  # needed timestamps -- true until this fix needed real last_login/
+  # changed_date values to compare. Now converts them to proper ISO-8601
+  # strings instead of discarding them.
+  #
   # v10/v11: CIAM ops feedback -- Auth0 Actions are edited independently of
   # this agent's deploys, so Tool 4's understanding of NetskopeID-Sync-2/
   # Gatekeeper must be re-verified live, not trusted from the 2026-07-28

@@ -61,7 +61,17 @@ def _agent4_input_builder(envelope: dict, output_fields: dict, ticket) -> dict:
     """Agent 4 (SPEC-CIAM-0004 §3) needs fields from BOTH Agent 2's
     account_payload and Agent 3's auth0_payload, not just Agent 1's
     envelope -- this is why input_builder receives the accumulated
-    output_fields dict, unlike Agents 2/3 which only need the envelope."""
+    output_fields dict, unlike Agents 2/3 which only need the envelope.
+
+    Still only forwards accounts[0]/users[0] as THE account/user for
+    birthright evaluation (unchanged) -- but now also forwards the full
+    counts and both agents' own ambiguity warnings, plus last_login and
+    recent_changes, so Agent 4 can detect when accounts[0]/users[0] might
+    not even be the right record to be evaluating, or when the birthright
+    it's evaluating simply hasn't had a chance to refresh yet (CIAM ops
+    feedback: sync only runs at login, so a Salesforce-side change made
+    after the user's last login won't be reflected regardless of how
+    correct the Auth0 Action's calculation logic is)."""
     account_payload = output_fields.get("account_payload") or {}
     auth0_payload = output_fields.get("auth0_payload") or {}
 
@@ -81,6 +91,12 @@ def _agent4_input_builder(envelope: dict, output_fields: dict, ticket) -> dict:
         "entitlements": user.get("entitlements", []) if user_found else [],
         "user_found_in_auth0": user_found,
         "last_sync": user.get("last_sync") if user_found else None,
+        "last_login": user.get("last_login") if user_found else None,
+        "recent_changes": account_payload.get("recent_changes") or [],
+        "accounts_count": len(accounts),
+        "auth0_users_count": len(users),
+        "account_data_warnings": account_payload.get("data_warnings") or [],
+        "auth0_warnings": auth0_payload.get("auth0_warnings") or [],
         "intent": envelope.get("intent"),
         "raw_input": raw_input,
     }

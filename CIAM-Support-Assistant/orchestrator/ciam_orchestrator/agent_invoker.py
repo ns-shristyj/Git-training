@@ -11,6 +11,7 @@ import json
 import logging
 import re
 import time
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 import boto3
@@ -114,6 +115,47 @@ class AgentInvoker:
                 error_message=f"{type(e).__name__}: {e}",
             )
 
+    # Matches a `datetime.datetime(...)` constructor-call repr in one shot,
+    # including its optional `tzinfo=TzInfo(<offset_seconds>)` kwarg (pydantic
+    # v2's own tzinfo class -- its repr for a UTC-aware datetime looks like
+    # `tzinfo=TzInfo(0)`). Anchoring on the tzinfo= substructure explicitly
+    # avoids the historical bug where a naive `[^)]*` on the datetime.datetime(
+    # call stopped at TzInfo's inner closing paren instead of the outer one.
+    _DATETIME_CALL_PATTERN = re.compile(
+        r"datetime\.datetime\(\s*"
+        r"(?P<args>-?\d+(?:\s*,\s*-?\d+)*)"
+        r"(?:\s*,\s*tzinfo=TzInfo\(\s*(?P<offset>-?\d+)\s*\))?"
+        r"\s*\)"
+    )
+    # Catch-all fallback for any datetime.datetime(...) call the specific
+    # pattern above didn't match (unexpected/non-numeric args, an
+    # unrecognized tzinfo class, etc.) -- handles one level of nested parens
+    # so it can't leave an unbalanced call behind either. Real pydantic
+    # datetime reprs never hit this path; it exists purely so one
+    # unrecognized field degrades to None instead of failing the entire
+    # payload parse (matching the old code's per-field fail-safe contract).
+    _DATETIME_CALL_FALLBACK_PATTERN = re.compile(
+        r"datetime\.datetime\([^()]*(?:\([^()]*\)[^()]*)*\)"
+    )
+
+    @classmethod
+    def _replace_datetime_call(cls, match: "re.Match") -> str:
+        """Converts one matched `datetime.datetime(...)` repr into a quoted
+        ISO-8601 string literal, so it survives `ast.literal_eval` as real
+        data instead of being discarded. Fails safe to the literal `None`
+        (matching the old behavior) if the captured args don't form a valid
+        datetime -- this must never raise and break the whole parse over one
+        malformed timestamp."""
+        try:
+            parts = [int(p.strip()) for p in match.group("args").split(",")]
+            dt = datetime(*parts)
+            offset = match.group("offset")
+            if offset is not None:
+                dt = dt.replace(tzinfo=timezone(timedelta(seconds=int(offset))))
+            return repr(dt.isoformat())
+        except Exception:
+            return "None"
+
     @staticmethod
     def _parse_agent_response(body_raw: bytes) -> dict:
         """Agent 1 returns a plain JSON object. Agent 2 (and future agents built
@@ -121,17 +163,23 @@ class AgentInvoker:
         a JSON string whose content is a Python dict literal containing
         `datetime.datetime(...)` constructor calls, which `json.loads` alone
         can't parse and plain `ast.literal_eval` rejects (it only handles
-        literals, not calls). Strip the datetime(...) calls out (they're not
-        needed downstream -- every consumer here only reads specific fields,
-        never the timestamp itself) and literal_eval the rest, rather than
-        eval()'ing untrusted-shaped agent output with the interpreter open.
+        literals, not calls).
 
-        Timezone-aware datetimes nest a `TzInfo(0)` call INSIDE the
-        datetime.datetime(...) args (e.g. `datetime.datetime(2025, 1, 1,
-        tzinfo=TzInfo(0))`) -- a naive `[^)]*` stops at TzInfo's closing
-        paren, not the outer one, corrupting the string. Strip the inner
-        TzInfo(...) call first so the outer datetime.datetime(...) match
-        has no nested parens left to trip on."""
+        Every `datetime.datetime(...)` call is converted to a quoted
+        ISO-8601 string literal (see _replace_datetime_call) rather than
+        discarded to `None` -- an earlier version of this function nulled
+        every timestamp on the theory that "no consumer here needs the
+        timestamp itself", which held until Agent 4's sync-timing checks
+        (comparing Auth0 last_login against Agent 2's account change
+        history) started needing exactly that. Nulling was also never
+        selective -- it destroyed timestamps for every field, on every
+        agent's response, not just the ones nothing used. Consumers that
+        still don't care about a given timestamp can simply ignore the
+        (now-populated) string field, exactly as easily as they ignored
+        None before.
+
+        Uses regex + a controlled per-field conversion rather than
+        eval()'ing untrusted-shaped agent output with the interpreter open."""
         try:
             parsed = json.loads(body_raw)
         except json.JSONDecodeError:
@@ -141,8 +189,10 @@ class AgentInvoker:
             return parsed
 
         if isinstance(parsed, str):
-            sanitized = re.sub(r"TzInfo\([^)]*\)", "None", parsed)
-            sanitized = re.sub(r"datetime\.datetime\([^)]*\)", "None", sanitized)
+            sanitized = AgentInvoker._DATETIME_CALL_PATTERN.sub(
+                AgentInvoker._replace_datetime_call, parsed
+            )
+            sanitized = AgentInvoker._DATETIME_CALL_FALLBACK_PATTERN.sub("None", sanitized)
             try:
                 return ast.literal_eval(sanitized)
             except Exception:

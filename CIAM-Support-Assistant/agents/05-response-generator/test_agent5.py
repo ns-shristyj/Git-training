@@ -16,6 +16,7 @@ from agent import (
     BirthrightEvaluation,
     FixClassification,
     KnowledgeBaseResults,
+    SyncDiagnostics,
 )
 
 
@@ -99,6 +100,7 @@ def make_auth0_payload(
 def make_kb_payload(
     birthright_eval: BirthrightEvaluation = None,
     fix_classification: FixClassification = None,
+    sync_diagnostics: SyncDiagnostics = None,
 ) -> KnowledgeBasePayloadInput:
     """Helper to create KnowledgeBasePayloadInput."""
     if birthright_eval is None:
@@ -119,6 +121,7 @@ def make_kb_payload(
         agent="ciam-knowledge-base-agent",
         birthright_evaluation=birthright_eval,
         fix_classification=fix_classification,
+        sync_diagnostics=sync_diagnostics,
         knowledge_base_results=KnowledgeBaseResults(),
     )
 
@@ -250,6 +253,132 @@ class TestDiagnosisSynthesis:
         assert "account not found" not in result.root_cause.primary_cause.lower()
         assert result.resolution_path.escalation_level == "ESCALATE_TO_L2"
         assert "sync refresh" not in result.jira_description.lower()
+
+    def test_multi_account_ambiguity_takes_priority_over_every_other_signal(self, response_generator):
+        """CIAM ops feedback: if Agent 4 flags multi_account_ambiguity, that must
+        dominate the diagnosis even when a strong signal like over-provisioning
+        is also present -- we can't trust ANY signal is about the right record."""
+        account = make_account_payload()
+        auth0 = make_auth0_payload(birthright=["Support", "Academy", "Notification", "Dashboard"])
+        kb = make_kb_payload(
+            birthright_eval=BirthrightEvaluation(
+                match=False,
+                persona="Customer",
+                expected_birthright=["Community", "Dashboard"],
+                actual_birthright=["Support", "Academy", "Notification", "Dashboard"],
+                entitlements=[],
+                missing_keywords=["Community"],
+                extra_keywords=["Academy", "Notification", "Support"],
+                explicit_block_detected=False,
+                block_keywords_found=[],
+                no_access_configured=False,
+            ),
+            fix_classification=FixClassification(
+                complexity="ESCALATE_TO_L2",
+                reason="Multiple accounts and/or Auth0 user records exist for this email",
+                recommended_actions=[
+                    "Confirm which account/tenant this ticket is about before taking any action",
+                ],
+                confidence="LOW",
+            ),
+            sync_diagnostics=SyncDiagnostics(
+                multi_account_ambiguity=True,
+                multi_account_ambiguity_reasons=["2 Auth0 user records found for this email"],
+            ),
+        )
+
+        result = response_generator.synthesize(account, auth0, kb, "test@example.com")
+
+        assert "multiple accounts" in result.root_cause.primary_cause.lower()
+        assert "over-provisioned" not in result.root_cause.primary_cause.lower()
+        assert result.resolution_path.escalation_level == "ESCALATE_TO_L2"
+        assert any(
+            "confirm which account" in a.action.lower() for a in result.resolution_path.actions
+        )
+
+    def test_code_drift_escalation_not_downgraded_to_missing_portal(self, response_generator):
+        """CIAM ops feedback: an Auth0 Action code-drift ESCALATE_TO_L2 from Agent 4
+        must not be silently re-derived into the lower-priority 'Missing portal
+        access' / L1_RESOLVABLE pattern -- same regression class as the
+        over-provisioned case (CIAM-5001/6010)."""
+        account = make_account_payload()
+        auth0 = make_auth0_payload(birthright=["Community"])
+        kb = make_kb_payload(
+            birthright_eval=BirthrightEvaluation(
+                match=False,
+                persona="Customer",
+                expected_birthright=["Community", "Support"],
+                actual_birthright=["Community"],
+                entitlements=[],
+                missing_keywords=["Support"],
+                extra_keywords=[],
+                explicit_block_detected=False,
+                block_keywords_found=[],
+                no_access_configured=False,
+            ),
+            fix_classification=FixClassification(
+                complexity="ESCALATE_TO_L2",
+                reason=(
+                    "The Auth0 Action responsible for computing birthright and/or enforcing "
+                    "access has changed in a way that doesn't match expected logic: Action "
+                    "'NetskopeID-Sync-2' current live code no longer contains expected marker(s)."
+                ),
+                recommended_actions=[
+                    "Review the current Auth0 Action code before making any entitlements change",
+                ],
+                confidence="MEDIUM",
+            ),
+        )
+
+        result = response_generator.synthesize(account, auth0, kb, "test@example.com")
+
+        assert "auth0 action" in result.root_cause.primary_cause.lower()
+        assert "missing portal access" not in result.root_cause.primary_cause.lower()
+        assert result.resolution_path.escalation_level == "ESCALATE_TO_L2"
+        assert result.resolution_path.fallback_escalation == "Auth0 Action Owner / L2 Team"
+
+    def test_pending_login_refresh_prefers_relogin_over_manual_entitlements(self, response_generator):
+        """CIAM ops feedback: when Agent 4 flags pending_login_refresh, the
+        recommended action reused from Agent 4 must be to try a fresh login
+        first, not an immediate manual entitlements edit."""
+        account = make_account_payload()
+        auth0 = make_auth0_payload(birthright=["Community"])
+        kb = make_kb_payload(
+            birthright_eval=BirthrightEvaluation(
+                match=False,
+                persona="Customer",
+                expected_birthright=["Community", "Support"],
+                actual_birthright=["Community"],
+                entitlements=[],
+                missing_keywords=["Support"],
+                extra_keywords=[],
+                explicit_block_detected=False,
+                block_keywords_found=[],
+                no_access_configured=False,
+            ),
+            fix_classification=FixClassification(
+                complexity="SIMPLE_FIX",
+                reason="Missing keyword(s) appear explained by a pending sync, not a real gap",
+                recommended_actions=[
+                    "Ask the user to log out and log back in -- this triggers NetskopeID-Sync-2 "
+                    "to recompute birthright from the CURRENT Salesforce Account Status",
+                    "If access is still missing after a fresh login, THEN add ['Support'] to "
+                    "the ENTITLEMENTS array",
+                ],
+                confidence="HIGH",
+            ),
+            sync_diagnostics=SyncDiagnostics(
+                pending_login_refresh=True,
+                pending_login_refresh_note="Account field 'account_status' changed after last login.",
+            ),
+        )
+
+        result = response_generator.synthesize(account, auth0, kb, "test@example.com")
+
+        assert "pending sync" in result.root_cause.primary_cause.lower()
+        assert result.resolution_path.escalation_level == "L1_RESOLVABLE"
+        assert "log" in result.resolution_path.actions[0].action.lower()
+        assert "in" in result.resolution_path.actions[0].action.lower()
 
     def test_salesforce_user_missing(self, response_generator):
         """Salesforce user object doesn't exist"""

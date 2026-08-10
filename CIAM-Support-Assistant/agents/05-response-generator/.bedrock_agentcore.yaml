@@ -11,9 +11,27 @@ bedrock_agentcore:
 
   agent_id: ciamResponseGenerator-75l4h0HADB
   agent_arn: arn:aws:bedrock-agentcore:us-east-1:786063285476:runtime/ciamResponseGenerator-75l4h0HADB
-  agent_runtime_version: '6'
-  last_deployed: '2026-08-10T09:02:43Z'
+  agent_runtime_version: '7'
+  last_deployed: '2026-08-10T12:11:54Z'
   status: READY
+  # v7: consumes Agent 4's new SyncDiagnostics field (see Agent 4's v12
+  # changelog) so multi-account ambiguity and pending-login-refresh
+  # signals actually reach the final Jira-facing response instead of being
+  # computed by Agent 4 and never used. Added two new root-cause patterns
+  # ahead of the existing Pattern 0 (over-provisioned): Pattern -1
+  # (multi-account/user ambiguity, checked before EVERYTHING -- other
+  # signals could be about the wrong record) and Pattern -0.5 (Auth0 Action
+  # code drift, matched on Agent 4's reason text since workflow_
+  # identification isn't wired into Agent 5's input schema). Both reuse
+  # Agent 4's own recommended_actions, same established pattern as Pattern
+  # 0. Pattern 3 (missing portal access) now labels a pending-login-refresh
+  # case distinctly while still matching the existing resolution logic via
+  # substring, so Agent 4's "try a fresh login first" action flows through
+  # unchanged. This closes the same class of regression Pattern 0 was
+  # built for (CIAM-5001/6010): an Agent-4 ESCALATE_TO_L2 must never be
+  # silently re-derived into a lower-priority pattern just because the new
+  # signal didn't have dedicated wiring yet.
+  #
   # v6: fixed a real terminology/logic bug (CIAM ops feedback, found via
   # CIAM-7501): Pattern 1 in _recommend_resolution (missing portal access)
   # re-derived its own action text -- "Add '{portal}' to birthright

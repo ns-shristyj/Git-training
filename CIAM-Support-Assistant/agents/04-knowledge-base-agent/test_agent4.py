@@ -15,6 +15,8 @@ from agent import (
     identify_failing_workflow,
     fetch_live_auth0_actions,
     derive_persona,
+    derive_pending_login_refresh,
+    derive_multi_account_ambiguity,
     assert_posture,
     assert_tool_posture,
     assert_http_posture,
@@ -820,3 +822,206 @@ def test_entrypoint_only_attempts_live_fetch_when_there_is_a_gap(monkeypatch):
 
     assert result["birthright_evaluation"]["match"] is True
     assert calls == []  # fetch_live_auth0_actions must not have been called
+
+
+# ============================================================================
+# Sync edge-case detection -- CIAM ops feedback: a birthright gap can look
+# identical whether it's (a) a real gap, (b) a pending sync that just
+# hasn't run yet because the user hasn't logged in since the Salesforce
+# change, or (c) the wrong account/user record entirely because multiple
+# exist for this email. These tests cover (a)/(b) distinction and (c);
+# (code drift, the third confounder) is covered above in the Tool 5 tests
+# and wired into classify_fix_complexity below.
+# ============================================================================
+
+def test_pending_login_refresh_no_recent_changes():
+    detected, note = derive_pending_login_refresh("2026-08-01T00:00:00+00:00", [])
+    assert detected is False
+    assert note is None
+
+
+def test_pending_login_refresh_change_before_last_login_is_fine():
+    """Salesforce changed BEFORE the user's last login -- sync already had
+    a chance to pick it up, so this is a real gap, not a pending refresh."""
+    detected, note = derive_pending_login_refresh(
+        "2026-08-05T00:00:00+00:00",
+        [{"field_name": "account_status", "changed_date": "2026-08-01T00:00:00+00:00"}],
+    )
+    assert detected is False
+
+
+def test_pending_login_refresh_change_after_last_login_detected():
+    detected, note = derive_pending_login_refresh(
+        "2026-08-01T00:00:00+00:00",
+        [{"field_name": "account_status", "changed_date": "2026-08-05T00:00:00+00:00"}],
+    )
+    assert detected is True
+    assert "account_status" in note
+    assert "2026-08-05" in note
+
+
+def test_pending_login_refresh_never_logged_in_with_changes_detected():
+    detected, note = derive_pending_login_refresh(
+        None,
+        [{"field_name": "account_status", "changed_date": "2026-08-05T00:00:00+00:00"}],
+    )
+    assert detected is True
+    assert "no recorded login" in note
+
+
+def test_pending_login_refresh_unparseable_dates_fail_safe():
+    detected, note = derive_pending_login_refresh(
+        "not-a-date",
+        [{"field_name": "account_status", "changed_date": "also-not-a-date"}],
+    )
+    assert detected is False
+    assert note is None
+
+
+def test_multi_account_ambiguity_none_when_single_account_and_user():
+    detected, reasons = derive_multi_account_ambiguity([], [], 1, 1)
+    assert detected is False
+    assert reasons == []
+
+
+def test_multi_account_ambiguity_detected_via_agent2_warning():
+    detected, reasons = derive_multi_account_ambiguity(["multiple_accounts_found"], [], 1, 1)
+    assert detected is True
+    assert any("Agent 2" in r for r in reasons)
+
+
+def test_multi_account_ambiguity_detected_via_agent3_warning():
+    detected, reasons = derive_multi_account_ambiguity([], ["multiple_users_found"], 1, 1)
+    assert detected is True
+    assert any("Agent 3" in r for r in reasons)
+
+
+def test_multi_account_ambiguity_detected_via_raw_counts_without_warning():
+    """Even if neither agent explicitly flagged a warning string, counts > 1
+    on their own must still be treated as ambiguous -- don't rely solely on
+    the upstream agent remembering to set the warning."""
+    detected, reasons = derive_multi_account_ambiguity([], [], 3, 1)
+    assert detected is True
+    assert any("3 accounts" in r for r in reasons)
+
+
+def test_classify_fix_complexity_multi_account_ambiguity_escalates_first():
+    """Ambiguity must be checked BEFORE extra_keywords/other signals --
+    those signals could belong to the wrong account entirely."""
+    fc = classify_fix_complexity(
+        missing_keywords=[],
+        extra_keywords=["Partner"],  # would normally trigger the over-provisioned path
+        account_status="Customer",
+        active_tenant_count=1,
+        user_found_in_auth0=True,
+        explicit_block_detected=False,
+        intent="ACCESS_DENIED",
+        birthright_correct_but_access_denied=False,
+        multi_account_ambiguity=True,
+        multi_account_ambiguity_reasons=["2 Auth0 user records found for this email"],
+    )
+    assert fc.complexity == "ESCALATE_TO_L2"
+    assert fc.confidence == "LOW"
+    assert "disambiguation" in fc.reason.lower() or "which record" in fc.reason.lower()
+    assert "2 Auth0 user records" in fc.reason
+
+
+def test_classify_fix_complexity_code_drift_escalates():
+    fc = classify_fix_complexity(
+        missing_keywords=["Support"],
+        extra_keywords=[],
+        account_status="Customer",
+        active_tenant_count=1,
+        user_found_in_auth0=True,
+        explicit_block_detected=False,
+        intent="ACCESS_DENIED",
+        birthright_correct_but_access_denied=False,
+        code_drift_detected=True,
+        code_drift_note="Action 'NetskopeID-Sync-2' current live code no longer contains expected marker(s)",
+    )
+    assert fc.complexity == "ESCALATE_TO_L2"
+    assert "no longer contains expected marker" in fc.reason
+
+
+def test_classify_fix_complexity_pending_login_refresh_prefers_relogin():
+    fc = classify_fix_complexity(
+        missing_keywords=["Support"],
+        extra_keywords=[],
+        account_status="Customer",
+        active_tenant_count=1,
+        user_found_in_auth0=True,
+        explicit_block_detected=False,
+        intent="ACCESS_DENIED",
+        birthright_correct_but_access_denied=False,
+        pending_login_refresh=True,
+        pending_login_refresh_note="Account field 'account_status' changed on 2026-08-05, after last login.",
+    )
+    assert fc.complexity == "SIMPLE_FIX"
+    assert fc.confidence == "HIGH"
+    # The FIRST recommended action must be to try a fresh login, not an
+    # immediate manual entitlements edit.
+    assert "log" in fc.recommended_actions[0].lower() and "in" in fc.recommended_actions[0].lower()
+    assert any("entitlements" in a.lower() for a in fc.recommended_actions)
+
+
+def test_entrypoint_surfaces_multi_account_ambiguity_end_to_end(monkeypatch):
+    monkeypatch.setattr("agent.fetch_live_auth0_actions", lambda names: ({}, None))
+    with patch("agent.requests.post") as mock_post:
+        mock_post.return_value = mock_response(mock_empty_kb_response())
+        result = evaluate_ciam_case({
+            "account_status": "Customer",
+            "active_tenant_count": 1,
+            "actual_birthright": ["Community", "Academy", "Notification", "Dashboard"],
+            "entitlements": [],
+            "user_found_in_auth0": True,
+            "intent": "ACCESS_DENIED",
+            "auth0_users_count": 2,
+            "auth0_warnings": ["multiple_users_found"],
+        })
+
+    assert result["fix_classification"]["complexity"] == "ESCALATE_TO_L2"
+    assert result["sync_diagnostics"]["multi_account_ambiguity"] is True
+    assert any("Agent 3" in r for r in result["sync_diagnostics"]["multi_account_ambiguity_reasons"])
+
+
+def test_entrypoint_surfaces_pending_login_refresh_end_to_end(monkeypatch):
+    monkeypatch.setattr("agent.fetch_live_auth0_actions", lambda names: ({}, None))
+    with patch("agent.requests.post") as mock_post:
+        mock_post.return_value = mock_response(mock_empty_kb_response())
+        result = evaluate_ciam_case({
+            "account_status": "Customer",
+            "active_tenant_count": 1,
+            "actual_birthright": ["Community", "Academy", "Notification", "Dashboard"],
+            "entitlements": [],
+            "user_found_in_auth0": True,
+            "intent": "ACCESS_DENIED",
+            "last_login": "2026-08-01T00:00:00+00:00",
+            "recent_changes": [
+                {"field_name": "account_status", "changed_date": "2026-08-05T00:00:00+00:00"}
+            ],
+        })
+
+    assert result["fix_classification"]["complexity"] == "SIMPLE_FIX"
+    assert result["sync_diagnostics"]["pending_login_refresh"] is True
+    assert "log" in result["fix_classification"]["recommended_actions"][0].lower()
+
+
+def test_entrypoint_without_new_fields_behaves_exactly_as_before(monkeypatch):
+    """Backward compatibility: a payload that doesn't send any of the new
+    fields (e.g. an orchestrator that hasn't been redeployed yet) must
+    produce the exact same classification as before this change."""
+    monkeypatch.setattr("agent.fetch_live_auth0_actions", lambda names: ({}, None))
+    with patch("agent.requests.post") as mock_post:
+        mock_post.return_value = mock_response(mock_empty_kb_response())
+        result = evaluate_ciam_case({
+            "account_status": "Customer",
+            "active_tenant_count": 2,
+            "actual_birthright": ["Community", "Academy", "Notification", "Dashboard"],
+            "entitlements": [],
+            "user_found_in_auth0": True,
+            "intent": "ACCESS_DENIED",
+        })
+
+    assert result["fix_classification"]["complexity"] == "SIMPLE_FIX"
+    assert result["sync_diagnostics"]["pending_login_refresh"] is False
+    assert result["sync_diagnostics"]["multi_account_ambiguity"] is False

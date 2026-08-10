@@ -139,6 +139,19 @@ class FixClassification(BaseModel):
     confidence: Literal["HIGH", "MEDIUM", "LOW"]
 
 
+class SyncDiagnostics(BaseModel):
+    """Mirrors Agent 4's SyncDiagnostics -- CIAM ops feedback additions
+    surfacing WHY a birthright gap exists, not just that one exists: a
+    pending sync (user hasn't logged in since the Salesforce change) and
+    multi-account/user ambiguity (accounts[0]/users[0] might not be the
+    right record) both look identical to a real gap from missing_keywords
+    alone."""
+    pending_login_refresh: bool = False
+    pending_login_refresh_note: Optional[str] = None
+    multi_account_ambiguity: bool = False
+    multi_account_ambiguity_reasons: List[str] = []
+
+
 class KBDocument(BaseModel):
     title: str
     excerpt: str
@@ -161,6 +174,7 @@ class KnowledgeBasePayloadInput(BaseModel):
     agent: Literal["ciam-knowledge-base-agent"]
     birthright_evaluation: Optional[BirthrightEvaluation] = None
     fix_classification: Optional[FixClassification] = None
+    sync_diagnostics: Optional[SyncDiagnostics] = None
     knowledge_base_results: KnowledgeBaseResults = KnowledgeBaseResults()
     knowledge_base_error: Optional[str] = None
     error: Optional[str] = None
@@ -466,6 +480,14 @@ class ResponseGenerator:
                 "confidence": payload.fix_classification.confidence,
             }
 
+        if payload.sync_diagnostics:
+            facts["sync_diagnostics"] = {
+                "pending_login_refresh": payload.sync_diagnostics.pending_login_refresh,
+                "pending_login_refresh_note": payload.sync_diagnostics.pending_login_refresh_note,
+                "multi_account_ambiguity": payload.sync_diagnostics.multi_account_ambiguity,
+                "multi_account_ambiguity_reasons": payload.sync_diagnostics.multi_account_ambiguity_reasons,
+            }
+
         if payload.knowledge_base_results:
             facts["kb_matches"] = {
                 "docs": len(payload.knowledge_base_results.relevant_docs),
@@ -489,15 +511,46 @@ class ResponseGenerator:
         secondary_causes = []
         evidence = []
         confidence = "LOW"
+        sync_diag = kb_facts.get("sync_diagnostics") or {}
 
-        # Pattern 0: Over-provisioned / security escalation from Agent 4 (checked FIRST,
-        # ahead of every other pattern including account-not-found). Agent 4 already
-        # classifies this ESCALATE_TO_L2 with HIGH confidence specifically because it's a
-        # security risk that must not be auto-remediated -- a data-completeness issue like
-        # "no account record" must never silently downgrade that into an L1 sync-refresh
-        # recommendation (confirmed regression: CIAM-5001/CIAM-6010 both had this pattern
-        # and were incorrectly downgraded to L1_RESOLVABLE before this fix).
-        if (
+        # Pattern -1: Multi-account/user ambiguity from Agent 4 (checked before
+        # EVERYTHING else, including Pattern 0) -- if accounts[0]/users[0] might
+        # not even be the correct record for this email, every other signal
+        # below (over-provisioning, missing keywords, etc.) could be about the
+        # wrong record entirely. CIAM ops feedback.
+        if sync_diag.get("multi_account_ambiguity"):
+            reasons = sync_diag.get("multi_account_ambiguity_reasons") or []
+            primary_cause = "Multiple accounts/records found for this email -- cannot confirm correct record"
+            evidence.extend(reasons)
+            if kb_facts.get("fix", {}).get("reason"):
+                evidence.append(kb_facts["fix"]["reason"])
+            confidence = kb_facts.get("fix", {}).get("confidence", "LOW")
+
+        # Pattern -0.5: Auth0 Action code drift detected live (Agent 4's Tool 5,
+        # via classify_fix_complexity). Same regression class Pattern 0 below
+        # guards against: an ESCALATE_TO_L2 classification from Agent 4 must
+        # never be silently re-derived into a lower-priority pattern (e.g.
+        # Pattern 3's "Missing portal access") just because this specific
+        # signal doesn't have its own dedicated kb_facts field the way
+        # extra_keywords does. Matched on the reason text Agent 4 always
+        # includes verbatim for this case (see classify_fix_complexity).
+        elif (
+            kb_facts.get("fix", {}).get("complexity") == "ESCALATE_TO_L2"
+            and "auth0 action responsible for computing birthright" in (kb_facts.get("fix", {}).get("reason") or "").lower()
+        ):
+            primary_cause = "Auth0 Action code may be miscalculating birthright/entitlements"
+            evidence.append(kb_facts["fix"]["reason"])
+            confidence = kb_facts["fix"].get("confidence", "MEDIUM")
+
+        # Pattern 0: Over-provisioned / security escalation from Agent 4 (checked
+        # ahead of every other remaining pattern including account-not-found).
+        # Agent 4 already classifies this ESCALATE_TO_L2 with HIGH confidence
+        # specifically because it's a security risk that must not be
+        # auto-remediated -- a data-completeness issue like "no account record"
+        # must never silently downgrade that into an L1 sync-refresh
+        # recommendation (confirmed regression: CIAM-5001/CIAM-6010 both had this
+        # pattern and were incorrectly downgraded to L1_RESOLVABLE before this fix).
+        elif (
             kb_facts.get("fix", {}).get("complexity") == "ESCALATE_TO_L2"
             and kb_facts.get("birthright", {}).get("extra")
         ):
@@ -529,10 +582,21 @@ class ResponseGenerator:
             evidence.append("Neither birthright nor entitlements have any keywords")
             confidence = "HIGH"
 
-        # Pattern 3: Birthright mismatch
+        # Pattern 3: Birthright mismatch. If Agent 4 flagged pending_login_refresh
+        # (Salesforce changed after this user's last login, so sync hasn't had a
+        # chance to run), label it distinctly -- the primary_cause text still
+        # contains "Missing portal access" so the existing resolution Pattern 1
+        # below still matches and reuses Agent 4's recommended_actions (which
+        # already prefer "ask the user to log back in" over an immediate manual
+        # entitlements edit in this case).
         elif kb_facts.get("birthright", {}).get("missing"):
             missing = kb_facts["birthright"]["missing"]
-            primary_cause = f"Missing portal access: {', '.join(missing)}"
+            if sync_diag.get("pending_login_refresh"):
+                primary_cause = f"Missing portal access (pending sync): {', '.join(missing)}"
+                if sync_diag.get("pending_login_refresh_note"):
+                    evidence.append(sync_diag["pending_login_refresh_note"])
+            else:
+                primary_cause = f"Missing portal access: {', '.join(missing)}"
             evidence.append(f"Expected birthright: {kb_facts['birthright']['expected']}")
             evidence.append(f"Actual birthright: {kb_facts['birthright']['actual']}")
 
@@ -584,12 +648,57 @@ class ResponseGenerator:
         estimated_time = "unknown"
         fallback = None
 
+        # Pattern -1: Multi-account/user ambiguity (matches Pattern -1 in
+        # _diagnose_root_cause). Checked before EVERYTHING else -- disambiguation
+        # must happen before any other recommended action, since every other
+        # signal could be about the wrong account/user record.
+        if "Multiple accounts/records found" in root_cause.primary_cause:
+            recommended = kb_facts.get("fix", {}).get("recommended_actions") or [
+                "Confirm which account/tenant this ticket is about before taking any action",
+                "Escalate to L2 for account disambiguation",
+            ]
+            for action_text in recommended:
+                actions.append(
+                    RecommendedAction(
+                        priority="IMMEDIATE",
+                        action=action_text,
+                        rationale="Multiple accounts/Auth0 records found for this email -- risk of diagnosing the wrong record",
+                        complexity="COMPLEX",
+                        estimated_effort="review required",
+                    )
+                )
+            escalation = "ESCALATE_TO_L2"
+            fallback = "CIAM Support Lead"
+            estimated_time = "15-30 minutes"
+
+        # Pattern -0.5: Auth0 Action code drift (matches Pattern -0.5 in
+        # _diagnose_root_cause). Reuses Agent 4's recommended_actions, same
+        # approach as every other escalation pattern here.
+        elif "Auth0 Action code may be miscalculating" in root_cause.primary_cause:
+            recommended = kb_facts.get("fix", {}).get("recommended_actions") or [
+                "Review the current Auth0 Action code before making any entitlements change",
+                "Escalate to L2 / Auth0 Action owner for code review",
+            ]
+            for action_text in recommended:
+                actions.append(
+                    RecommendedAction(
+                        priority="IMMEDIATE",
+                        action=action_text,
+                        rationale="Auth0 Action code drift detected -- apparent access gap may be a code bug, not a data issue",
+                        complexity="COMPLEX",
+                        estimated_effort="review required",
+                    )
+                )
+            escalation = "ESCALATE_TO_L2"
+            fallback = "Auth0 Action Owner / L2 Team"
+            estimated_time = "1-2 hours"
+
         # Pattern 0: Over-provisioned / security escalation (matches the new Pattern 0 in
         # _diagnose_root_cause). Must be checked before any other pattern -- in particular
         # before the stale-sync elif below, which this used to silently fall through into,
         # producing a misleading "trigger sync refresh" / L1_RESOLVABLE recommendation for
         # what Agent 4 explicitly flagged as a security risk requiring L2 review.
-        if "Over-provisioned access" in root_cause.primary_cause:
+        elif "Over-provisioned access" in root_cause.primary_cause:
             recommended = kb_facts.get("fix", {}).get("recommended_actions") or [
                 "Review over-provisioned keywords",
                 "Do not modify entitlements without L2 approval",

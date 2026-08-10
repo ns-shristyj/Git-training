@@ -204,6 +204,25 @@ class KnowledgeBaseResults(BaseModel):
     similar_past_tickets: List[KBTicket] = []
 
 
+class SyncDiagnostics(BaseModel):
+    """CIAM ops feedback: a birthright gap has (at least) three distinct root
+    causes that all look identical from missing_keywords alone -- (a) the
+    user simply hasn't logged in since the Salesforce-side change that would
+    grant it (sync only runs at login, so no login means no refresh,
+    regardless of how correct the calculation is), (b) accounts[0]/users[0]
+    isn't even the right record for this email (multiple accounts/Auth0
+    users exist, and we're confidently evaluating the wrong one), or (c) the
+    Auth0 Action's own code is broken (see WorkflowIdentification.code_drift_
+    detected). This model surfaces (a) and (b) as their own signals so
+    classify_fix_complexity can react to them instead of confidently
+    recommending a manual entitlements add when the real fix is "ask the
+    user to log back in" or "confirm which account this ticket is about"."""
+    pending_login_refresh: bool = False
+    pending_login_refresh_note: Optional[str] = None
+    multi_account_ambiguity: bool = False
+    multi_account_ambiguity_reasons: List[str] = []
+
+
 class KnowledgeBasePayload(BaseModel):
     schema_version: Literal["1.0"] = "1.0"
     spec_id: Literal["SPEC-CIAM-0004"] = "SPEC-CIAM-0004"
@@ -214,6 +233,7 @@ class KnowledgeBasePayload(BaseModel):
     birthright_evaluation: Optional[BirthrightEvaluation] = None
     fix_classification: Optional[FixClassification] = None
     workflow_identification: Optional[WorkflowIdentification] = None
+    sync_diagnostics: Optional[SyncDiagnostics] = None
 
     knowledge_base_results: KnowledgeBaseResults = KnowledgeBaseResults()
     knowledge_base_error: Optional[str] = None
@@ -349,9 +369,74 @@ def classify_fix_complexity(
     explicit_block_detected: bool,
     intent: Optional[str],
     birthright_correct_but_access_denied: bool,
+    multi_account_ambiguity: bool = False,
+    multi_account_ambiguity_reasons: Optional[List[str]] = None,
+    code_drift_detected: bool = False,
+    code_drift_note: Optional[str] = None,
+    pending_login_refresh: bool = False,
+    pending_login_refresh_note: Optional[str] = None,
 ) -> FixClassification:
-    """Tool 3 -- pure local logic, zero external calls (§4.1)."""
+    """Tool 3 -- pure local logic, zero external calls (§4.1).
+
+    The last five params are CIAM ops feedback additions: `missing_keywords`/
+    `extra_keywords` alone can't distinguish "this data is genuinely
+    accurate and there's a real gap" from "this data can't be trusted right
+    now" -- multi_account_ambiguity (evaluating possibly the wrong account/
+    user record entirely) and code_drift_detected (the Auth0 Action that
+    computes birthright may itself be broken) are both reasons the
+    underlying missing/extra keyword computation might not mean what it
+    looks like it means, so they're checked before trusting that
+    computation at all. pending_login_refresh is different in kind -- it
+    doesn't undermine trust in the data, it explains WHY there's a gap
+    (sync hasn't run since a Salesforce change because the user hasn't
+    logged in), which changes the recommended fix, not the complexity."""
     assert_tool_posture("classify_fix_complexity")
+
+    # Checked FIRST: if we can't even be confident WHICH account/user record
+    # this evaluation is based on, every downstream signal (extra_keywords,
+    # missing_keywords, block detection) is potentially about the wrong
+    # record entirely. Must not silently proceed as if accounts[0]/users[0]
+    # is definitely correct.
+    if multi_account_ambiguity:
+        return FixClassification(
+            complexity="ESCALATE_TO_L2",
+            reason=(
+                "Multiple accounts and/or Auth0 user records exist for this email -- "
+                f"({'; '.join(multi_account_ambiguity_reasons or [])}) -- cannot safely "
+                "determine which record is authoritative for this ticket without disambiguation. "
+                "Any diagnosis below is based on the FIRST record returned, which may not be "
+                "the one this ticket is actually about."
+            ),
+            recommended_actions=[
+                "Confirm with the user (or Salesforce/tenant context) which specific "
+                "account/tenant this ticket is about",
+                "Re-run diagnosis scoped to the confirmed account/user before taking any "
+                "entitlements action",
+                "Escalate to L2 for account disambiguation",
+            ],
+            confidence="LOW",
+        )
+
+    # Checked SECOND: if the Auth0 Action that computes birthright has
+    # itself changed in a way that no longer matches this agent's
+    # assumptions, the missing/extra keyword computation below may reflect
+    # a code bug rather than a real account/entitlement issue.
+    if code_drift_detected:
+        return FixClassification(
+            complexity="ESCALATE_TO_L2",
+            reason=(
+                "The Auth0 Action responsible for computing birthright and/or enforcing access "
+                f"has changed in a way that doesn't match expected logic: {code_drift_note or 'see workflow_identification for details.'} "
+                "The apparent access gap below may be caused by this code change rather than "
+                "Salesforce data -- do not assume a manual entitlements fix will hold."
+            ),
+            recommended_actions=[
+                "Review the current Auth0 Action code for the workflow named in "
+                "workflow_identification before making any entitlements change",
+                "Escalate to L2 / Auth0 Action owner for code review",
+            ],
+            confidence="MEDIUM",
+        )
 
     # ESCALATE_TO_L2 triggers -- any single condition (checked first, per spec priority)
     if extra_keywords:
@@ -448,6 +533,31 @@ def classify_fix_complexity(
         and (active_tenant_count or 0) >= 1
     )
     if account_ok:
+        if pending_login_refresh:
+            # A pending Salesforce-side change that hasn't hit a login yet
+            # is NOT the same situation as "birthright is just wrong" --
+            # the correct fix is a fresh login (free, no manual edit, and
+            # actually addresses the cause), tried BEFORE reaching for a
+            # manual entitlements compensation.
+            return FixClassification(
+                complexity="SIMPLE_FIX",
+                reason=(
+                    f"Missing keyword(s) appear explained by a pending sync, not a real gap: "
+                    f"{pending_login_refresh_note} Try a fresh login before adding entitlements "
+                    "manually."
+                ),
+                recommended_actions=[
+                    "Ask the user to log out and log back in -- this triggers NetskopeID-Sync-2 "
+                    "to recompute birthright from the CURRENT Salesforce Account Status, which "
+                    "may already resolve this without any manual change",
+                    f"If access is still missing after a fresh login, THEN add {missing_keywords} "
+                    "to the ENTITLEMENTS array via Auth0 Management API as a compensating "
+                    "control (never modify birthright directly -- it will be recalculated and "
+                    "overwritten on next login regardless)",
+                    "Verify access after whichever step resolves it",
+                ],
+                confidence="HIGH",
+            )
         return FixClassification(
             complexity="SIMPLE_FIX",
             reason=(
@@ -1038,6 +1148,84 @@ def derive_sync_flags(last_sync) -> tuple:
     return False, False
 
 
+def _parse_dt(value) -> Optional[datetime]:
+    if not value:
+        return None
+    if isinstance(value, datetime):
+        return value
+    if isinstance(value, str):
+        try:
+            return datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except ValueError:
+            return None
+    return None
+
+
+def derive_pending_login_refresh(last_login, recent_changes: Optional[List[dict]]) -> tuple:
+    """CIAM ops feedback: birthright is only recalculated at login
+    (NetskopeID-Sync-2 runs post-login). A Salesforce-side account change
+    made after the user's last login has had NO chance to be reflected yet
+    -- that's not a data bug or a code bug, it's just pending a login that
+    hasn't happened. Returns (pending_login_refresh, note). Fails safe to
+    (False, None) on missing/unparseable data -- this is a best-effort
+    signal, not a hard gate."""
+    if not recent_changes:
+        return False, None
+
+    last_login_dt = _parse_dt(last_login)
+    newest_change = None
+    for change in recent_changes:
+        changed_at = _parse_dt(change.get("changed_date"))
+        if changed_at and (newest_change is None or changed_at > newest_change[0]):
+            newest_change = (changed_at, change)
+
+    if newest_change is None:
+        return False, None
+
+    changed_at, change = newest_change
+    field = change.get("field_name", "an account field")
+
+    if last_login_dt is None:
+        return True, (
+            f"Account field '{field}' changed on {changed_at.isoformat()}, but this user has "
+            "no recorded login since then (or ever) -- birthright can't have refreshed yet, "
+            "since NetskopeID-Sync-2 only recalculates it at login."
+        )
+
+    if changed_at > last_login_dt:
+        return True, (
+            f"Account field '{field}' changed on {changed_at.isoformat()}, which is AFTER this "
+            f"user's last login ({last_login_dt.isoformat()}) -- birthright can't have picked up "
+            "that change yet, since NetskopeID-Sync-2 only recalculates it at login."
+        )
+
+    return False, None
+
+
+def derive_multi_account_ambiguity(
+    account_data_warnings: Optional[List[str]],
+    auth0_warnings: Optional[List[str]],
+    accounts_count: int,
+    auth0_users_count: int,
+) -> tuple:
+    """CIAM ops feedback: the account/user this agent evaluates is always
+    accounts[0]/users[0] -- if there's more than one candidate record for
+    this email, silently picking the first one risks evaluating the WRONG
+    account/user entirely. Returns (ambiguity_detected, reasons)."""
+    reasons = []
+    if account_data_warnings and "multiple_accounts_found" in account_data_warnings:
+        reasons.append("Agent 2 (database) flagged multiple_accounts_found for this email")
+    elif accounts_count > 1:
+        reasons.append(f"{accounts_count} accounts found for this email")
+
+    if auth0_warnings and "multiple_users_found" in auth0_warnings:
+        reasons.append("Agent 3 (Auth0) flagged multiple_users_found for this email")
+    elif auth0_users_count > 1:
+        reasons.append(f"{auth0_users_count} Auth0 user records found for this email")
+
+    return len(reasons) > 0, reasons
+
+
 # Main
 app = BedrockAgentCoreApp()
 
@@ -1069,8 +1257,24 @@ def evaluate_ciam_case(payload: dict) -> dict:
     last_sync = payload.get("last_sync")
     raw_input = payload.get("raw_input", "")
 
+    # CIAM ops feedback additions -- all optional/best-effort, default to
+    # "no signal" so older orchestrator payloads that don't send them yet
+    # still work exactly as before.
+    last_login = payload.get("last_login")
+    recent_changes = payload.get("recent_changes") or []
+    accounts_count = payload.get("accounts_count", 1 if account_status is not None else 0)
+    auth0_users_count = payload.get("auth0_users_count", 1 if user_found_in_auth0 else 0)
+    account_data_warnings = payload.get("account_data_warnings") or []
+    auth0_warnings = payload.get("auth0_warnings") or []
+
     # Step 2: derive sync flags
     sync_never_ran, sync_stale = derive_sync_flags(last_sync)
+    pending_login_refresh, pending_login_refresh_note = derive_pending_login_refresh(
+        last_login, recent_changes
+    )
+    multi_account_ambiguity, ambiguity_reasons = derive_multi_account_ambiguity(
+        account_data_warnings, auth0_warnings, accounts_count, auth0_users_count
+    )
 
     # Step 3: evaluate birthright (Tool 1) -- always called
     evaluation = evaluate_birthright(account_status, active_tenant_count, actual_birthright, entitlements)
@@ -1080,26 +1284,11 @@ def evaluate_ciam_case(payload: dict) -> dict:
     birthright_correct_but_access_denied = evaluation.match and intent == "ACCESS_DENIED"
     evaluation.birthright_correct_but_access_denied = birthright_correct_but_access_denied
 
-    # Step 4: classify fix complexity (Tool 3) -- always called
-    classification = classify_fix_complexity(
-        missing_keywords=evaluation.missing_keywords,
-        extra_keywords=evaluation.extra_keywords,
-        account_status=account_status,
-        active_tenant_count=active_tenant_count,
-        user_found_in_auth0=user_found_in_auth0,
-        explicit_block_detected=evaluation.explicit_block_detected,
-        intent=intent,
-        birthright_correct_but_access_denied=birthright_correct_but_access_denied,
-    )
-
-    # Step 5: query Knowledge Base (Tool 2) -- always attempted, non-fatal
-    query = build_kb_query(intent, evaluation.persona, evaluation.missing_keywords, evaluation.extra_keywords, raw_input)
-    kb_results, kb_error = query_knowledge_base(query, top_k=payload.get("top_k", DEFAULT_TOP_K))
-
-    # Step 6: identify failing workflow (Tool 4), backed by a live Auth0
-    # Action fetch (Tool 5) -- always attempted, non-fatal on failure (falls
-    # back to the offline snapshot inside identify_failing_workflow itself).
-    # Only worth the extra round trip when there's actually a gap to explain.
+    # Step 4: fetch live Auth0 Action state (Tool 5), backed into Tool 3's
+    # classification -- moved ahead of Tool 3 (previously only fed Tool 4)
+    # so code drift can downgrade/escalate the fix classification itself,
+    # not just annotate the workflow note after the fact. Only worth the
+    # round trip when there's actually a gap to explain.
     failed_step = (
         "explicit_block_detected" if evaluation.explicit_block_detected
         else (evaluation.missing_keywords[0] if evaluation.missing_keywords else None)
@@ -1109,8 +1298,44 @@ def evaluate_ciam_case(payload: dict) -> dict:
         live_actions, live_fetch_error = fetch_live_auth0_actions(
             ["NetskopeID-Sync-2", "Gatekeeper"]
         )
+    code_drift_detected = any(info.code_drift_detected for info in live_actions.values())
+    code_drift_note = " ".join(
+        info.code_drift_note for info in live_actions.values() if info.code_drift_note
+    ) or None
+
+    # Step 5: classify fix complexity (Tool 3) -- always called
+    classification = classify_fix_complexity(
+        missing_keywords=evaluation.missing_keywords,
+        extra_keywords=evaluation.extra_keywords,
+        account_status=account_status,
+        active_tenant_count=active_tenant_count,
+        user_found_in_auth0=user_found_in_auth0,
+        explicit_block_detected=evaluation.explicit_block_detected,
+        intent=intent,
+        birthright_correct_but_access_denied=birthright_correct_but_access_denied,
+        multi_account_ambiguity=multi_account_ambiguity,
+        multi_account_ambiguity_reasons=ambiguity_reasons,
+        code_drift_detected=code_drift_detected,
+        code_drift_note=code_drift_note,
+        pending_login_refresh=pending_login_refresh,
+        pending_login_refresh_note=pending_login_refresh_note,
+    )
+
+    # Step 6: query Knowledge Base (Tool 2) -- always attempted, non-fatal
+    query = build_kb_query(intent, evaluation.persona, evaluation.missing_keywords, evaluation.extra_keywords, raw_input)
+    kb_results, kb_error = query_knowledge_base(query, top_k=payload.get("top_k", DEFAULT_TOP_K))
+
+    # Step 7: identify failing workflow (Tool 4) -- reuses the live Auth0
+    # data already fetched in Step 4, no second round trip.
     workflow_id = identify_failing_workflow(
         failed_step, evaluation.missing_keywords, live_actions, live_fetch_error
+    )
+
+    sync_diagnostics = SyncDiagnostics(
+        pending_login_refresh=pending_login_refresh,
+        pending_login_refresh_note=pending_login_refresh_note,
+        multi_account_ambiguity=multi_account_ambiguity,
+        multi_account_ambiguity_reasons=ambiguity_reasons,
     )
 
     logger.info(f"[{run_id}] Done. persona={evaluation.persona} complexity={classification.complexity}")
@@ -1121,6 +1346,7 @@ def evaluate_ciam_case(payload: dict) -> dict:
         birthright_evaluation=evaluation,
         fix_classification=classification,
         workflow_identification=workflow_id,
+        sync_diagnostics=sync_diagnostics,
         knowledge_base_results=kb_results,
         knowledge_base_error=kb_error,
         error=None,
