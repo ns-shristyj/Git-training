@@ -588,6 +588,58 @@ class TestResolutionPaths:
         action_texts = [str(a.action) for a in result.resolution_path.actions]
         assert "AGENT4-SUPPLIED ACTION TEXT MARKER" in action_texts
 
+    def test_missing_portal_rationale_varies_per_action(self, response_generator):
+        """Regression test: Pattern 1 used to give every action the SAME
+        blanket rationale ("can be compensated via entitlements"), which was
+        flat-out wrong once Agent 4 started emitting qualitatively different
+        step types (re-login vs. entitlements vs. verify) for the
+        pending-login-refresh case. Each action's rationale must match what
+        that specific action actually asks for."""
+        account = make_account_payload()
+        auth0 = make_auth0_payload(birthright=["Community"])
+        kb = make_kb_payload(
+            BirthrightEvaluation(
+                match=False,
+                persona="Customer",
+                expected_birthright=["Community", "Support"],
+                actual_birthright=["Community"],
+                entitlements=[],
+                missing_keywords=["Support"],
+                extra_keywords=[],
+                explicit_block_detected=False,
+                block_keywords_found=[],
+                no_access_configured=False,
+            ),
+            fix_classification=FixClassification(
+                complexity="SIMPLE_FIX",
+                reason="pending login sync",
+                recommended_actions=[
+                    "Ask the user to log out and log back in to trigger a fresh sync",
+                    "If still missing after a fresh login, add ['Support'] to the ENTITLEMENTS array",
+                    "Verify access after whichever step resolves it",
+                ],
+                confidence="HIGH",
+            ),
+        )
+
+        result = response_generator.synthesize(account, auth0, kb, "test@example.com")
+        actions = result.resolution_path.actions
+        assert len(actions) == 3
+
+        login_action = next(a for a in actions if "log out" in a.action.lower())
+        entitlements_action = next(a for a in actions if "entitlements" in a.action.lower())
+        verify_action = next(a for a in actions if a.action.lower().startswith("verify"))
+
+        # The three rationales must all be distinct -- and each must
+        # actually match its own action's content, not a shared sentence.
+        rationales = {login_action.rationale, entitlements_action.rationale, verify_action.rationale}
+        assert len(rationales) == 3
+
+        assert "entitlements" not in login_action.rationale.lower()
+        assert "netskopeid-sync-2" in login_action.rationale.lower() or "login" in login_action.rationale.lower()
+        assert "entitlements" in entitlements_action.rationale.lower()
+        assert "confirm" in verify_action.rationale.lower() or "restore" in verify_action.rationale.lower()
+
     def test_l2_escalation_block_keyword(self, response_generator):
         """Block keyword requires L2 escalation"""
         account = make_account_payload()

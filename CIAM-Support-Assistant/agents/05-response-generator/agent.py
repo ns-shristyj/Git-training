@@ -300,6 +300,43 @@ class ResponseGeneratorPayload(BaseModel):
 # SYNTHESIS LOGIC
 # ============================================================================
 
+def _rationale_for_missing_portal_action(action_text: str, missing: List[str]) -> str:
+    """Pattern 1's recommended_actions can contain qualitatively different
+    KINDS of steps -- trigger a re-login, add entitlements, verify the fix
+    worked -- since Agent 4 started distinguishing "pending login sync" from
+    a real gap (CIAM ops feedback). A single blanket rationale no longer
+    fits all of them: labeling a "log out and log back in" step with
+    "compensated via entitlements" is simply wrong, since that step has
+    nothing to do with entitlements. Derive the rationale from what the
+    action text actually asks for, instead of restating the same sentence
+    for every action regardless of content."""
+    text_lower = action_text.lower()
+    missing_str = ", ".join(missing) if missing else "the affected portal(s)"
+
+    # Check "entitlements" BEFORE the login phrases: the conditional
+    # follow-up action ("If still missing after a fresh login, add ... to
+    # ENTITLEMENTS") legitimately mentions "fresh login" too, but its actual
+    # instruction is the entitlements change -- the login mention there is
+    # backward-referencing the prior step, not a new instruction to log in.
+    # A pure "log out and log back in" action never mentions entitlements at
+    # all, so checking this first doesn't miscategorize that one.
+    if "entitlements" in text_lower:
+        return (
+            f"Missing portal(s) {missing_str} can be compensated via entitlements; "
+            "birthright itself is not directly editable"
+        )
+    if any(phrase in text_lower for phrase in ("log out", "log back in", "fresh login", "re-login")):
+        return (
+            "A login is what actually triggers NetskopeID-Sync-2 to recompute birthright from "
+            "current Salesforce data -- this may resolve the gap with no manual change at all"
+        )
+    if text_lower.startswith("verify"):
+        return f"Confirms the fix actually restored access to {missing_str} for this user"
+    # Fallback for any action text that doesn't match a known pattern above --
+    # still accurate, just less specific than the three cases above.
+    return f"Recommended step toward resolving missing portal access: {missing_str}"
+
+
 class ResponseGenerator:
     """Synthesizes Agent 2/3/4 findings into diagnosis and recommendations."""
 
@@ -736,10 +773,7 @@ class ResponseGenerator:
                     RecommendedAction(
                         priority="IMMEDIATE",
                         action=action_text,
-                        rationale=(
-                            f"Missing portal(s) {', '.join(missing)} can be compensated via "
-                            "entitlements; birthright itself is not directly editable"
-                        ),
+                        rationale=_rationale_for_missing_portal_action(action_text, missing),
                         complexity="SIMPLE",
                         estimated_effort="2 minutes",
                     )

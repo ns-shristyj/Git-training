@@ -11,8 +11,23 @@ bedrock_agentcore:
 
   agent_id: ciamResponseGenerator-75l4h0HADB
   agent_arn: arn:aws:bedrock-agentcore:us-east-1:786063285476:runtime/ciamResponseGenerator-75l4h0HADB
-  agent_runtime_version: '7'
-  last_deployed: '2026-08-10T12:11:54Z'
+  agent_runtime_version: '8'
+  last_deployed: '2026-08-10T12:32:04Z'
+  status: READY
+  # v8: Pattern 1's recommended_actions loop gave every action the SAME
+  # blanket rationale ("can be compensated via entitlements"), which became
+  # visibly wrong once Agent 4 started emitting qualitatively different step
+  # types for the pending-login-refresh case (v7) -- e.g. a "log out and log
+  # back in" action was labeled with an entitlements rationale that has
+  # nothing to do with it. Added _rationale_for_missing_portal_action(),
+  # which derives each action's rationale from its own content (re-login vs.
+  # entitlements vs. verify) instead of one shared sentence. Caught and fixed
+  # a priority-order bug during verification: the conditional follow-up
+  # action ("If still missing after a fresh login, add ... to ENTITLEMENTS")
+  # mentions "fresh login" too, so checking the login phrases before
+  # "entitlements" misclassified it -- reordered to check "entitlements"
+  # first. Verified live: all 3 actions now get distinct, correct
+  # rationales.
   status: READY
   # v7: consumes Agent 4's new SyncDiagnostics field (see Agent 4's v12
   # changelog) so multi-account ambiguity and pending-login-refresh
