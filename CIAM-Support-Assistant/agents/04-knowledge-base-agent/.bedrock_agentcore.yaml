@@ -11,9 +11,38 @@ bedrock_agentcore:
 
   agent_id: ciamKnowledgeBaseAgent-VdVt7x7TZ1
   agent_arn: arn:aws:bedrock-agentcore:us-east-1:786063285476:runtime/ciamKnowledgeBaseAgent-VdVt7x7TZ1
-  agent_runtime_version: '9'
-  last_deployed: '2026-08-10T08:59:44Z'
+  agent_runtime_version: '11'
+  last_deployed: '2026-08-10T10:32:11Z'
   status: READY
+  # v10/v11: CIAM ops feedback -- Auth0 Actions are edited independently of
+  # this agent's deploys, so Tool 4's understanding of NetskopeID-Sync-2/
+  # Gatekeeper must be re-verified live, not trusted from the 2026-07-28
+  # offline snapshot forever. Added Tool 5 (fetch_live_auth0_actions):
+  # fetches the current Action list from the Auth0 Management API
+  # (ciam-agent/auth0-workflows M2M credentials, read:actions/read:rules/
+  # read:triggers scopes only) on every invocation that has an actual gap
+  # to explain, and checks each Action's live code against known-good
+  # marker strings -- flags "code drift" if a marker is missing (e.g. the
+  # Action's logic changed) or the Action can't be found by name at all
+  # (renamed/deleted). Non-fatal: any failure falls back to the offline
+  # snapshot exactly as before, never blocks the rest of Agent 4's output.
+  # IAM: added a narrowly-scoped secretsmanager:GetSecretValue Allow for
+  # ONLY ciam-agent/auth0-workflows-* (removed the blanket GetSecretValue
+  # Deny that previously blocked this); Agent 4 still has zero access to
+  # Agent 3's ciam-agent/auth0 user-lookup credential.
+  #
+  # v11 fixes a real bug found via the FIRST live verification of v10: the
+  # initial _EXPECTED_CODE_MARKERS used "Tenant_Requests__c" for
+  # NetskopeID-Sync-2 -- a paraphrase from a code COMMENT, not a literal
+  # token in the real fetched source (the actual second SF field is
+  # Customer_Status__c). That fired a false "code drift" WARNING against
+  # the live tenant on the very first real invocation. Fixed the marker and
+  # added a regression test that verifies every _EXPECTED_CODE_MARKERS
+  # entry literally appears in the archived auth0_workflow_scripts/*.md
+  # source, so a marker can never again be inferred instead of
+  # copy-verified. Re-verified live: code_drift_detected=False,
+  # live_verified=True, no false warning.
+  #
   # v9: CIAM ops feedback -- classify_fix_complexity's SIMPLE_FIX reason/
   # recommended_actions now explicitly state the hard rule that birthright is
   # Salesforce-computed by NetskopeID-Sync-2 and must NEVER be edited

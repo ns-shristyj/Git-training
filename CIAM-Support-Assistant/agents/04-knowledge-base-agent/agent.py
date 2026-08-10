@@ -14,16 +14,30 @@ Agent 4. It:
      (Tool 3: classify_fix_complexity)
   3. Queries the Bedrock Knowledge Base for relevant SOPs and similar past
      tickets (Tool 2: query_knowledge_base) -- non-fatal on failure
-  4. [PLACEHOLDER] Attempts to map the failure to a specific Auth0 workflow
-     script (Tool 4: identify_failing_workflow) -- always a stub until real
-     Auth0 Action/Rule/Flow scripts are supplied (see spec OQ-8)
+  4. Maps the failure to the real Auth0 Action(s) responsible (Tool 4:
+     identify_failing_workflow), backed by a LIVE fetch of the current
+     Action list/metadata from the Auth0 Management API on every invocation
+     (Tool 5: fetch_live_auth0_actions) -- non-fatal on failure, falls back
+     to the last-known-good offline snapshot. This exists because Auth0
+     Actions are edited independently of this agent's deploys: a hardcoded
+     "what this Action does" description silently goes stale the moment
+     someone edits the Action in the Auth0 dashboard. The live fetch also
+     flags "code drift" -- when the live Action's source no longer contains
+     the marker strings this agent's diagnosis logic assumes -- so a broken
+     or changed Action shows up as a signal in the response instead of
+     silently producing a wrong root cause.
 
 Security model
 --------------
-Tools 1, 3, and 4 are pure local functions -- zero network calls, zero IAM
-permissions required. Tool 2 is the only external call: bedrock:Retrieve /
-bedrock:RetrieveAndGenerate, scoped to the CIAM Knowledge Base ARN only.
-No DynamoDB, no Auth0, no Secrets Manager, no writes of any kind.
+Tools 1 and 3 are pure local functions -- zero network calls, zero IAM
+permissions required. Tool 2 calls bedrock:Retrieve / bedrock:RetrieveAndGenerate,
+scoped to the CIAM Knowledge Base ARN only. Tool 5 (used by Tool 4) calls
+secretsmanager:GetSecretValue scoped ONLY to the ciam-agent/auth0-workflows
+secret (a read-only M2M app with read:actions/read:rules/read:triggers
+scopes -- distinct from Agent 3's ciam-agent/auth0 user-lookup credential,
+which Agent 4 has no access to), then HTTPS GET to the Auth0 Management API
+(GET /api/v2/actions/actions only -- no writes, ever). No DynamoDB, no
+Auth0 user data, no writes of any kind.
 """
 
 import json
@@ -49,6 +63,14 @@ DEFAULT_TOP_K = 3
 MAX_TOP_K = 10
 BEDROCK_TIMEOUT_SECONDS = 10
 MAX_RETRIES = 3
+
+# Live Auth0 Action fetch (Tool 5) -- same tenant Agent 3 talks to, but a
+# separate, narrower-scoped M2M app/secret (read:actions/read:rules/
+# read:triggers only, no user data access).
+AUTH0_DOMAIN = "netskope-dev.us.auth0.com"
+AUTH0_WORKFLOWS_SECRET_PATH = "ciam-agent/auth0-workflows"
+AUTH0_HTTP_TIMEOUT_SECONDS = 5
+AUTH0_MAX_RETRIES = 2  # best-effort, non-fatal -- don't retry as aggressively as Tool 2
 
 KNOWN_PORTAL_KEYWORDS = frozenset({"Support", "Community", "Academy", "Notification", "Dashboard", "Partner", "Prime"})
 
@@ -76,13 +98,21 @@ logging.basicConfig(
 )
 logger = logging.getLogger("ciam-knowledge-base-agent")
 
-# Posture Guard: Tools 1, 3, 4 are pure local logic (no IAM needed). Tool 2
-# is the only external call.
-ALLOWED_ACTIONS = frozenset({"bedrock:Retrieve", "bedrock:RetrieveAndGenerate"})
+# Posture Guard: Tools 1 and 3 are pure local logic (no IAM needed). Tool 2
+# and Tool 5 are the only external calls.
+ALLOWED_ACTIONS = frozenset({
+    "bedrock:Retrieve", "bedrock:RetrieveAndGenerate", "secretsmanager:GetSecretValue",
+})
 ALLOWED_TOOL_NAMES = frozenset({
     "evaluate_birthright", "query_knowledge_base",
     "classify_fix_complexity", "identify_failing_workflow",
+    "fetch_live_auth0_actions",
 })
+
+# HTTP allow-list for Tool 5 -- exactly two permitted call patterns, read-only,
+# same host Agent 3 uses but a narrower path set (no user-data endpoints).
+ALLOWED_HTTP_HOSTS = frozenset({AUTH0_DOMAIN})
+ALLOWED_HTTP_PATHS = frozenset({"/oauth/token", "/api/v2/actions/actions"})
 
 
 class PostureViolationError(RuntimeError):
@@ -101,6 +131,13 @@ def assert_tool_posture(tool_name: str) -> None:
         raise PostureViolationError(
             f"Posture violation: tool '{tool_name}' not permitted. Allowed: {ALLOWED_TOOL_NAMES}"
         )
+
+
+def assert_http_posture(host: str, path: str, method: str) -> None:
+    if host != AUTH0_DOMAIN:
+        raise PostureViolationError(f"Posture violation: host '{host}' not permitted")
+    if path not in ALLOWED_HTTP_PATHS:
+        raise PostureViolationError(f"Posture violation: path '{path}' not permitted")
 
 
 # Schemas (§7.1)
@@ -129,15 +166,23 @@ class FixClassification(BaseModel):
 
 
 class WorkflowIdentification(BaseModel):
-    """Maps a failure symptom to the real Auth0 Action(s) responsible,
-    fetched live from the nskp tenant's Management API (see
-    fetch_auth0_workflow_scripts.py). Resolved OQ-8."""
+    """Maps a failure symptom to the real Auth0 Action(s) responsible.
+    `workflow_script_ref`/`enforcement_workflow_script_ref` are the LIVE
+    action IDs fetched from the Auth0 Management API on this invocation
+    when available (`live_verified=True`), falling back to the last-known
+    offline snapshot when the live fetch fails (`live_verified=False`,
+    `live_fetch_error` populated) -- never blocks the rest of Agent 4's
+    output either way. Resolved OQ-8."""
     workflow_identified: bool = False
     workflow_name: Optional[str] = None
     workflow_script_ref: Optional[str] = None
     enforcement_workflow_name: Optional[str] = None
     enforcement_workflow_script_ref: Optional[str] = None
     note: str = "Auth0 workflow scripts not yet provided -- placeholder only"
+    live_verified: bool = False
+    live_fetch_error: Optional[str] = None
+    code_drift_detected: bool = False
+    code_drift_note: Optional[str] = None
 
 
 class KBDocument(BaseModel):
@@ -437,34 +482,211 @@ def classify_fix_complexity(
     )
 
 
+# Tool 5 — fetch_live_auth0_actions (CIAM ops feedback: Auth0 Actions are
+# edited independently of this agent's deploys, so Tool 4's understanding of
+# "what NetskopeID-Sync-2/Gatekeeper currently do" must be re-verified live
+# on every invocation, not trusted from a point-in-time hardcoded snapshot.
+#
+# _OFFLINE_FALLBACK_WORKFLOWS is the last-known-good snapshot from the
+# original offline fetch (see fetch_auth0_workflow_scripts.py, action IDs
+# valid as of 2026-07-28) -- used ONLY when the live fetch below fails
+# (network error, credential issue, Auth0 API outage). When the live fetch
+# succeeds, its action IDs/status always take precedence.
+_OFFLINE_FALLBACK_WORKFLOWS = {
+    "NetskopeID-Sync-2": "bb237d59-6ef7-420e-881a-345c8d0bc3a2",
+    "Gatekeeper": "35d76097-24c1-4b5b-b3cc-e853e286b7e6",
+}
+
+# Marker strings this agent's diagnosis logic assumes are present in each
+# Action's current source. Not code review -- a lightweight drift detector:
+# if a marker goes missing, the Action was very likely edited in a way that
+# changes its behavior, and Tool 4's root-cause mapping may no longer be
+# accurate (addresses CIAM ops feedback: "the action code could be something
+# wrong and not applying to calculate birthright properly"). Never surfaces
+# the underlying code itself -- only a boolean + a description of what's
+# missing.
+# Verified against the actual fetched source (auth0_workflow_scripts/
+# auth0-action-*.md, 2026-07-28 snapshot) -- NOT against the prose
+# description. An earlier version of this dict used "Tenant_Requests__c",
+# which is a paraphrase from a code COMMENT ("Salesforce Account Status and
+# Tenant Requests") and never appears as a literal token anywhere in the
+# real source; the actual second Salesforce field referenced is
+# `Customer_Status__c`. That mismatch would have fired a false "code drift"
+# warning on every single ticket. Lesson: markers must be copy-verified
+# against real fetched code, never inferred from a summary/comment.
+_EXPECTED_CODE_MARKERS = {
+    "NetskopeID-Sync-2": ["Account_Status__c", "Customer_Status__c", "birthright"],
+    "Gatekeeper": ["birthright", "entitlements"],
+}
+
+
+class LiveActionInfo(BaseModel):
+    name: str
+    action_id: str
+    status: Optional[str] = None
+    updated_at: Optional[str] = None
+    code_drift_detected: bool = False
+    code_drift_note: Optional[str] = None
+
+
+_auth0_secrets_client = None
+_auth0_cached_token: Optional[str] = None
+_auth0_cached_token_expires_at: Optional[datetime] = None
+
+
+class Auth0WorkflowFetchError(RuntimeError):
+    pass
+
+
+def _get_auth0_secrets_client():
+    global _auth0_secrets_client
+    if _auth0_secrets_client is None:
+        _auth0_secrets_client = boto3.client("secretsmanager", region_name=AWS_REGION)
+    return _auth0_secrets_client
+
+
+def _get_auth0_workflows_credentials() -> dict:
+    assert_posture("secretsmanager:GetSecretValue")
+    client = _get_auth0_secrets_client()
+    response = client.get_secret_value(SecretId=AUTH0_WORKFLOWS_SECRET_PATH)
+    return json.loads(response["SecretString"])
+
+
+def _acquire_auth0_token() -> tuple:
+    creds = _get_auth0_workflows_credentials()
+    assert_http_posture(AUTH0_DOMAIN, "/oauth/token", "POST")
+
+    last_error = None
+    for attempt in range(1, AUTH0_MAX_RETRIES + 1):
+        try:
+            response = requests.post(
+                f"https://{AUTH0_DOMAIN}/oauth/token",
+                json={
+                    "grant_type": "client_credentials",
+                    "client_id": creds["client_id"],
+                    "client_secret": creds["client_secret"],
+                    "audience": f"https://{AUTH0_DOMAIN}/api/v2/",
+                },
+                timeout=AUTH0_HTTP_TIMEOUT_SECONDS,
+            )
+            response.raise_for_status()
+            body = response.json()
+            return body["access_token"], body.get("expires_in", 3600)
+        except Exception as e:
+            last_error = e
+            if attempt < AUTH0_MAX_RETRIES:
+                time.sleep(1)
+
+    raise Auth0WorkflowFetchError(str(last_error))
+
+
+def _get_valid_auth0_token() -> str:
+    """Caching the TOKEN is just an auth-perf optimization (avoids an extra
+    round trip when Agent 4 is invoked repeatedly in a warm container) -- it
+    is NOT a cache of Action data. The actions list itself (below) is always
+    re-fetched fresh on every call; nothing about Action content is ever
+    cached across invocations."""
+    global _auth0_cached_token, _auth0_cached_token_expires_at
+    now = now_utc()
+    if _auth0_cached_token and _auth0_cached_token_expires_at and now < _auth0_cached_token_expires_at:
+        return _auth0_cached_token
+    token, expires_in = _acquire_auth0_token()
+    _auth0_cached_token = token
+    _auth0_cached_token_expires_at = now + timedelta(seconds=max(expires_in - 60, 30))
+    return token
+
+
+def fetch_live_auth0_actions(action_names: List[str]) -> tuple:
+    """Tool 5 -- fetches the CURRENT Auth0 Action list from the live
+    Management API (GET /api/v2/actions/actions, read-only) and checks each
+    requested action's live source against _EXPECTED_CODE_MARKERS. Always
+    attempted fresh on every Agent 4 invocation -- no caching of Action data.
+    Non-fatal: any failure (network, credentials, Auth0 API error/timeout)
+    returns ({}, error_string) and callers fall back to
+    _OFFLINE_FALLBACK_WORKFLOWS, exactly like Tool 2's KB failure handling."""
+    assert_tool_posture("fetch_live_auth0_actions")
+
+    try:
+        token = _get_valid_auth0_token()
+        assert_http_posture(AUTH0_DOMAIN, "/api/v2/actions/actions", "GET")
+        response = requests.get(
+            f"https://{AUTH0_DOMAIN}/api/v2/actions/actions",
+            headers={"Authorization": f"Bearer {token}"},
+            params={"per_page": 100},
+            timeout=AUTH0_HTTP_TIMEOUT_SECONDS,
+        )
+        response.raise_for_status()
+        body = response.json()
+    except Exception as e:
+        logger.warning(
+            f"Live Auth0 Action fetch failed, falling back to offline snapshot: "
+            f"{type(e).__name__}: {e}"
+        )
+        return {}, f"auth0_live_fetch_error: {type(e).__name__}"
+
+    actions_by_name = {a.get("name"): a for a in body.get("actions", []) if a.get("name")}
+    results = {}
+    for name in action_names:
+        live = actions_by_name.get(name)
+        if not live:
+            results[name] = LiveActionInfo(
+                name=name,
+                action_id="",
+                status="not_found_live",
+                code_drift_detected=True,
+                code_drift_note=(
+                    f"Action '{name}' was not found by that name in the live tenant -- it may "
+                    "have been renamed, deleted, or consolidated. Root-cause mapping for this "
+                    "workflow can't be verified against current reality."
+                ),
+            )
+            continue
+
+        code = live.get("code") or ""
+        expected_markers = _EXPECTED_CODE_MARKERS.get(name, [])
+        missing_markers = [m for m in expected_markers if m not in code]
+        drift = len(missing_markers) > 0
+        results[name] = LiveActionInfo(
+            name=name,
+            action_id=live.get("id", ""),
+            status=live.get("status"),
+            updated_at=live.get("updated_at"),
+            code_drift_detected=drift,
+            code_drift_note=(
+                f"Action '{name}' current live code no longer contains expected marker(s) "
+                f"{missing_markers} -- its logic may have changed since this diagnosis mapping "
+                "was last validated. Escalate for manual review of the Action's current code."
+            ) if drift else None,
+        )
+
+    return results, None
+
+
 # Tool 4 — identify_failing_workflow (§4.1 Tool 4, resolves OQ-8)
 #
-# Real Auth0 Actions fetched live from the nskp tenant (18 actions,
-# see fetch_auth0_workflow_scripts.py, indexed in the KB as
-# auth0-action-*.md). Root cause of a birthright/entitlement gap traces to
-# two distinct Actions:
+# Root cause of a birthright/entitlement gap traces to two distinct Actions
+# (verified live via Tool 5 above on every call; falls back to
+# _OFFLINE_FALLBACK_WORKFLOWS only if that live fetch fails):
 #
-#   1. NetskopeID-Sync-2 (`set_birthright_access`, action ID
-#      bb237d59-6ef7-420e-881a-345c8d0bc3a2) computes the user's birthright
-#      array from Salesforce Account Status + Tenant Requests at login.
-#      A missing keyword almost always originates here -- the SF-derived
-#      calculation didn't grant it.
-#   2. Gatekeeper (action ID 35d76097-24c1-4b5b-b3cc-e853e286b7e6) is the
-#      enforcement point: it checks
+#   1. NetskopeID-Sync-2 (`set_birthright_access`) computes the user's
+#      birthright array from Salesforce Account Status + Tenant Requests at
+#      login. A missing keyword almost always originates here -- the
+#      SF-derived calculation didn't grant it.
+#   2. Gatekeeper is the enforcement point: it checks
 #      `entitlements.includes(block) || !(entitlements.includes(x) || birthright.includes(x))`
 #      per portal at login and is what actually produces the "insufficient
 #      permissions" denial the user sees -- including explicit Block-<X>
 #      keyword checks.
-_BIRTHRIGHT_SOURCE_WORKFLOW = ("NetskopeID-Sync-2", "bb237d59-6ef7-420e-881a-345c8d0bc3a2")
-_ENFORCEMENT_WORKFLOW = ("Gatekeeper", "35d76097-24c1-4b5b-b3cc-e853e286b7e6")
-
-
 def identify_failing_workflow(
-    failed_step: Optional[str], all_missing_keywords: Optional[List[str]] = None
+    failed_step: Optional[str],
+    all_missing_keywords: Optional[List[str]] = None,
+    live_actions: Optional[dict] = None,
+    live_fetch_error: Optional[str] = None,
 ) -> WorkflowIdentification:
-    """Tool 4 -- pure local logic, zero external calls at runtime (the Auth0
-    Action/Rule data was fetched offline and is hardcoded here + indexed in
-    the KB as auth0-action-*.md for Tool 2 to surface alongside this).
+    """Tool 4. `live_actions` (from Tool 5, keyed by Action name) supplies
+    live-verified action IDs/drift status when available; falls back to
+    _OFFLINE_FALLBACK_WORKFLOWS when `live_actions` is None/empty or doesn't
+    contain a given name (e.g. Tool 5's fetch failed entirely).
 
     `failed_step` is the single value used for backward-compat call sites and
     the "explicit_block_detected" sentinel. When there's more than one
@@ -477,10 +699,30 @@ def identify_failing_workflow(
         return WorkflowIdentification(
             workflow_identified=False,
             note="No failing step to map -- birthright matched expected, no workflow implicated.",
+            live_fetch_error=live_fetch_error,
         )
 
-    source_name, source_ref = _BIRTHRIGHT_SOURCE_WORKFLOW
-    enforce_name, enforce_ref = _ENFORCEMENT_WORKFLOW
+    live_actions = live_actions or {}
+    source_name = "NetskopeID-Sync-2"
+    enforce_name = "Gatekeeper"
+    source_live = live_actions.get(source_name)
+    enforce_live = live_actions.get(enforce_name)
+
+    source_ref = (source_live.action_id if source_live and source_live.action_id
+                  else _OFFLINE_FALLBACK_WORKFLOWS[source_name])
+    enforce_ref = (enforce_live.action_id if enforce_live and enforce_live.action_id
+                   else _OFFLINE_FALLBACK_WORKFLOWS[enforce_name])
+
+    # live_verified means BOTH relevant actions were actually found in this
+    # invocation's live fetch -- not just that the HTTP call succeeded.
+    live_verified = (
+        live_fetch_error is None
+        and source_live is not None and source_live.action_id != ""
+        and enforce_live is not None and enforce_live.action_id != ""
+    )
+    drift_infos = [info for info in (source_live, enforce_live) if info and info.code_drift_detected]
+    code_drift_detected = len(drift_infos) > 0
+    code_drift_note = " ".join(info.code_drift_note for info in drift_infos if info.code_drift_note) or None
 
     if failed_step == "explicit_block_detected":
         return WorkflowIdentification(
@@ -491,7 +733,13 @@ def identify_failing_workflow(
                 f"{enforce_name} checks entitlements against the client's Block-<Portal> "
                 "metadata at login and denies access when a block keyword is present. "
                 "See auth0-action-gatekeeper.md for the exact check."
+                + (f" LIVE-VERIFIED action ID as of this run: {enforce_ref}." if live_verified else
+                   " (Live verification unavailable this run -- using last-known-good action ID.)")
             ),
+            live_verified=live_verified,
+            live_fetch_error=live_fetch_error,
+            code_drift_detected=code_drift_detected,
+            code_drift_note=code_drift_note,
         )
 
     keywords = all_missing_keywords or [failed_step]
@@ -501,19 +749,35 @@ def identify_failing_workflow(
 
     # Any missing birthright keyword(s) (e.g. "Support", "Partner") trace to
     # the Salesforce-driven birthright calculation, then are enforced by Gatekeeper.
+    note = (
+        f"{source_name}'s set_birthright_access() computes birthright from Salesforce "
+        f"Account Status/Tenant Requests -- investigate why keyword{plural} {keywords_str} "
+        f"{was_were} granted there. {enforce_name} is what enforces the resulting gap at "
+        f"login (denies each portal whose required keyword is absent from entitlements/"
+        f"birthright). See auth0-action-netskopeid-sync-2.md and auth0-action-gatekeeper.md."
+    )
+    if live_verified:
+        note += f" LIVE-VERIFIED against the current Auth0 tenant as of this run (action IDs: {source_ref}, {enforce_ref})."
+    else:
+        note += (
+            " (Live verification unavailable this run"
+            + (f": {live_fetch_error}" if live_fetch_error else "")
+            + " -- using last-known-good offline snapshot; action IDs above may be stale.)"
+        )
+    if code_drift_note:
+        note += f" WARNING: {code_drift_note}"
+
     return WorkflowIdentification(
         workflow_identified=True,
         workflow_name=source_name,
         workflow_script_ref=source_ref,
         enforcement_workflow_name=enforce_name,
         enforcement_workflow_script_ref=enforce_ref,
-        note=(
-            f"{source_name}'s set_birthright_access() computes birthright from Salesforce "
-            f"Account Status/Tenant Requests -- investigate why keyword{plural} {keywords_str} "
-            f"{was_were} granted there. {enforce_name} is what enforces the resulting gap at "
-            f"login (denies each portal whose required keyword is absent from entitlements/"
-            f"birthright). See auth0-action-netskopeid-sync-2.md and auth0-action-gatekeeper.md."
-        ),
+        note=note,
+        live_verified=live_verified,
+        live_fetch_error=live_fetch_error,
+        code_drift_detected=code_drift_detected,
+        code_drift_note=code_drift_note,
     )
 
 
@@ -544,9 +808,17 @@ _CODE_TOKEN_PATTERN = re.compile(
 _CODE_TOKEN_MIN_HITS = 3  # a few isolated hits can occur in prose examples; require several
 
 # Plain-English summaries of each real Auth0 Action, derived by reading the
-# actual fetched script bodies (see auth0_workflow_scripts/*.md) -- used in
-# place of raw code so Tool 2 stays *informed by* the real implementation
-# without ever printing a line of it. Keyed by the KB document title.
+# actual fetched script bodies as of the 2026-07-28 offline fetch (see
+# auth0_workflow_scripts/*.md) -- used in place of raw code so Tool 2 stays
+# *informed by* the real implementation without ever printing a line of it.
+# Keyed by the KB document title. NOTE: this is now a point-in-time
+# snapshot only used for excerpt sanitization (Tool 2) -- it is NOT the
+# source of truth for Tool 4's root-cause mapping, which re-verifies
+# NetskopeID-Sync-2/Gatekeeper against the LIVE Auth0 tenant on every
+# invocation (see fetch_live_auth0_actions / Tool 5, below). If a KB
+# document's underlying Action has since changed, this summary can go
+# stale -- that staleness only affects the KB excerpt text (still labeled
+# with the doc title so it's traceable), not the live diagnosis.
 _AUTH0_ACTION_SUMMARIES = {
     "auth0-action-netskopeid-sync-2.md": (
         "NetskopeID-Sync-2 (post-login) is the core birthright engine: it computes a "
@@ -824,12 +1096,22 @@ def evaluate_ciam_case(payload: dict) -> dict:
     query = build_kb_query(intent, evaluation.persona, evaluation.missing_keywords, evaluation.extra_keywords, raw_input)
     kb_results, kb_error = query_knowledge_base(query, top_k=payload.get("top_k", DEFAULT_TOP_K))
 
-    # Step 6: identify failing workflow (Tool 4 -- placeholder) -- always called, never fails
+    # Step 6: identify failing workflow (Tool 4), backed by a live Auth0
+    # Action fetch (Tool 5) -- always attempted, non-fatal on failure (falls
+    # back to the offline snapshot inside identify_failing_workflow itself).
+    # Only worth the extra round trip when there's actually a gap to explain.
     failed_step = (
         "explicit_block_detected" if evaluation.explicit_block_detected
         else (evaluation.missing_keywords[0] if evaluation.missing_keywords else None)
     )
-    workflow_id = identify_failing_workflow(failed_step, evaluation.missing_keywords)
+    live_actions, live_fetch_error = ({}, None)
+    if failed_step:
+        live_actions, live_fetch_error = fetch_live_auth0_actions(
+            ["NetskopeID-Sync-2", "Gatekeeper"]
+        )
+    workflow_id = identify_failing_workflow(
+        failed_step, evaluation.missing_keywords, live_actions, live_fetch_error
+    )
 
     logger.info(f"[{run_id}] Done. persona={evaluation.persona} complexity={classification.complexity}")
 

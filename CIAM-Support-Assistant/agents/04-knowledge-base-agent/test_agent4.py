@@ -13,9 +13,11 @@ from agent import (
     evaluate_birthright,
     classify_fix_complexity,
     identify_failing_workflow,
+    fetch_live_auth0_actions,
     derive_persona,
     assert_posture,
     assert_tool_posture,
+    assert_http_posture,
     PostureViolationError,
 )
 
@@ -582,3 +584,239 @@ def test_invalid_input_returns_structured_error():
     result = evaluate_ciam_case({"account_status": "Customer"})  # missing required fields
     assert result["error"] == "invalid_input"
     assert result["birthright_evaluation"] is None
+
+
+# ============================================================================
+# Tool 5 (fetch_live_auth0_actions) + Tool 4 live-verification / drift
+# detection -- CIAM ops feedback: Auth0 Actions are edited independently of
+# this agent's deploys, so a hardcoded understanding of what an Action does
+# must be re-verified live on every invocation, not trusted from a
+# point-in-time snapshot. Note: the autouse `_no_live_auth0_fetch` fixture in
+# conftest.py patches `fetch_live_auth0_actions` to a network-free default
+# for every OTHER test in this file -- these tests override that default
+# explicitly to exercise the real function body via lower-level mocks.
+# ============================================================================
+
+def _mock_auth0_token_response():
+    return mock_response({"access_token": "fake-token", "expires_in": 3600})
+
+
+def _mock_auth0_actions_list_response(actions):
+    return mock_response({"actions": actions})
+
+
+def test_fetch_live_auth0_actions_success_no_drift(monkeypatch):
+    """Happy path: live fetch succeeds, both actions found, code contains all
+    expected markers -- no drift, live-verified IDs differ from (and take
+    precedence over) the offline fallback IDs."""
+    monkeypatch.setattr(
+        "agent._get_auth0_workflows_credentials",
+        lambda: {"client_id": "x", "client_secret": "y"},
+    )
+    live_actions_payload = [
+        {
+            "name": "NetskopeID-Sync-2",
+            "id": "LIVE-sync2-id-currently-in-tenant",
+            "status": "built",
+            "updated_at": "2026-08-01T00:00:00.000Z",
+            "code": "const x = Account_Status__c; const y = Customer_Status__c; user.birthright = [];",
+        },
+        {
+            "name": "Gatekeeper",
+            "id": "LIVE-gatekeeper-id-currently-in-tenant",
+            "status": "built",
+            "updated_at": "2026-08-01T00:00:00.000Z",
+            "code": "if (!entitlements.includes(x) && !birthright.includes(x)) deny();",
+        },
+    ]
+
+    def fake_post(url, **kwargs):
+        return _mock_auth0_token_response()
+
+    def fake_get(url, **kwargs):
+        return _mock_auth0_actions_list_response(live_actions_payload)
+
+    monkeypatch.setattr("agent.requests.post", fake_post)
+    monkeypatch.setattr("agent.requests.get", fake_get)
+
+    live_actions, error = fetch_live_auth0_actions(["NetskopeID-Sync-2", "Gatekeeper"])
+
+    assert error is None
+    assert live_actions["NetskopeID-Sync-2"].action_id == "LIVE-sync2-id-currently-in-tenant"
+    assert live_actions["NetskopeID-Sync-2"].code_drift_detected is False
+    assert live_actions["Gatekeeper"].action_id == "LIVE-gatekeeper-id-currently-in-tenant"
+    assert live_actions["Gatekeeper"].code_drift_detected is False
+
+    wf = identify_failing_workflow("Support", ["Support"], live_actions, error)
+    assert wf.live_verified is True
+    assert wf.code_drift_detected is False
+    # Live IDs must win over the hardcoded offline fallback constants.
+    assert wf.workflow_script_ref == "LIVE-sync2-id-currently-in-tenant"
+    assert wf.enforcement_workflow_script_ref == "LIVE-gatekeeper-id-currently-in-tenant"
+    assert "LIVE-VERIFIED" in wf.note
+
+
+def test_fetch_live_auth0_actions_detects_code_drift(monkeypatch):
+    """If the live Action's current code no longer contains a marker this
+    agent's diagnosis assumes (e.g. someone edited NetskopeID-Sync-2 to stop
+    reading Customer_Status__c), that must surface as a flagged warning, not
+    be silently ignored -- this is what lets Agent 4 say 'the Action code
+    itself might be the problem' instead of always blaming Salesforce data."""
+    monkeypatch.setattr(
+        "agent._get_auth0_workflows_credentials",
+        lambda: {"client_id": "x", "client_secret": "y"},
+    )
+    drifted_payload = [
+        {
+            "name": "NetskopeID-Sync-2",
+            "id": "sync2-id",
+            "status": "built",
+            "updated_at": "2026-08-09T00:00:00.000Z",
+            # Customer_Status__c marker removed -- simulates someone editing
+            # the Action's calculation logic.
+            "code": "const x = Account_Status__c; user.birthright = [];",
+        },
+        {
+            "name": "Gatekeeper",
+            "id": "gatekeeper-id",
+            "status": "built",
+            "updated_at": "2026-08-01T00:00:00.000Z",
+            "code": "if (!entitlements.includes(x) && !birthright.includes(x)) deny();",
+        },
+    ]
+    monkeypatch.setattr("agent.requests.post", lambda url, **kw: _mock_auth0_token_response())
+    monkeypatch.setattr("agent.requests.get", lambda url, **kw: _mock_auth0_actions_list_response(drifted_payload))
+
+    live_actions, error = fetch_live_auth0_actions(["NetskopeID-Sync-2", "Gatekeeper"])
+
+    assert error is None
+    assert live_actions["NetskopeID-Sync-2"].code_drift_detected is True
+    assert "Customer_Status__c" in live_actions["NetskopeID-Sync-2"].code_drift_note
+
+    wf = identify_failing_workflow("Support", ["Support"], live_actions, error)
+    assert wf.code_drift_detected is True
+    assert "WARNING" in wf.note
+
+
+def test_fetch_live_auth0_actions_renamed_or_missing_falls_back(monkeypatch):
+    """If an expected Action can't be found by name in the live tenant (e.g.
+    renamed or deleted), Tool 4 must fall back to the offline reference ID
+    for that action and must NOT claim live_verified."""
+    monkeypatch.setattr(
+        "agent._get_auth0_workflows_credentials",
+        lambda: {"client_id": "x", "client_secret": "y"},
+    )
+    # "Gatekeeper" is missing entirely from the live list.
+    partial_payload = [
+        {
+            "name": "NetskopeID-Sync-2",
+            "id": "sync2-id",
+            "status": "built",
+            "updated_at": "2026-08-01T00:00:00.000Z",
+            "code": "Account_Status__c Customer_Status__c birthright",
+        },
+    ]
+    monkeypatch.setattr("agent.requests.post", lambda url, **kw: _mock_auth0_token_response())
+    monkeypatch.setattr("agent.requests.get", lambda url, **kw: _mock_auth0_actions_list_response(partial_payload))
+
+    live_actions, error = fetch_live_auth0_actions(["NetskopeID-Sync-2", "Gatekeeper"])
+
+    assert error is None
+    assert live_actions["Gatekeeper"].action_id == ""
+    assert live_actions["Gatekeeper"].code_drift_detected is True
+
+    wf = identify_failing_workflow("Support", ["Support"], live_actions, error)
+    assert wf.live_verified is False  # Gatekeeper couldn't be confirmed live
+    assert wf.enforcement_workflow_script_ref == "35d76097-24c1-4b5b-b3cc-e853e286b7e6"  # offline fallback
+
+
+def test_fetch_live_auth0_actions_network_failure_is_non_fatal(monkeypatch):
+    """Any failure fetching live Auth0 data (credentials, network, Auth0 API
+    error) must never crash Agent 4 -- it degrades to the offline snapshot,
+    same non-fatal contract as Tool 2's KB failure handling."""
+    def raise_error():
+        raise RuntimeError("secrets manager unavailable")
+
+    monkeypatch.setattr("agent._get_auth0_workflows_credentials", lambda: raise_error())
+
+    live_actions, error = fetch_live_auth0_actions(["NetskopeID-Sync-2", "Gatekeeper"])
+
+    assert live_actions == {}
+    assert error is not None
+    assert "auth0_live_fetch_error" in error
+
+    # Tool 4 must still produce a complete, non-crashing result using the
+    # offline fallback.
+    wf = identify_failing_workflow("Support", ["Support"], live_actions, error)
+    assert wf.workflow_identified is True
+    assert wf.live_verified is False
+    assert wf.live_fetch_error == error
+    assert wf.workflow_script_ref == "bb237d59-6ef7-420e-881a-345c8d0bc3a2"  # offline fallback
+    assert "Live verification unavailable" in wf.note
+
+
+def test_expected_code_markers_are_verified_against_real_archived_source():
+    """Regression test for a real bug caught during Fix #2 verification: the
+    first version of _EXPECTED_CODE_MARKERS used "Tenant_Requests__c" for
+    NetskopeID-Sync-2 -- a paraphrase from a code COMMENT ("Salesforce
+    Account Status and Tenant Requests"), not a literal token anywhere in
+    the real fetched source. That would have fired a false "code drift"
+    warning against the live tenant on every single ticket, defeating the
+    entire point of the drift detector. This test asserts every marker in
+    _EXPECTED_CODE_MARKERS literally appears in the corresponding archived
+    Action source file, so a marker can never again be inferred from a
+    summary instead of copy-verified from the real code."""
+    import os
+    from agent import _EXPECTED_CODE_MARKERS
+
+    action_to_filename = {
+        "NetskopeID-Sync-2": "auth0-action-netskopeid-sync-2.md",
+        "Gatekeeper": "auth0-action-gatekeeper.md",
+    }
+    scripts_dir = os.path.join(os.path.dirname(__file__), "auth0_workflow_scripts")
+
+    for action_name, markers in _EXPECTED_CODE_MARKERS.items():
+        filename = action_to_filename.get(action_name)
+        assert filename, f"no archived source mapping for '{action_name}' -- add one to this test"
+        path = os.path.join(scripts_dir, filename)
+        with open(path, "r", encoding="utf-8") as f:
+            source = f.read()
+        for marker in markers:
+            assert marker in source, (
+                f"marker '{marker}' for '{action_name}' does not literally appear in "
+                f"{filename} -- it was likely inferred from a comment/summary instead of "
+                "copy-verified from the real code (see this test's docstring)"
+            )
+
+
+def test_http_posture_rejects_disallowed_host_and_path():
+    with pytest.raises(PostureViolationError):
+        assert_http_posture("evil.example.com", "/oauth/token", "POST")
+    with pytest.raises(PostureViolationError):
+        assert_http_posture("netskope-dev.us.auth0.com", "/api/v2/users", "GET")
+    # Allowed combination must not raise.
+    assert_http_posture("netskope-dev.us.auth0.com", "/api/v2/actions/actions", "GET")
+
+
+def test_entrypoint_only_attempts_live_fetch_when_there_is_a_gap(monkeypatch):
+    """No point spending the extra round trip when birthright already
+    matches -- Tool 5 must only be invoked when there's an actual gap for
+    Tool 4 to explain."""
+    calls = []
+    monkeypatch.setattr(
+        "agent.fetch_live_auth0_actions",
+        lambda names: (calls.append(names) or ({}, None)),
+    )
+    with patch("agent.requests.post") as mock_post:
+        mock_post.return_value = mock_response(mock_empty_kb_response())
+        result = evaluate_ciam_case({
+            "account_status": "Customer",
+            "active_tenant_count": 1,
+            "actual_birthright": ["Community", "Academy", "Support", "Notification", "Dashboard"],
+            "entitlements": [],
+            "user_found_in_auth0": True,
+            "intent": "ACCESS_DENIED",
+        })
+
+    assert result["birthright_evaluation"]["match"] is True
+    assert calls == []  # fetch_live_auth0_actions must not have been called
