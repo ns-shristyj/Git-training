@@ -8,8 +8,17 @@ Expects Jira webhook payload with issue/key, summary, description.
 
 import json
 import logging
+import sys
+import os
 from typing import Dict
 from flask import Flask, request, jsonify
+from dotenv import load_dotenv
+
+# Load .env file
+load_dotenv()
+
+# Add orchestrator to path so we can import ciam_orchestrator
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from ciam_orchestrator.orchestrator import CIAMOrchestrator
 from ciam_orchestrator.schemas import JiraTicket

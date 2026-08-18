@@ -1,0 +1,16 @@
+================================================================================
+AGENTCORE DEPLOY LOG
+Command: deploy
+Started: 2026-08-14T16:24:59.926Z
+================================================================================
+
+
+[21:54:59] STEP: Load deployment target
+[21:55:00] [ERROR] AWS Targets config file not found at: /Users/shristyj/repos/GIS-SecEng-Intern/CIAM-Support-Assistant/agents/04-knowledge-base-agent/agentcore/aws-targets.json
+[21:55:00] Status: FAILED
+[21:55:00] Duration: 280ms
+
+================================================================================
+FAILED
+Total Duration: 283ms
+================================================================================

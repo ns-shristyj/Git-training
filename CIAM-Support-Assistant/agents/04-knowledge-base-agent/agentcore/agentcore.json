@@ -1,0 +1,13 @@
+{
+  "name": "ciamkb",
+  "version": 13,
+  "runtimes": [
+    {
+      "name": "python_runtime",
+      "build": "CodeZip",
+      "entrypoint": "agent.py:handler",
+      "codeLocation": ".",
+      "runtimeVersion": "PYTHON_3_13"
+    }
+  ]
+}

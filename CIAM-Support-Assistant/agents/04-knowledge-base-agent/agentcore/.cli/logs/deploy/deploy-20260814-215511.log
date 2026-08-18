@@ -1,0 +1,17 @@
+================================================================================
+AGENTCORE DEPLOY LOG
+Command: deploy
+Started: 2026-08-14T16:25:11.808Z
+================================================================================
+
+
+[21:55:11] STEP: Load deployment target
+[21:55:11] [ERROR] /Users/shristyj/repos/GIS-SecEng-Intern/CIAM-Support-Assistant/agents/04-knowledge-base-agent/agentcore/aws-targets.json:
+  - root: expected "array"
+[21:55:11] Status: FAILED
+[21:55:11] Duration: 2ms
+
+================================================================================
+FAILED
+Total Duration: 3ms
+================================================================================

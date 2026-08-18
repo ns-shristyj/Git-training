@@ -1,0 +1,17 @@
+================================================================================
+AGENTCORE DEPLOY LOG
+Command: deploy
+Started: 2026-08-14T16:25:21.868Z
+================================================================================
+
+
+[21:55:21] STEP: Load deployment target
+[21:55:21] [ERROR] /Users/shristyj/repos/GIS-SecEng-Intern/CIAM-Support-Assistant/agents/04-knowledge-base-agent/agentcore/aws-targets.json:
+  - [0].account: expected "string"
+[21:55:21] Status: FAILED
+[21:55:21] Duration: 2ms
+
+================================================================================
+FAILED
+Total Duration: 3ms
+================================================================================

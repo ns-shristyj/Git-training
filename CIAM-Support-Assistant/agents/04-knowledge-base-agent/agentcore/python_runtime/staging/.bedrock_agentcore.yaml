@@ -1,0 +1,133 @@
+bedrock_agentcore:
+  agent_name: ciam-knowledge-base-agent
+  description: CIAM Knowledge Base Agent - Birthright evaluation, fix classification, and KB retrieval (no LLM, deterministic lookup + local logic)
+  execution_role: arn:aws:iam::786063285476:role/CIAMAgentKnowledgeBaseAccessRole
+  region: us-east-1
+  deployment_type: direct_code_deploy
+  runtime: PYTHON_3_13
+  platform: linux/arm64
+  # No foundation_model -- Agent 4 does deterministic birthright comparison
+  # and KB retrieval only, no LLM reasoning of its own.
+
+  agent_id: ciamKnowledgeBaseAgent-VdVt7x7TZ1
+  agent_arn: arn:aws:bedrock-agentcore:us-east-1:786063285476:runtime/ciamKnowledgeBaseAgent-VdVt7x7TZ1
+  agent_runtime_version: '13'
+  last_deployed: '2026-08-14T16:32:29Z'
+  status: READY
+  # v13: CIAM ops feedback -- internal/Netskope.com (NSKP-Preview connection)
+  # users don't compute birthright via Salesforce Account Status like
+  # external customers; their birthright comes from Okta group membership,
+  # via the NetskopeID-Sync-1 Action (previously untouched by this agent).
+  # Added GROUP_BASED_CONNECTION detection + derive_group_based_persona()
+  # (Okta group -> birthright list) wired into evaluate_birthright() via new
+  # optional connection/groups params (backward-compatible: old payloads
+  # without these fields evaluate exactly as before, Salesforce-only).
+  # classify_fix_complexity() and identify_failing_workflow() also take an
+  # is_group_based flag so a user with no recognized portal group escalates
+  # to L2 and the workflow note correctly names NetskopeID-Sync-1 instead of
+  # Sync-2. Also expanded live Auth0 Actions monitoring from 2 to all 9
+  # actions (NetskopeID-Sync-1/2, Gatekeeper, RBAC-Consolidated, Email
+  # Verification v2, Registration-Forms, Account Migration Acknowledgement,
+  # Privacy Policy Acknowledgement, MFA-Consolidated) per the
+  # ISI-Solutions-Architecture-Plan -- evaluate_ciam_case() now always
+  # fetches all 9 for comprehensive drift detection instead of only
+  # fetching birthright-related actions when a gap exists. New
+  # BirthrightEvaluation.persona_source field ("okta_groups" |
+  # "salesforce_account_status") makes which path was used explicit in the
+  # response. All 9 code markers copy-verified against archived Auth0
+  # Action source (not inferred) -- same discipline as the v11 fix.
+  # Deployed via bedrock-agentcore-control UpdateAgentRuntime (S3 code
+  # artifact at bedrock-agentcore-codebuild-sources-786063285476-us-east-1/
+  # ciam-knowledge-base-agent/v13/deployment.zip), not the agentcore CLI --
+  # the CLI's `deploy` command expects a CDK-managed project structure this
+  # agent doesn't use (it was originally created via direct_code_deploy),
+  # so it fails with "CDK project not found". GetAgentRuntime on the
+  # existing runtime revealed the actual API contract (roleArn,
+  # networkConfiguration, agentRuntimeArtifact.codeConfiguration.code.s3),
+  # which UpdateAgentRuntime accepts directly via boto3.
+  # v12: CIAM ops feedback, fix 3 of 3 -- a birthright gap looked identical
+  # whether it was (a) a real gap, (b) a pending sync (user hasn't logged in
+  # since the Salesforce-side change, and birthright only recalculates at
+  # login), or (c) accounts[0]/users[0] being the wrong record entirely
+  # because multiple accounts/Auth0 users exist for this email. Added two
+  # new helpers: derive_pending_login_refresh() compares Agent 2's
+  # recent_changes timestamps against Agent 3's last_login; derive_multi_
+  # account_ambiguity() checks Agent 2/3's own ambiguity warnings plus raw
+  # account/user counts. Both feed into classify_fix_complexity (new
+  # multi_account_ambiguity/code_drift_detected/pending_login_refresh
+  # params) and a new SyncDiagnostics field on KnowledgeBasePayload.
+  # Priority: multi-account ambiguity checked FIRST (undermines every other
+  # signal), then code drift (Tool 5, wired in from v10 -- previously only
+  # fed Tool 4's note text, now actually escalates the classification
+  # itself), then the existing extra_keywords/block/etc. checks, with
+  # pending_login_refresh changing the SIMPLE_FIX recommended action (try a
+  # fresh login first) rather than the complexity.
+  #
+  # Required a fix to the orchestrator's response parser
+  # (agent_invoker.py): it previously nulled EVERY datetime.datetime(...)
+  # value from every agent's response on the theory that nothing downstream
+  # needed timestamps -- true until this fix needed real last_login/
+  # changed_date values to compare. Now converts them to proper ISO-8601
+  # strings instead of discarding them.
+  #
+  # v10/v11: CIAM ops feedback -- Auth0 Actions are edited independently of
+  # this agent's deploys, so Tool 4's understanding of NetskopeID-Sync-2/
+  # Gatekeeper must be re-verified live, not trusted from the 2026-07-28
+  # offline snapshot forever. Added Tool 5 (fetch_live_auth0_actions):
+  # fetches the current Action list from the Auth0 Management API
+  # (ciam-agent/auth0-workflows M2M credentials, read:actions/read:rules/
+  # read:triggers scopes only) on every invocation that has an actual gap
+  # to explain, and checks each Action's live code against known-good
+  # marker strings -- flags "code drift" if a marker is missing (e.g. the
+  # Action's logic changed) or the Action can't be found by name at all
+  # (renamed/deleted). Non-fatal: any failure falls back to the offline
+  # snapshot exactly as before, never blocks the rest of Agent 4's output.
+  # IAM: added a narrowly-scoped secretsmanager:GetSecretValue Allow for
+  # ONLY ciam-agent/auth0-workflows-* (removed the blanket GetSecretValue
+  # Deny that previously blocked this); Agent 4 still has zero access to
+  # Agent 3's ciam-agent/auth0 user-lookup credential.
+  #
+  # v11 fixes a real bug found via the FIRST live verification of v10: the
+  # initial _EXPECTED_CODE_MARKERS used "Tenant_Requests__c" for
+  # NetskopeID-Sync-2 -- a paraphrase from a code COMMENT, not a literal
+  # token in the real fetched source (the actual second SF field is
+  # Customer_Status__c). That fired a false "code drift" WARNING against
+  # the live tenant on the very first real invocation. Fixed the marker and
+  # added a regression test that verifies every _EXPECTED_CODE_MARKERS
+  # entry literally appears in the archived auth0_workflow_scripts/*.md
+  # source, so a marker can never again be inferred instead of
+  # copy-verified. Re-verified live: code_drift_detected=False,
+  # live_verified=True, no false warning.
+  #
+  # v9: CIAM ops feedback -- classify_fix_complexity's SIMPLE_FIX reason/
+  # recommended_actions now explicitly state the hard rule that birthright is
+  # Salesforce-computed by NetskopeID-Sync-2 and must NEVER be edited
+  # directly; only entitlements is the manually-editable compensating field.
+  # (Root bug was actually in Agent 5, which re-derived its own conflated
+  # "add to birthright entitlements" wording instead of reusing this
+  # function's recommended_actions -- see Agent 5's v6 changelog. This
+  # change strengthens Agent 4's own text as defense in depth and documents
+  # the rule inline so it can't silently drift again.)
+  # v8: fixes 2 CIAM-4602 findings --
+  #   1. Tool 4's note now references ALL missing keywords (e.g. Partner),
+  #      not just the alphabetically-first one (e.g. Academy)
+  #   2. Tool 2 dedupes KB results by (title, sanitized excerpt) so two
+  #      code chunks from the same Action that sanitize to an identical
+  #      curated summary no longer eat multiple top_k slots
+  # v7: query_knowledge_base (Tool 2) replaces code-like excerpts (e.g. from
+  # auth0-action-*.md) with a curated plain-English summary of what that
+  # Action actually does -- informed by the real script, zero literal code
+  # ever reaches a user-facing (Jira/L1) response. Falls back to a generic
+  # (still code-free) note for actions not yet characterized.
+
+  knowledge_base:
+    id: O4XMWIIEHS
+    name: ciam-kb
+    type: managed_vector_store
+    data_source_s3: s3://ciam-agent4-kb-docs-786063285476-us-east-1/docs/
+    note: >-
+      27 real documents synced (8 core CIAM docs + 18 live Auth0 Action
+      scripts + 1 post-login flow execution order doc, all fetched via the
+      workflow-reader M2M app). Tool 4 (identify_failing_workflow)
+      resolved -- maps failures to NetskopeID-Sync-2 (birthright source)
+      and Gatekeeper (enforcement).

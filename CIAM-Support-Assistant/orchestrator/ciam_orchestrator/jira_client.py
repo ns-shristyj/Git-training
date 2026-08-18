@@ -39,7 +39,7 @@ class JiraClient:
 
     def _request(self, method: str, endpoint: str, **kwargs) -> Optional[dict]:
         """Generic request wrapper with error handling."""
-        url = f"{self.instance_url}/rest/api/3{endpoint}"
+        url = f"{self.instance_url}/rest/api/2{endpoint}"
         try:
             response = requests.request(
                 method,
@@ -58,36 +58,20 @@ class JiraClient:
 
     def get_issue(self, issue_key: str) -> Optional[dict]:
         """Fetch issue details."""
-        return self._request("GET", f"/issues/{issue_key}")
+        return self._request("GET", f"/issue/{issue_key}")
 
     def add_comment(self, issue_key: str, comment_body: str) -> bool:
         """Post a comment to a Jira issue.
 
         Args:
             issue_key: e.g., 'NETSK-20'
-            comment_body: Jira markdown/ADF text
+            comment_body: Plain text comment
 
         Returns:
             True if successful, False otherwise
         """
-        payload = {
-            "body": {
-                "version": 1,
-                "type": "doc",
-                "content": [
-                    {
-                        "type": "paragraph",
-                        "content": [
-                            {
-                                "type": "text",
-                                "text": comment_body,
-                            }
-                        ],
-                    }
-                ],
-            }
-        }
-        result = self._request("POST", f"/issues/{issue_key}/comments", json=payload)
+        payload = {"body": comment_body}
+        result = self._request("POST", f"/issue/{issue_key}/comment", json=payload)
         if result:
             logger.info(f"Posted comment to {issue_key}")
             return True
@@ -125,7 +109,7 @@ class JiraClient:
             return True
 
         payload = {"fields": update_fields}
-        result = self._request("PUT", f"/issues/{issue_key}", json=payload)
+        result = self._request("PUT", f"/issue/{issue_key}", json=payload)
         if result is not None:
             logger.info(f"Updated {issue_key}: {update_fields}")
             return True

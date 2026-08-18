@@ -11,9 +11,67 @@ bedrock_agentcore:
 
   agent_id: ciamKnowledgeBaseAgent-VdVt7x7TZ1
   agent_arn: arn:aws:bedrock-agentcore:us-east-1:786063285476:runtime/ciamKnowledgeBaseAgent-VdVt7x7TZ1
-  agent_runtime_version: '12'
-  last_deployed: '2026-08-10T12:11:24Z'
+  agent_runtime_version: '14'
+  last_deployed: '2026-08-17T07:00:03Z'
   status: READY
+  # v14: fixes a deploy-tooling bug from the v13 push, not an agent.py logic
+  # change. The initial v13 UpdateAgentRuntime call (2026-08-14) reported
+  # READY but every live invocation failed with "Runtime initialization
+  # time exceeded (30s)" and CloudWatch never created a log group for this
+  # runtime at all -- meaning the container was crash-looping before it
+  # could even start logging. Root cause: `agentcore/agentcore.json` (a new
+  # file this session, needed because `agentcore create`'s CLI wants a
+  # CDK-managed project this direct-code-deploy agent doesn't have) never
+  # set `runtimes[0].runtimeVersion`, so `agentcore package` silently
+  # defaulted to PYTHON_3_14 -- resolving a `pydantic_core` wheel built for
+  # the cp314 ABI (`_pydantic_core.cpython-314-aarch64-linux-gnu.so`) even
+  # though this runtime is declared PYTHON_3_13 both here and in the actual
+  # UpdateAgentRuntime call. A 3.13 interpreter can't load a cp314 compiled
+  # extension (invisible to its import system, not just a version
+  # mismatch), so `import pydantic` -> `import pydantic_core` crashed
+  # agent.py's entire top-level import chain on every cold start, which
+  # AWS surfaces as a generic init-timeout rather than the underlying
+  # ImportError. Fixed by adding `"runtimeVersion": "PYTHON_3_13"` to
+  # agentcore.json (and pinning `requires-python = ">=3.13,<3.14"` in the
+  # new pyproject.toml for the same reason, though agentcore.json's field
+  # is what actually controls the packager's `uv pip install
+  # --python-version` call). Rebuilt package now carries
+  # `_pydantic_core.cpython-313-aarch64-linux-gnu.so`. Verified live:
+  # invocation succeeds in ~4-6s (was: always failed at 30s), full v13
+  # feature set confirmed working against real RJT-30 data (persona_source,
+  # all 9 Auth0 Actions live-fetched, code drift correctly detected on
+  # Account Migration Acknowledgement).
+  # v13: CIAM ops feedback -- internal/Netskope.com (NSKP-Preview connection)
+  # users don't compute birthright via Salesforce Account Status like
+  # external customers; their birthright comes from Okta group membership,
+  # via the NetskopeID-Sync-1 Action (previously untouched by this agent).
+  # Added GROUP_BASED_CONNECTION detection + derive_group_based_persona()
+  # (Okta group -> birthright list) wired into evaluate_birthright() via new
+  # optional connection/groups params (backward-compatible: old payloads
+  # without these fields evaluate exactly as before, Salesforce-only).
+  # classify_fix_complexity() and identify_failing_workflow() also take an
+  # is_group_based flag so a user with no recognized portal group escalates
+  # to L2 and the workflow note correctly names NetskopeID-Sync-1 instead of
+  # Sync-2. Also expanded live Auth0 Actions monitoring from 2 to all 9
+  # actions (NetskopeID-Sync-1/2, Gatekeeper, RBAC-Consolidated, Email
+  # Verification v2, Registration-Forms, Account Migration Acknowledgement,
+  # Privacy Policy Acknowledgement, MFA-Consolidated) per the
+  # ISI-Solutions-Architecture-Plan -- evaluate_ciam_case() now always
+  # fetches all 9 for comprehensive drift detection instead of only
+  # fetching birthright-related actions when a gap exists. New
+  # BirthrightEvaluation.persona_source field ("okta_groups" |
+  # "salesforce_account_status") makes which path was used explicit in the
+  # response. All 9 code markers copy-verified against archived Auth0
+  # Action source (not inferred) -- same discipline as the v11 fix.
+  # Deployed via bedrock-agentcore-control UpdateAgentRuntime (S3 code
+  # artifact at bedrock-agentcore-codebuild-sources-786063285476-us-east-1/
+  # ciam-knowledge-base-agent/v13/deployment.zip), not the agentcore CLI --
+  # the CLI's `deploy` command expects a CDK-managed project structure this
+  # agent doesn't use (it was originally created via direct_code_deploy),
+  # so it fails with "CDK project not found". GetAgentRuntime on the
+  # existing runtime revealed the actual API contract (roleArn,
+  # networkConfiguration, agentRuntimeArtifact.codeConfiguration.code.s3),
+  # which UpdateAgentRuntime accepts directly via boto3.
   # v12: CIAM ops feedback, fix 3 of 3 -- a birthright gap looked identical
   # whether it was (a) a real gap, (b) a pending sync (user hasn't logged in
   # since the Salesforce-side change, and birthright only recalculates at

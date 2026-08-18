@@ -1,0 +1,20 @@
+================================================================================
+AGENTCORE DEPLOY LOG
+Command: deploy
+Started: 2026-08-14T16:25:39.729Z
+================================================================================
+
+
+[21:55:39] STEP: Load deployment target
+[21:55:39] Status: SUCCESS
+[21:55:39] Duration: 2ms
+
+[21:55:39] STEP: Validate project
+[21:55:39] [ERROR] CDK project not found at /Users/shristyj/repos/GIS-SecEng-Intern/CIAM-Support-Assistant/agents/04-knowledge-base-agent/agentcore/cdk. Run 'agentcore create' first.
+[21:55:39] Status: FAILED
+[21:55:39] Duration: 0ms
+
+================================================================================
+FAILED
+Total Duration: 6ms
+================================================================================

@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=65", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ciam-knowledge-base-agent"
+version = "0.13.0"
+description = "CIAM Knowledge Base Agent - Birthright evaluation, fix classification, and KB retrieval"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    "bedrock-agentcore",
+    "boto3",
+    "pydantic>=2.0",
+    "requests",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-cov",
+]

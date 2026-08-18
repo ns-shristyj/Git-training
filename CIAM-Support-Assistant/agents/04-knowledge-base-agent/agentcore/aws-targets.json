@@ -1,0 +1,10 @@
+[
+  {
+    "name": "default",
+    "account": "786063285476",
+    "region": "us-east-1",
+    "executionRole": "arn:aws:iam::786063285476:role/CIAMAgentKnowledgeBaseAccessRole",
+    "deploymentType": "direct_code_deploy",
+    "agentId": "ciamKnowledgeBaseAgent-VdVt7x7TZ1"
+  }
+]
