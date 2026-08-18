@@ -4,57 +4,78 @@ Multi-agent system that auto-triages CIAM (Customer Identity and Access Manageme
 
 **All 5 agents deployed and live on AWS Bedrock AgentCore as of 2026-08-17, end-to-end tested and verified against real sandbox tickets.**
 
-## Architecture
+## Architecture & Orchestrator Integration
 
 ```
-Jira Ticket
+Jira Ticket (via webhook or CLI)
     │
     ▼
-Orchestrator (ciam_orchestrator/) — pulls ticket from Jira, dispatches agents
+Orchestrator (ciam_orchestrator/orchestrator.py) — dispatches through 5-agent pipeline
     │
-    ├──► Agent 1 — Intent Classifier (Python)
-    │    • Classifies intent (ACCESS_DENIED, etc.), extracts email & portal
-    │    • Deployed v3 on AgentCore — runtime READY
-    │    • Tests: unit test + 25 real test cases ✅
+    ├─ Step 1: Agent 1 (Intent Classifier) — ALWAYS
+    │  • Classifies intent (ACCESS_DENIED, BIRTHRIGHT_MISMATCH, etc.)
+    │  • Extracts email, portal, intent confidence
+    │  • Deployed v3 on AgentCore — ✅ LIVE & INTEGRATED
+    │  • Returns routing envelope: should invoke Agents 2/3/4?
     │
-    ├──► Agent 2 — Database Agent (Python)
-    │    • Queries NetskopeID DynamoDB table (Salesforce account data)
-    │    • Deployed v6 on AgentCore — runtime READY
-    │    • Tests: 67 case comprehensive_test.py ✅
+    ├─ Step 2: Confidence Gate (orchestrator-level)
+    │  • Threshold: 0.70 (configurable)
+    │  • Low confidence → escalate to L2 (stop here)
     │
-    ├──► Agent 3 — Auth0 Agent (Python)
-    │    • Fetches user birthright, entitlements, login history from Auth0 Management API
-    │    • Deployed v3 on AgentCore — runtime READY, credentials configured
-    │    • Tests: 18 unit tests ✅ (1 stale domain test, cosmetic)
+    ├─ Step 3: Conditional Agent Dispatch Loop (if confidence passed)
+    │  │
+    │  ├──► Agent 2 (Database) — CONDITIONAL (routing_flag: invoke_agent_2)
+    │  │    • Queries NetskopeID DynamoDB (Salesforce account data)
+    │  │    • Deployed v6 on AgentCore — ✅ LIVE & INTEGRATED
+    │  │    • Returns: account_payload
+    │  │    • Enabled by default (ENABLE_AGENT_2=true)
+    │  │
+    │  ├──► Agent 3 (Auth0) — CONDITIONAL (routing_flag: invoke_agent_3)
+    │  │    • Fetches user birthright, entitlements, login history
+    │  │    • Deployed v3 on AgentCore — ✅ LIVE & INTEGRATED
+    │  │    • Returns: auth0_payload
+    │  │    • Enabled by default (ENABLE_AGENT_3=true)
+    │  │
+    │  └──► Agent 4 (Knowledge Base) — CONDITIONAL (routing_flag: invoke_agent_4)
+    │       • Evaluates birthright (Salesforce vs Auth0 live)
+    │       • Classifies fix (SIMPLE_FIX vs ESCALATE_TO_L2)
+    │       • KB retrieval (9 live Auth0 Actions, core CIAM docs)
+    │       • Deployed v14 on AgentCore — ✅ LIVE & INTEGRATED
+    │       • Returns: kb_payload
+    │       • Enabled by default (ENABLE_AGENT_4=true)
     │
-    ├──► Agent 4 — Knowledge Base Agent (Python) [FIXED 2026-08-17]
-    │    • Birthright evaluation (Salesforce vs live Auth0)
-    │    • Fix classification (SIMPLE_FIX vs ESCALATE_TO_L2)
-    │    • KB retrieval (9 live Auth0 Actions, post-login flow, core CIAM docs)
-    │    • Deployed v14 on AgentCore — runtime READY
-    │    • Fixed: Python 3.13 ABI mismatch (v13 silently packaged cp314 wheels)
-    │    • Tests: 60 unit tests ✅
-    │
-    └──► Agent 5 — Response Generator (Python)
-         • Synthesizes Agents 2/3/4 into final diagnosis
-         • Root cause, evidence, recommended actions, L1/L2 routing
-         • Deployed v9 on AgentCore — runtime READY
-         • Tests: 29 unit tests ✅
-    │
-    └──► Posts diagnosis back to Jira
+    └─ Step 4: Agent 5 (Response Generator) — UNCONDITIONAL FINAL SYNTHESIS
+         • Runs ALWAYS after dispatch loop (no routing flag)
+         • Synthesizes output from Agents 2/3/4 + Agent 1 envelope
+         • Generates final diagnosis: root cause, evidence, recommended actions, L1/L2 routing
+         • Deployed v9 on AgentCore — ✅ LIVE & INTEGRATED
+         • Returns: final diagnosis for Jira comment
+         │
+         └──► Posts complete diagnosis back to Jira as comment
 ```
 
-## Deployment Status (verified live, 2026-08-17)
+**Integration Status:** ✅ **All 5 agents LIVE & INTEGRATED**
+- Agent 1: Routing/gating (hardstop for low confidence or Agent 1's auto_escalate flag)
+- Agents 2/3/4: Conditional dispatch (routed by Agent 1's envelope)
+- Agent 5: Unconditional synthesis (always runs after dispatch loop, never skipped)
+- Orchestrator: Verified end-to-end on real tickets (RJT-30, RJT-31, 2026-08-17)
 
-| Agent | Version | Status | Last Updated | Backend |
+## Deployment & Integration Status (verified live, 2026-08-18)
+
+| Agent | Version | Runtime Status | Orchestrator Integration | Last Verified |
 |---|---|---|---|---|
-| 1 — Intent Classifier | v3 | READY | 2026-07-23 | — |
-| 2 — Database | v6 | READY | 2026-07-21 | NetskopeID (DynamoDB) |
-| 3 — Auth0 | v3 | READY | 2026-08-04 | Auth0 Management API |
-| 4 — Knowledge Base | v14 | READY | 2026-08-17 | ciam-kb KB (27 docs + 9 live Actions) |
-| 5 — Response Generator | v9 | READY | 2026-08-13 | — |
+| 1 — Intent Classifier | v3 | ✅ READY | ✅ Gating + routing (unconditional entry point) | 2026-08-17 |
+| 2 — Database | v6 | ✅ READY | ✅ Conditional dispatch (routing_flag: invoke_agent_2) | 2026-08-17 |
+| 3 — Auth0 | v3 | ✅ READY | ✅ Conditional dispatch (routing_flag: invoke_agent_3) | 2026-08-17 |
+| 4 — Knowledge Base | v14 | ✅ READY | ✅ Conditional dispatch (routing_flag: invoke_agent_4) | 2026-08-17 |
+| 5 — Response Generator | v9 | ✅ READY | ✅ Unconditional synthesis (always runs after loop) | 2026-08-17 |
 
-Knowledge Base (Agent 4): `ciam-kb` (ID `O4XMWIIEHS`) — **ACTIVE** with S3 data source **AVAILABLE**, synced with core CIAM docs, live Auth0 Action scripts, and post-login execution order.
+**Backends:**
+- Agent 2: NetskopeID (AWS DynamoDB) — Salesforce account data
+- Agent 3: Auth0 Management API (netskope-dev.us.auth0.com) — user birthright & entitlements
+- Agent 4: Bedrock Knowledge Base `ciam-kb` (ID `O4XMWIIEHS`) — S3 data source ACTIVE, 27 docs + 9 live Auth0 Actions monitored
+
+**End-to-End Orchestrator:** ✅ VERIFIED on real tickets (RJT-30, RJT-31) — full 5-agent pipeline completes in ~25–30s, diagnoses posted to Jira.
 
 ## Directory Structure
 

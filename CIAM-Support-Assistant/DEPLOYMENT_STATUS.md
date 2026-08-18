@@ -8,12 +8,15 @@
 
 | Component | Status | Details |
 |---|---|---|
-| **Agents (5)** | ✅ READY | All deployed to Bedrock AgentCore, verified 2026-08-17 |
-| **Orchestrator** | ✅ READY | 5-agent pipeline working, Jira integration complete |
-| **Jira Integration** | ✅ READY | Webhook listener + API client (1 cosmetic bug noted) |
-| **Knowledge Base** | ✅ ACTIVE | 27 docs + 9 live Auth0 Actions monitored |
+| **Agents (5)** | ✅ DEPLOYED & LIVE | All 5 on Bedrock AgentCore, Agent ARNs in config.py, verified 2026-08-17 |
+| **Agent 1** | ✅ INTEGRATED | Entry point, gating, routing envelope generation |
+| **Agents 2/3/4** | ✅ INTEGRATED | Conditional routing via AGENT_REGISTRY (feature-flagged) |
+| **Agent 5** | ✅ INTEGRATED | Unconditional final synthesis (always runs after dispatch loop) |
+| **Orchestrator Pipeline** | ✅ LIVE | 5-step: Agent 1 → gate → dispatch Agents 2/3/4 → Agent 5 → Jira |
+| **Jira Integration** | ✅ READY | Webhook listener + API client (1 path bug noted, not triggered) |
+| **Knowledge Base** | ✅ ACTIVE | 27 docs + 9 live Auth0 Actions monitored for code drift |
 | **Tests** | ✅ 192/193 | Agent 3 has 1 stale test (cosmetic, not blocking) |
-| **End-to-End** | ✅ VERIFIED | RJT-30, RJT-31 ran successfully through pipeline |
+| **End-to-End** | ✅ VERIFIED | RJT-30, RJT-31 completed full pipeline, diagnoses posted to Jira |
 
 ---
 
@@ -89,29 +92,67 @@
 
 ## Orchestrator Status
 
-### Pipeline
+### Pipeline (Verified Integration)
 ```
-Jira Ticket (webhook)
-    ↓
-orchestrator.py (5-agent dispatch)
-    ├─→ Agent 1: intent classification
-    ├─→ Agent 2: account/birthright data
-    ├─→ Agent 3: Auth0 live state
-    ├─→ Agent 4: KB RAG + fix classification
-    └─→ Agent 5: final diagnosis synthesis
-    ↓
-Posts result back to Jira as comment
+Jira Ticket (webhook or run_ticket.py CLI)
+    │
+    ▼
+orchestrator.py: Step 1 — Agent 1 (Intent Classifier)
+    • Always invoked, never skipped
+    • Returns: routing envelope with confidence, intent, auto_escalate flag
+    ├─→ Confidence < 0.70? → Escalate to L2 (stop)
+    └─→ Agent 1 auto_escalate=true? → Escalate to L2 (stop)
+    │
+    ▼
+orchestrator.py: Step 2 — Conditional Dispatch Loop (if confidence passed)
+    • Agents in AGENT_REGISTRY (Agents 2/3/4)
+    • Each agent has routing_flag set by Agent 1's envelope
+    │
+    ├─→ Agent 2 (Database) — if routing_flag "invoke_agent_2" is true
+    │   • Query DynamoDB for account data
+    │   • Output: account_payload
+    │
+    ├─→ Agent 3 (Auth0) — if routing_flag "invoke_agent_3" is true
+    │   • Fetch user birthright, entitlements, login history
+    │   • Output: auth0_payload
+    │
+    └─→ Agent 4 (KB) — if routing_flag "invoke_agent_4" is true
+        • Evaluate birthright vs KB, classify fix
+        • Output: kb_payload
+    │
+    ▼
+orchestrator.py: Step 3 — Agent 5 (Response Generator) — ALWAYS RUNS
+    • Unconditional final synthesis (no routing flag, never skipped)
+    • Inputs: Agent 1 envelope + Agents 2/3/4 outputs + ticket metadata
+    • Output: final_diagnosis (root cause, evidence, actions, L1/L2 routing)
+    │
+    ▼
+Posts complete diagnosis back to Jira as comment
 ```
 
-### Components
-| File | Status | Details |
+**Integration Reality:** All 5 agents LIVE & INTEGRATED
+- Agent 1: Entry point gating + routing envelope generation
+- Agents 2/3/4: Feature-flagged conditional dispatch from AGENT_REGISTRY
+- Agent 5: Unconditional final synthesis (always executes after dispatch loop)
+- End-to-end verified: RJT-30, RJT-31 (2026-08-17)
+
+### Components & Wiring
+
+| File | Status | Integration |
 |---|---|---|
-| `orchestrator.py` | ✅ READY | Main 5-agent pipeline dispatcher |
-| `schemas.py` | ✅ READY | Pydantic types for agent I/O |
-| `agent_invoker.py` | ✅ READY | AgentCore invoke + result parsing |
-| `jira_client.py` | ✅ READY (⚠️ bug noted) | Jira REST API client |
-| `webhook_listener.py` | ✅ READY | Jira webhook handler (Lambda-ready) |
-| `run_ticket.py` | ✅ NEW | CLI: `python3 run_ticket.py <ISSUE-KEY>` |
+| `orchestrator.py` | ✅ READY | **Core 5-agent pipeline** — Step 1: Agent 1 (always), Confidence gate, Step 2: Agents 2/3/4 (conditional from AGENT_REGISTRY), Step 3: Agent 5 (unconditional final) |
+| `config.py` | ✅ READY | **AGENT_REGISTRY** (Agents 2/3/4 config) + **Agent ARNs** (all 5 agents) + **build_agent5_input()** (Agent 5 synthesis payload builder) |
+| `schemas.py` | ✅ READY | Pydantic types for agent I/O, routing envelope, orchestrator output |
+| `agent_invoker.py` | ✅ READY | AWS Bedrock AgentCore invoke + JSON response parsing, timeout handling |
+| `jira_client.py` | ✅ READY (⚠️ path bug) | Jira REST API client (get_issue/update_issue have wrong paths; add_comment is correct and used by orchestrator) |
+| `webhook_listener.py` | ✅ READY | Lambda-ready handler for Jira issue.created webhook events |
+| `run_ticket.py` | ✅ NEW | CLI: `python3 run_ticket.py <ISSUE-KEY>` — manual orchestrator invocation for testing |
+
+**Wiring Summary:**
+- All 5 agent ARNs configured in config.py (AGENT_1_ARN through AGENT_5_ARN)
+- Agents 2/3/4 in AGENT_REGISTRY with routing_flags (invoke_agent_2/3/4), input builders, output keys
+- Agent 5 special-cased: no routing_flag, unconditional invocation after dispatch loop
+- orchestrator.py implements full 5-step pipeline: Agent 1 → gate → dispatch → Agent 5 → post to Jira
 
 ### Jira Integration Status
 
