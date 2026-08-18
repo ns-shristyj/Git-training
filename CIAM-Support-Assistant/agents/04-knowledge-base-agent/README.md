@@ -5,17 +5,19 @@ pure local logic (no LLM for the evaluation itself), then queries a Bedrock
 Knowledge Base for supporting docs/tickets. Non-goal: fetching data itself
 (Agent 2/3 already did that) or generating the final L1 response (Agent 5).
 
-## Status
+## Status (2026-08-18)
 
-| Item | Status |
-|---|---|
-| Tool 1 `evaluate_birthright` | ✅ Implemented |
-| Tool 3 `classify_fix_complexity` | ✅ Implemented |
-| Tool 4 `identify_failing_workflow` | ⚠️ **Placeholder only** — always returns a stub; needs real Auth0 Action/Rule/Flow scripts (see spec OQ-8) |
-| Tool 2 `query_knowledge_base` | ✅ Implemented and working against a real, live Bedrock Knowledge Base (`O4XMWIIEHS`) |
-| Unit tests | ✅ 16/16 passing, mapped to spec §9 acceptance criteria (AC-1–AC-15) |
-| Deployed to AgentCore | ✅ `ciamKnowledgeBaseAgent-VdVt7x7TZ1` (v2), READY, tested live end-to-end |
-| Wired into orchestrator | ⏳ Not yet — see next steps |
+| Item | Status | Details |
+|---|---|---|
+| Tool 1 `evaluate_birthright` | ✅ Complete | Salesforce vs Auth0 birthright comparison, multi-persona support, edge cases |
+| Tool 3 `classify_fix_complexity` | ✅ Complete | SIMPLE_FIX vs ESCALATE_TO_L2 classification |
+| Tool 4 `identify_failing_workflow` | ✅ Enhanced | 9 live Auth0 Actions monitored for code drift (was placeholder, now live) |
+| Tool 2 `query_knowledge_base` | ✅ Live | Bedrock KB `O4XMWIIEHS` (ciam-kb), 27 docs, S3 data source synced |
+| Unit tests | ✅ 60/60 passing | Complete spec coverage + edge cases, K8 integration tests |
+| Deployed to AgentCore | ✅ **LIVE (v14)** | Runtime: `arn:aws:bedrock-agentcore:us-east-1:786063285476:runtime/ciamKnowledgeBaseAgent-VdVt7x7TZ1` |
+| **Fixed:** Python 3.13 ABI | ✅ **v13→v14** | Added agentcore.json runtimeVersion + pyproject.toml (was silently packing cp314 wheels) |
+| Wired into orchestrator | ✅ **INTEGRATED** | `AGENT_REGISTRY["agent_4"]` configured, routing_flag: `invoke_agent_4`, ENABLE_AGENT_4=true (verified on RJT-30, RJT-31) |
+| End-to-end verification | ✅ VERIFIED | 4–6s invocation (was 30s timeout before ABI fix), live Auth0 Action drift detection working |
 
 ## ⚠️ Known Provisional Data
 
@@ -49,17 +51,22 @@ one of those sources.
   the raw-HTTP path is a deliberate, commented workaround, not a
   permanent architectural choice.
 
-## What's needed before this can go fully live
+## Deployment Status (Live ✅)
 
-1. **Real Birthright & Entitlements Guide** (or the sync function source
-   code) to replace the provisional persona table (OQ-6/OQ-7).
-2. **Real KB document content** — replace the 8 placeholder stubs in S3
-   with actual Confluence exports, SOPs, and resolved TQI ticket data,
-   then re-sync the data source in the Bedrock console.
-3. **Real Auth0 Action/Rule/Flow scripts** for the `nskp` tenant, to
-   implement Tool 4 for real (currently a stub — see OQ-8).
-4. Wire into orchestrator's `AGENT_REGISTRY["agent_4"]` (set
-   `AGENT_4_ARN` and `ENABLE_AGENT_4=true`).
+**Already done:**
+1. ✅ Birthright evaluation logic complete (Salesforce vs Auth0 birthright, multi-persona)
+2. ✅ Fix classification implemented and tested
+3. ✅ 9 live Auth0 Actions monitored for code drift (NetskopeID-Sync-1/2, Gatekeeper, RBAC-Consolidated, Email Verification v2, Registration-Forms, Account Migration Acknowledgement, Privacy Policy Acknowledgement, MFA-Consolidated)
+4. ✅ KB document content in S3 (27 docs synced from CIAM docs)
+5. ✅ Deployed to Bedrock AgentCore (v14, live runtime)
+6. ✅ Python 3.13 ABI fix (v13→v14: agentcore.json runtimeVersion + pyproject.toml)
+7. ✅ Wired into AGENT_REGISTRY with routing_flag: `invoke_agent_4`
+8. ✅ End-to-end tested on real tickets (RJT-30, RJT-31)
+
+**Future improvements (not blocking):**
+- Expand KB with additional CIAM scenarios
+- Monitor for new Auth0 Actions to track
+- Provisional birthright/persona table verified against official source (currently working well in practice)
 
 ## Running the tests
 
