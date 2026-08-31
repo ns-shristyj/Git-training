@@ -9,10 +9,65 @@ bedrock_agentcore:
 
   agent_id: ciamAuth0Agent-lVu70L5GK4
   agent_arn: arn:aws:bedrock-agentcore:us-east-1:786063285476:runtime/ciamAuth0Agent-lVu70L5GK4
-  agent_runtime_version: '3'
-  last_deployed: '2026-08-04T14:06:37Z'
+  agent_runtime_version: '5'
+  last_deployed: '2026-08-24T11:08:31Z'
   status: READY
 
+  # v5: found via a real Jira ticket (RJT-34, brad.melchior@cencora.com,
+  # "Unable to access Community portal") right after real credentials were
+  # restored (v4) -- this SPECIFIC email crashed with another plain
+  # HTTP 500, while vshah@netskope.com still worked fine, so this was a
+  # data-shape bug, not a credentials/deploy issue. Queried the real Auth0
+  # Management API directly to compare: this user's app_metadata stores
+  # last_sync/last_daily_sync as an EMPTY STRING "" (never synced), not
+  # null/absent like vshah's record. `last_sync=app_metadata.get(...)`
+  # passed that "" straight into Auth0UserRecord's Optional[datetime]
+  # fields -- Pydantic accepts None for Optional but rejects "" as an
+  # invalid datetime, so the ValidationError was uncaught by the
+  # entrypoint's try/except (only ClientError/TokenAcquisitionError) and
+  # crashed the handler. Fixed with `... or None` on both fields. New test:
+  # test_regression_empty_string_sync_fields_dont_crash. All 20 tests pass.
+  # Verified live: statusCode 200, error=None, correct birthright
+  # ['Dashboard', 'Support'] (no 'Community' -- matches the ticket).
+  #
+  # v4: found via a full orchestrator run right after fixing Agents 2 and 4
+  # (both had been recreated with a missing-dependencies bug) -- Agent 3
+  # was failing every invocation with a plain, undiagnosable HTTP 500. Root
+  # cause was NOT a code bug at first glance: the ciam-agent/auth0 secret
+  # had been overwritten on 2026-08-19 (by a process outside this session)
+  # with a completely different key schema
+  # (auth0_client_id/auth0_client_secret, both EMPTY strings) than agent.py
+  # expects (client_id/client_secret) -- description/tags on the secret
+  # itself now read "PLACEHOLDER VALUES", meaning the real credentials
+  # configured back on 2026-07-23 were wiped.
+  #
+  # That secret-shape mismatch meant creds["client_id"] in acquire_token()
+  # raised a plain KeyError, which get_auth0_credentials()'s caller
+  # (fetch_auth0_data's entrypoint try/except) did NOT catch -- only
+  # ClientError and TokenAcquisitionError were handled, so the KeyError
+  # crashed the whole request handler as an unhandled 500 instead of
+  # degrading to the graceful error="auth0_token_acquisition_failed"
+  # response every other Auth0 failure mode already gets.
+  #
+  # Fixed the code gap: get_auth0_credentials() now validates client_id/
+  # client_secret are present and non-empty, raising TokenAcquisitionError
+  # (the same exception class real token-endpoint failures already raise)
+  # instead of letting a malformed/wrong-shaped secret crash the handler.
+  # New regression test: test_regression_malformed_secret_shape_is_graceful.
+  # Also fixed 3 stale "nskp.auth0.com" literals in test_agent3.py (a
+  # leftover from before the domain fix) -- one of them
+  # (test_http_posture_denies_wrong_path) was silently passing for the
+  # WRONG reason (host check firing before the path check it was meant to
+  # exercise). All 19 tests pass. Verified live: statusCode 200 (no more
+  # crash), error="auth0_token_acquisition_failed" (clean, diagnosable).
+  #
+  # REMAINING: the actual credentials are still empty/wrong -- Agent 3
+  # cannot fetch real Auth0 data until real M2M client_id/client_secret
+  # are restored to ciam-agent/auth0 (correct key names: client_id,
+  # client_secret). This assistant cannot enter credentials itself; run
+  # ADD_AUTH0_CREDENTIALS.sh from `~/CIAM L1 SUPPORT ASSISTANT AGENT/`
+  # to restore them.
+  #
   # v2 (deployed 2026-07-23) was NEVER updated after the Auth0 domain fix
   # landed later that week (nskp.auth0.com -> netskope-dev.us.auth0.com,
   # 2026-07-29) -- confirmed via a full 1-5 agent live chain test on

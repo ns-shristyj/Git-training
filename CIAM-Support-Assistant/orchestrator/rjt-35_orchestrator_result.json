@@ -1,0 +1,514 @@
+{
+  "run_id": "69256921-52ff-4e2b-a171-c86ca026c610",
+  "orchestrated_at": "2026-08-25T09:35:29.575642Z",
+  "source_ticket": {
+    "issue_key": "RJT-35",
+    "summary": "Issues with support portal access - brad.melchior@cencora.com",
+    "description": "Hi team,  Brad.Melchior@cencora.com  having issues with support portal access. Please help. Thank you"
+  },
+  "routing_envelope": {
+    "schema_version": "1.0",
+    "spec_id": "SPEC-CIAM-0001",
+    "agent": "ciam-intent-classifier",
+    "run_id": "f2037e42-6b2b-4898-9892-5527b7dc4936",
+    "classified_at": "2026-08-25T09:35:12.469002+00:00",
+    "source": "jira",
+    "ticket_key": "RJT-35",
+    "raw_text_length": 164,
+    "intent": "ACCESS_DENIED",
+    "confidence": 0.92,
+    "extracted_email": "brad.melchior@cencora.com",
+    "extracted_portal": "Support",
+    "invoke_agent_2": true,
+    "invoke_agent_3": true,
+    "invoke_agent_4": true,
+    "auto_escalate": false,
+    "escalation_reason": null,
+    "routing_warnings": [
+      "multiple_emails_found"
+    ]
+  },
+  "account_payload": {
+    "schema_version": "1.0",
+    "spec_id": "SPEC-CIAM-0002",
+    "agent": "ciam-database-agent",
+    "run_id": "f006a6f6-bff4-4e82-9b7c-a752bdf7830f",
+    "fetched_at": null,
+    "account_found": true,
+    "accounts": [
+      {
+        "account_name": "Cencora Account",
+        "account_status": "Customer",
+        "customer_status": "Active",
+        "active_tenant_count": 1,
+        "tenant_url": null,
+        "sf_user_exists": true,
+        "sf_user_active": true
+      }
+    ],
+    "recent_changes": [],
+    "history_fetch_error": "ResourceNotFoundException",
+    "data_freshness": {
+      "last_synced_at": null,
+      "age_hours": 0.00003584722222222222,
+      "is_stale": false
+    },
+    "data_warnings": [],
+    "error": null
+  },
+  "auth0_payload": {
+    "schema_version": "1.0",
+    "spec_id": "SPEC-CIAM-0003",
+    "agent": "ciam-auth0-agent",
+    "run_id": "3a83b293-d354-4b36-a3d9-efac503ade6c",
+    "fetched_at": null,
+    "user_found": true,
+    "users": [
+      {
+        "user_id": "auth0|e5b1cab4-1de2-41f9-bb48-c7703b7c3535",
+        "email": "brad.melchior@cencora.com",
+        "connection": "NetskopeID",
+        "connection_priority": 2,
+        "selected": true,
+        "created_at": "2026-08-18T19:22:33.770000+00:00",
+        "last_login": null,
+        "logins_count": 0,
+        "birthright": [
+          "Dashboard",
+          "Support"
+        ],
+        "entitlements": [],
+        "last_sync": null,
+        "last_daily_sync": null
+      }
+    ],
+    "login_history": [
+      {
+        "date": null,
+        "type": "ss",
+        "type_description": "Other: ss",
+        "description": "",
+        "ip": "24.206.73.11",
+        "client_name": "All Applications",
+        "user_agent": "Chrome 151.0.0 / Windows 10.0.0"
+      }
+    ],
+    "failed_logins_last_7_days": 1,
+    "last_failed_login_reason": "",
+    "login_history_fetch_error": null,
+    "sync_stale": true,
+    "sync_stale_reason": "sync_has_never_run",
+    "auth0_warnings": [],
+    "error": null
+  },
+  "kb_payload": {
+    "schema_version": "1.0",
+    "spec_id": "SPEC-CIAM-0004",
+    "agent": "ciam-knowledge-base-agent",
+    "run_id": "1e987101-5be5-4c6f-a98a-5382f5f0d8ab",
+    "evaluated_at": null,
+    "birthright_evaluation": {
+      "match": false,
+      "persona": "Customer",
+      "expected_birthright": [
+        "Community",
+        "Academy",
+        "Support",
+        "Notification",
+        "Dashboard"
+      ],
+      "actual_birthright": [
+        "Dashboard",
+        "Support"
+      ],
+      "entitlements": [],
+      "missing_keywords": [
+        "Academy",
+        "Community",
+        "Notification"
+      ],
+      "extra_keywords": [],
+      "entitlements_compensate": false,
+      "explicit_block_detected": false,
+      "block_keywords_found": [],
+      "no_access_configured": false,
+      "birthright_correct_but_access_denied": false,
+      "sync_never_ran": true,
+      "sync_stale": false,
+      "persona_source": "salesforce_account_status"
+    },
+    "fix_classification": {
+      "complexity": "ESCALATE_TO_L2",
+      "reason": "The Auth0 Action responsible for computing birthright and/or enforcing access has changed in a way that doesn't match expected logic: Action 'Account Migration Acknowledgement' current live code no longer contains expected marker(s) ['CIAM'] -- its logic may have changed since this diagnosis mapping was last validated. Escalate for manual review of the Action's current code. The apparent access gap below may be caused by this code change rather than Salesforce data -- do not assume a manual entitlements fix will hold.",
+      "recommended_actions": [
+        "Review the current Auth0 Action code for the workflow named in workflow_identification before making any entitlements change",
+        "Escalate to L2 / Auth0 Action owner for code review"
+      ],
+      "confidence": "MEDIUM"
+    },
+    "workflow_identification": {
+      "workflow_identified": true,
+      "workflow_name": "NetskopeID-Sync-2",
+      "workflow_script_ref": "bb237d59-6ef7-420e-881a-345c8d0bc3a2",
+      "enforcement_workflow_name": "Gatekeeper",
+      "enforcement_workflow_script_ref": "35d76097-24c1-4b5b-b3cc-e853e286b7e6",
+      "note": "NetskopeID-Sync-2's set_birthright_access() computes birthright from Salesforce Account Status/Tenant Requests -- investigate why keywords 'Academy', 'Community', 'Notification' weren't granted there. Gatekeeper is what enforces the resulting gap at login (denies each portal whose required keyword is absent from entitlements/birthright). See auth0-action-netskopeid-sync-2.md and auth0-action-gatekeeper.md. LIVE-VERIFIED against the current Auth0 tenant as of this run (action IDs: bb237d59-6ef7-420e-881a-345c8d0bc3a2, 35d76097-24c1-4b5b-b3cc-e853e286b7e6).",
+      "live_verified": true,
+      "live_fetch_error": null,
+      "code_drift_detected": false,
+      "code_drift_note": null
+    },
+    "sync_diagnostics": {
+      "pending_login_refresh": false,
+      "pending_login_refresh_note": null,
+      "multi_account_ambiguity": false,
+      "multi_account_ambiguity_reasons": []
+    },
+    "knowledge_base_results": {
+      "relevant_docs": [
+        {
+          "title": "ciam-l1-common-issues.md",
+          "url": "https://ciam-agent4-kb-docs-786063285476-us-east-1.s3.amazonaws.com/docs/ciam-l1-common-issues.md",
+          "excerpt": "# CIAM L1 Common Issues & Fixes\n\n> **Source:** CIAM Support documentation - Real L1 support issue patterns and resolutions\n\n## Access Control Issues\n\n### User Cannot Access Support Portal\n\n**Symptoms:**\n- User sees \"Insufficient permissions\" error\n- Can access other portals (Community, Academy) normally\n- Error message mentions missing \"Support\" keyword\n\n**Root Causes:**\n1. Missing 'Support' keyword in birthright\n2. Explicit block keyword (Block-Supp) set\n3. Account status not aligned with perso",
+          "relevance_score": 0.6396082639694214
+        },
+        {
+          "title": "portal-access-requirements.md",
+          "url": "https://ciam-agent4-kb-docs-786063285476-us-east-1.s3.amazonaws.com/docs/portal-access-requirements.md",
+          "excerpt": "# Portal Access Requirements\n\n> **Source:** CIAM Support documentation - Per-portal access control rules\n\n## Support Portal\n\n### Who Has Access\n- Customers with active tenants\n- Partners (all types)\n- Selected prospects with tenant\n\n### Access Requirement\n- **Required Keyword:** `Support` in birthright\n- **Can be compensated by:** Entitlement with `Support` keyword\n\n### Common Issues\n- **Issue:** Customer missing Support portal after account upgrade\n  - **Fix:** Add `Support` to birthright\n  - *",
+          "relevance_score": 0.6393526196479797
+        },
+        {
+          "title": "portal-access-requirements.md",
+          "url": "https://ciam-agent4-kb-docs-786063285476-us-east-1.s3.amazonaws.com/docs/portal-access-requirements.md",
+          "excerpt": "## Academy Portal\n\n### Who Has Access\n- All personas except those explicitly blocked\n- New users typically granted Academy access\n\n### Access Requirement\n- **Required Keyword:** `Academy` in birthright\n\n### Common Issues\n- **Issue:** New users can't access Academy\n  - **Fix:** Ensure `Academy` in initial birthright setup\n  - **Estimated Time:** 2 minutes\n\n---\n\n## Community Portal\n\n### Who Has Access\n- All personas except Churn (no tenant) and QOB\n- Widest access level\n\n### Access Requirement\n- *",
+          "relevance_score": 0.5929354429244995
+        }
+      ],
+      "similar_past_tickets": []
+    },
+    "knowledge_base_error": null,
+    "error": null
+  },
+  "synthesis_payload": {
+    "schema_version": "1.0",
+    "spec_id": "SPEC-CIAM-0005",
+    "agent": "ciam-response-generator",
+    "run_id": "8a8cf7c0-9168-4875-b796-b4128583aeda",
+    "synthesized_at": null,
+    "root_cause": {
+      "primary_cause": "Auth0 Action code may be miscalculating birthright/entitlements",
+      "secondary_causes": [],
+      "evidence": [
+        "The Auth0 Action responsible for computing birthright and/or enforcing access has changed in a way that doesn't match expected logic: Action 'Account Migration Acknowledgement' current live code no longer contains expected marker(s) ['CIAM'] -- its logic may have changed since this diagnosis mapping was last validated. Escalate for manual review of the Action's current code. The apparent access gap below may be caused by this code change rather than Salesforce data -- do not assume a manual entitlements fix will hold."
+      ],
+      "confidence": "MEDIUM"
+    },
+    "resolution_path": {
+      "escalation_level": "ESCALATE_TO_L2",
+      "actions": [
+        {
+          "priority": "IMMEDIATE",
+          "action": "Review the current Auth0 Action code for the workflow named in workflow_identification before making any entitlements change",
+          "rationale": "Auth0 Action code drift detected -- apparent access gap may be a code bug, not a data issue",
+          "complexity": "COMPLEX",
+          "estimated_effort": "review required"
+        },
+        {
+          "priority": "IMMEDIATE",
+          "action": "Escalate to L2 / Auth0 Action owner for code review",
+          "rationale": "Auth0 Action code drift detected -- apparent access gap may be a code bug, not a data issue",
+          "complexity": "COMPLEX",
+          "estimated_effort": "review required"
+        }
+      ],
+      "estimated_resolution_time": "1-2 hours",
+      "fallback_escalation": "Auth0 Action Owner / L2 Team"
+    },
+    "similar_past_cases": [],
+    "jira_summary": "Auth0 Action code may be miscalculating birthright/entitlements",
+    "jira_description": "h2. Diagnosis\n\n*Root Cause:* Auth0 Action code may be miscalculating birthright/entitlements\n*Confidence:* MEDIUM\n\n*Evidence:*\n* The Auth0 Action responsible for computing birthright and/or enforcing access has changed in a way that doesn't match expected logic: Action 'Account Migration Acknowledgement' current live code no longer contains expected marker(s) ['CIAM'] -- its logic may have changed since this diagnosis mapping was last validated. Escalate for manual review of the Action's current code. The apparent access gap below may be caused by this code change rather than Salesforce data -- do not assume a manual entitlements fix will hold.\n\nh2. Recommended Actions\n\n*Escalation Level:* ESCALATE_TO_L2\n*Estimated Time:* 1-2 hours\n\n1. [IMMEDIATE] Review the current Auth0 Action code for the workflow named in workflow_identification before making any entitlements change\n   - Rationale: Auth0 Action code drift detected -- apparent access gap may be a code bug, not a data issue\n   - Effort: review required\n\n2. [IMMEDIATE] Escalate to L2 / Auth0 Action owner for code review\n   - Rationale: Auth0 Action code drift detected -- apparent access gap may be a code bug, not a data issue\n   - Effort: review required\n\n*Fallback Escalation:* Auth0 Action Owner / L2 Team\n",
+    "metadata": {
+      "data_completeness": "COMPLETE",
+      "stale_data_detected": true,
+      "conflicting_signals": [],
+      "reasoning_notes": [
+        "Data may be stale (sync older than expected)"
+      ]
+    },
+    "error": null
+  },
+  "should_escalate_to_l2": false,
+  "escalation_reason": null,
+  "orchestration_warnings": [],
+  "orchestration_error": null,
+  "agent_invocations": [
+    {
+      "agent_name": "ciam-intent-classifier",
+      "agent_arn": "arn:aws:bedrock-agentcore:us-east-1:786063285476:runtime/ciamintentclassifier-a0h3meCoOo",
+      "status": "success",
+      "response_time_ms": 5550.956964492798,
+      "response_payload": {
+        "schema_version": "1.0",
+        "spec_id": "SPEC-CIAM-0001",
+        "agent": "ciam-intent-classifier",
+        "run_id": "f2037e42-6b2b-4898-9892-5527b7dc4936",
+        "classified_at": "2026-08-25T09:35:12.469002+00:00",
+        "source": "jira",
+        "ticket_key": "RJT-35",
+        "raw_text_length": 164,
+        "intent": "ACCESS_DENIED",
+        "confidence": 0.92,
+        "extracted_email": "brad.melchior@cencora.com",
+        "extracted_portal": "Support",
+        "invoke_agent_2": true,
+        "invoke_agent_3": true,
+        "invoke_agent_4": true,
+        "auto_escalate": false,
+        "escalation_reason": null,
+        "routing_warnings": [
+          "multiple_emails_found"
+        ]
+      },
+      "error_message": null
+    },
+    {
+      "agent_name": "ciam-database-agent",
+      "agent_arn": "arn:aws:bedrock-agentcore:us-east-1:786063285476:runtime/ciamDatabaseAgent-6kAarB3cge",
+      "status": "success",
+      "response_time_ms": 3619.091033935547,
+      "response_payload": {
+        "schema_version": "1.0",
+        "spec_id": "SPEC-CIAM-0002",
+        "agent": "ciam-database-agent",
+        "run_id": "f006a6f6-bff4-4e82-9b7c-a752bdf7830f",
+        "fetched_at": null,
+        "account_found": true,
+        "accounts": [
+          {
+            "account_name": "Cencora Account",
+            "account_status": "Customer",
+            "customer_status": "Active",
+            "active_tenant_count": 1,
+            "tenant_url": null,
+            "sf_user_exists": true,
+            "sf_user_active": true
+          }
+        ],
+        "recent_changes": [],
+        "history_fetch_error": "ResourceNotFoundException",
+        "data_freshness": {
+          "last_synced_at": null,
+          "age_hours": 0.00003584722222222222,
+          "is_stale": false
+        },
+        "data_warnings": [],
+        "error": null
+      },
+      "error_message": null
+    },
+    {
+      "agent_name": "ciam-auth0-agent",
+      "agent_arn": "arn:aws:bedrock-agentcore:us-east-1:786063285476:runtime/ciamAuth0Agent-lVu70L5GK4",
+      "status": "success",
+      "response_time_ms": 3936.753034591675,
+      "response_payload": {
+        "schema_version": "1.0",
+        "spec_id": "SPEC-CIAM-0003",
+        "agent": "ciam-auth0-agent",
+        "run_id": "3a83b293-d354-4b36-a3d9-efac503ade6c",
+        "fetched_at": null,
+        "user_found": true,
+        "users": [
+          {
+            "user_id": "auth0|e5b1cab4-1de2-41f9-bb48-c7703b7c3535",
+            "email": "brad.melchior@cencora.com",
+            "connection": "NetskopeID",
+            "connection_priority": 2,
+            "selected": true,
+            "created_at": "2026-08-18T19:22:33.770000+00:00",
+            "last_login": null,
+            "logins_count": 0,
+            "birthright": [
+              "Dashboard",
+              "Support"
+            ],
+            "entitlements": [],
+            "last_sync": null,
+            "last_daily_sync": null
+          }
+        ],
+        "login_history": [
+          {
+            "date": null,
+            "type": "ss",
+            "type_description": "Other: ss",
+            "description": "",
+            "ip": "24.206.73.11",
+            "client_name": "All Applications",
+            "user_agent": "Chrome 151.0.0 / Windows 10.0.0"
+          }
+        ],
+        "failed_logins_last_7_days": 1,
+        "last_failed_login_reason": "",
+        "login_history_fetch_error": null,
+        "sync_stale": true,
+        "sync_stale_reason": "sync_has_never_run",
+        "auth0_warnings": [],
+        "error": null
+      },
+      "error_message": null
+    },
+    {
+      "agent_name": "ciam-kb-agent",
+      "agent_arn": "arn:aws:bedrock-agentcore:us-east-1:786063285476:runtime/ciamKnowledgeBaseAgent-JmWwft556Y",
+      "status": "success",
+      "response_time_ms": 5270.179033279419,
+      "response_payload": {
+        "schema_version": "1.0",
+        "spec_id": "SPEC-CIAM-0004",
+        "agent": "ciam-knowledge-base-agent",
+        "run_id": "1e987101-5be5-4c6f-a98a-5382f5f0d8ab",
+        "evaluated_at": null,
+        "birthright_evaluation": {
+          "match": false,
+          "persona": "Customer",
+          "expected_birthright": [
+            "Community",
+            "Academy",
+            "Support",
+            "Notification",
+            "Dashboard"
+          ],
+          "actual_birthright": [
+            "Dashboard",
+            "Support"
+          ],
+          "entitlements": [],
+          "missing_keywords": [
+            "Academy",
+            "Community",
+            "Notification"
+          ],
+          "extra_keywords": [],
+          "entitlements_compensate": false,
+          "explicit_block_detected": false,
+          "block_keywords_found": [],
+          "no_access_configured": false,
+          "birthright_correct_but_access_denied": false,
+          "sync_never_ran": true,
+          "sync_stale": false,
+          "persona_source": "salesforce_account_status"
+        },
+        "fix_classification": {
+          "complexity": "ESCALATE_TO_L2",
+          "reason": "The Auth0 Action responsible for computing birthright and/or enforcing access has changed in a way that doesn't match expected logic: Action 'Account Migration Acknowledgement' current live code no longer contains expected marker(s) ['CIAM'] -- its logic may have changed since this diagnosis mapping was last validated. Escalate for manual review of the Action's current code. The apparent access gap below may be caused by this code change rather than Salesforce data -- do not assume a manual entitlements fix will hold.",
+          "recommended_actions": [
+            "Review the current Auth0 Action code for the workflow named in workflow_identification before making any entitlements change",
+            "Escalate to L2 / Auth0 Action owner for code review"
+          ],
+          "confidence": "MEDIUM"
+        },
+        "workflow_identification": {
+          "workflow_identified": true,
+          "workflow_name": "NetskopeID-Sync-2",
+          "workflow_script_ref": "bb237d59-6ef7-420e-881a-345c8d0bc3a2",
+          "enforcement_workflow_name": "Gatekeeper",
+          "enforcement_workflow_script_ref": "35d76097-24c1-4b5b-b3cc-e853e286b7e6",
+          "note": "NetskopeID-Sync-2's set_birthright_access() computes birthright from Salesforce Account Status/Tenant Requests -- investigate why keywords 'Academy', 'Community', 'Notification' weren't granted there. Gatekeeper is what enforces the resulting gap at login (denies each portal whose required keyword is absent from entitlements/birthright). See auth0-action-netskopeid-sync-2.md and auth0-action-gatekeeper.md. LIVE-VERIFIED against the current Auth0 tenant as of this run (action IDs: bb237d59-6ef7-420e-881a-345c8d0bc3a2, 35d76097-24c1-4b5b-b3cc-e853e286b7e6).",
+          "live_verified": true,
+          "live_fetch_error": null,
+          "code_drift_detected": false,
+          "code_drift_note": null
+        },
+        "sync_diagnostics": {
+          "pending_login_refresh": false,
+          "pending_login_refresh_note": null,
+          "multi_account_ambiguity": false,
+          "multi_account_ambiguity_reasons": []
+        },
+        "knowledge_base_results": {
+          "relevant_docs": [
+            {
+              "title": "ciam-l1-common-issues.md",
+              "url": "https://ciam-agent4-kb-docs-786063285476-us-east-1.s3.amazonaws.com/docs/ciam-l1-common-issues.md",
+              "excerpt": "# CIAM L1 Common Issues & Fixes\n\n> **Source:** CIAM Support documentation - Real L1 support issue patterns and resolutions\n\n## Access Control Issues\n\n### User Cannot Access Support Portal\n\n**Symptoms:**\n- User sees \"Insufficient permissions\" error\n- Can access other portals (Community, Academy) normally\n- Error message mentions missing \"Support\" keyword\n\n**Root Causes:**\n1. Missing 'Support' keyword in birthright\n2. Explicit block keyword (Block-Supp) set\n3. Account status not aligned with perso",
+              "relevance_score": 0.6396082639694214
+            },
+            {
+              "title": "portal-access-requirements.md",
+              "url": "https://ciam-agent4-kb-docs-786063285476-us-east-1.s3.amazonaws.com/docs/portal-access-requirements.md",
+              "excerpt": "# Portal Access Requirements\n\n> **Source:** CIAM Support documentation - Per-portal access control rules\n\n## Support Portal\n\n### Who Has Access\n- Customers with active tenants\n- Partners (all types)\n- Selected prospects with tenant\n\n### Access Requirement\n- **Required Keyword:** `Support` in birthright\n- **Can be compensated by:** Entitlement with `Support` keyword\n\n### Common Issues\n- **Issue:** Customer missing Support portal after account upgrade\n  - **Fix:** Add `Support` to birthright\n  - *",
+              "relevance_score": 0.6393526196479797
+            },
+            {
+              "title": "portal-access-requirements.md",
+              "url": "https://ciam-agent4-kb-docs-786063285476-us-east-1.s3.amazonaws.com/docs/portal-access-requirements.md",
+              "excerpt": "## Academy Portal\n\n### Who Has Access\n- All personas except those explicitly blocked\n- New users typically granted Academy access\n\n### Access Requirement\n- **Required Keyword:** `Academy` in birthright\n\n### Common Issues\n- **Issue:** New users can't access Academy\n  - **Fix:** Ensure `Academy` in initial birthright setup\n  - **Estimated Time:** 2 minutes\n\n---\n\n## Community Portal\n\n### Who Has Access\n- All personas except Churn (no tenant) and QOB\n- Widest access level\n\n### Access Requirement\n- *",
+              "relevance_score": 0.5929354429244995
+            }
+          ],
+          "similar_past_tickets": []
+        },
+        "knowledge_base_error": null,
+        "error": null
+      },
+      "error_message": null
+    },
+    {
+      "agent_name": "ciam-response-generator",
+      "agent_arn": "arn:aws:bedrock-agentcore:us-east-1:786063285476:runtime/ciamResponseGenerator-75l4h0HADB",
+      "status": "success",
+      "response_time_ms": 4183.280944824219,
+      "response_payload": {
+        "schema_version": "1.0",
+        "spec_id": "SPEC-CIAM-0005",
+        "agent": "ciam-response-generator",
+        "run_id": "8a8cf7c0-9168-4875-b796-b4128583aeda",
+        "synthesized_at": null,
+        "root_cause": {
+          "primary_cause": "Auth0 Action code may be miscalculating birthright/entitlements",
+          "secondary_causes": [],
+          "evidence": [
+            "The Auth0 Action responsible for computing birthright and/or enforcing access has changed in a way that doesn't match expected logic: Action 'Account Migration Acknowledgement' current live code no longer contains expected marker(s) ['CIAM'] -- its logic may have changed since this diagnosis mapping was last validated. Escalate for manual review of the Action's current code. The apparent access gap below may be caused by this code change rather than Salesforce data -- do not assume a manual entitlements fix will hold."
+          ],
+          "confidence": "MEDIUM"
+        },
+        "resolution_path": {
+          "escalation_level": "ESCALATE_TO_L2",
+          "actions": [
+            {
+              "priority": "IMMEDIATE",
+              "action": "Review the current Auth0 Action code for the workflow named in workflow_identification before making any entitlements change",
+              "rationale": "Auth0 Action code drift detected -- apparent access gap may be a code bug, not a data issue",
+              "complexity": "COMPLEX",
+              "estimated_effort": "review required"
+            },
+            {
+              "priority": "IMMEDIATE",
+              "action": "Escalate to L2 / Auth0 Action owner for code review",
+              "rationale": "Auth0 Action code drift detected -- apparent access gap may be a code bug, not a data issue",
+              "complexity": "COMPLEX",
+              "estimated_effort": "review required"
+            }
+          ],
+          "estimated_resolution_time": "1-2 hours",
+          "fallback_escalation": "Auth0 Action Owner / L2 Team"
+        },
+        "similar_past_cases": [],
+        "jira_summary": "Auth0 Action code may be miscalculating birthright/entitlements",
+        "jira_description": "h2. Diagnosis\n\n*Root Cause:* Auth0 Action code may be miscalculating birthright/entitlements\n*Confidence:* MEDIUM\n\n*Evidence:*\n* The Auth0 Action responsible for computing birthright and/or enforcing access has changed in a way that doesn't match expected logic: Action 'Account Migration Acknowledgement' current live code no longer contains expected marker(s) ['CIAM'] -- its logic may have changed since this diagnosis mapping was last validated. Escalate for manual review of the Action's current code. The apparent access gap below may be caused by this code change rather than Salesforce data -- do not assume a manual entitlements fix will hold.\n\nh2. Recommended Actions\n\n*Escalation Level:* ESCALATE_TO_L2\n*Estimated Time:* 1-2 hours\n\n1. [IMMEDIATE] Review the current Auth0 Action code for the workflow named in workflow_identification before making any entitlements change\n   - Rationale: Auth0 Action code drift detected -- apparent access gap may be a code bug, not a data issue\n   - Effort: review required\n\n2. [IMMEDIATE] Escalate to L2 / Auth0 Action owner for code review\n   - Rationale: Auth0 Action code drift detected -- apparent access gap may be a code bug, not a data issue\n   - Effort: review required\n\n*Fallback Escalation:* Auth0 Action Owner / L2 Team\n",
+        "metadata": {
+          "data_completeness": "COMPLETE",
+          "stale_data_detected": true,
+          "conflicting_signals": [],
+          "reasoning_notes": [
+            "Data may be stale (sync older than expected)"
+          ]
+        },
+        "error": null
+      },
+      "error_message": null
+    }
+  ]
+}

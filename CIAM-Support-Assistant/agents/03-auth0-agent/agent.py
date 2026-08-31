@@ -153,15 +153,35 @@ def get_secrets_client():
     return _secrets_client
 
 
+class TokenAcquisitionError(RuntimeError):
+    """Raised when the M2M token endpoint fails after all retries (§8), or
+    when the stored credentials are missing/malformed (see get_auth0_credentials)."""
+
+
 def get_auth0_credentials() -> dict:
     assert_posture("secretsmanager:GetSecretValue")
     client = get_secrets_client()
     response = client.get_secret_value(SecretId=AUTH0_SECRET_PATH)
-    return json.loads(response["SecretString"])
-
-
-class TokenAcquisitionError(RuntimeError):
-    """Raised when the M2M token endpoint fails after all retries (§8)."""
+    creds = json.loads(response["SecretString"])
+    # A KeyError here from creds["client_id"] downstream (in acquire_token)
+    # is NOT caught by the entrypoint's try/except -- it would crash the
+    # whole request handler as an unhandled 500 instead of the graceful
+    # error="auth0_token_acquisition_failed" response every other Auth0
+    # failure mode gets. Confirmed live: the secret was overwritten
+    # (2026-08-19) with a different key schema (auth0_client_id/
+    # auth0_client_secret, both empty) than this code expects
+    # (client_id/client_secret), and every invocation since has 500'd with
+    # no diagnosable error field at all. Validate here and raise the same
+    # exception class real token-endpoint failures already raise, so a
+    # malformed/wrong-shaped secret degrades exactly like any other Auth0
+    # failure instead of crashing the handler outright.
+    if not creds.get("client_id") or not creds.get("client_secret"):
+        raise TokenAcquisitionError(
+            "ciam-agent/auth0 secret is missing client_id/client_secret, or "
+            "they are empty -- check the secret's shape and values in "
+            "Secrets Manager"
+        )
+    return creds
 
 
 def acquire_token() -> tuple:
@@ -299,8 +319,17 @@ def get_user_metadata(email: str) -> tuple:
             logins_count=raw.get("logins_count", 0),
             birthright=app_metadata.get("birthright", []),
             entitlements=app_metadata.get("entitlements", []),
-            last_sync=app_metadata.get("last_sync"),
-            last_daily_sync=app_metadata.get("last_daily_sync"),
+            # Real Auth0 data (confirmed live, RJT-34) stores these as an
+            # empty string "" for a user who has never synced -- NOT null
+            # or absent. Auth0UserRecord types these Optional[datetime],
+            # and Pydantic rejects "" as an invalid datetime (unlike None,
+            # which Optional accepts) -- an uncaught ValidationError here
+            # crashed the whole request handler as an unhandled HTTP 500,
+            # since fetch_auth0_data's entrypoint try/except only catches
+            # ClientError/TokenAcquisitionError. `or None` normalizes ""
+            # (and any other falsy value) to None before validation.
+            last_sync=app_metadata.get("last_sync") or None,
+            last_daily_sync=app_metadata.get("last_daily_sync") or None,
         ))
 
     # Resolve selection: lowest priority number wins; first match on ties

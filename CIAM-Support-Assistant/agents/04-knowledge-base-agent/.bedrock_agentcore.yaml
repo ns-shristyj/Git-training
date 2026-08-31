@@ -9,11 +9,42 @@ bedrock_agentcore:
   # No foundation_model -- Agent 4 does deterministic birthright comparison
   # and KB retrieval only, no LLM reasoning of its own.
 
-  agent_id: ciamKnowledgeBaseAgent-VdVt7x7TZ1
-  agent_arn: arn:aws:bedrock-agentcore:us-east-1:786063285476:runtime/ciamKnowledgeBaseAgent-VdVt7x7TZ1
-  agent_runtime_version: '14'
-  last_deployed: '2026-08-17T07:00:03Z'
+  agent_id: ciamKnowledgeBaseAgent-JmWwft556Y
+  agent_arn: arn:aws:bedrock-agentcore:us-east-1:786063285476:runtime/ciamKnowledgeBaseAgent-JmWwft556Y
+  agent_runtime_version: '2'
+  last_deployed: '2026-08-24T10:36:57Z'
   status: READY
+  # v2 (new runtime ciamKnowledgeBaseAgent-JmWwft556Y): the OLD runtime
+  # (ciamKnowledgeBaseAgent-VdVt7x7TZ1, v14 below) was deleted and recreated
+  # from scratch on 2026-08-24 by a process outside this session -- new ID,
+  # version reset to 1. That fresh v1 deployment
+  # (ciam-knowledge-base-agent/v2/agent4.zip) was broken the same way as
+  # Agent 2's identical-timing recreation: the package contained ONLY
+  # agent.py + a 47-byte requirements.txt, no bundled dependencies, relying
+  # on AgentCore installing bedrock-agentcore/boto3/pydantic/requests from
+  # PyPI at cold start -- which fails because the public PyPI
+  # `bedrock-agentcore` package is a useless 0.0.1 placeholder with no real
+  # exports. Every invocation failed with "Runtime initialization time
+  # exceeded."
+  #
+  # Fixed (v2) by rebuilding the package with the real SDK bundled directly,
+  # sourced this time from this agent's OWN local
+  # agentcore/python_runtime/staging/ directory (a genuine dependency bundle
+  # left behind by the real `agentcore launch` CLI from the v13/v14 deploys
+  # below -- confirmed to contain bedrock_agentcore 1.17.0 for real), with
+  # agent.py replaced by the current (post-v14) source since that staging
+  # snapshot was 10 days stale. Verified live: statusCode 200, error=None,
+  # full v14 feature set intact (persona_source, live Auth0 code-drift
+  # detection correctly flagging Account Migration Acknowledgement,
+  # sync_diagnostics) against real vshah@netskope.com-shaped data. All 60
+  # local unit tests also pass.
+  #
+  # Everything below this point describes the OLD runtime
+  # (ciamKnowledgeBaseAgent-VdVt7x7TZ1) through v14 -- kept for history;
+  # the runtime ID it refers to no longer exists, but agent.py's logic
+  # (and therefore all of it) carried forward unchanged into the new
+  # runtime above.
+  #
   # v14: fixes a deploy-tooling bug from the v13 push, not an agent.py logic
   # change. The initial v13 UpdateAgentRuntime call (2026-08-14) reported
   # READY but every live invocation failed with "Runtime initialization

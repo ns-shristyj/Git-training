@@ -1,0 +1,94 @@
+{
+  "run_id": "0b13eff4-2718-42f5-bbb1-697179fb4ba7",
+  "orchestrated_at": "2026-08-24T10:05:30.379842Z",
+  "source_ticket": {
+    "issue_key": "RJT-33",
+    "summary": "Missing Community birthright keyword",
+    "description": "User brad.melchior@cencora.com unable to access Community portal. Missing Community keyword in birthright."
+  },
+  "routing_envelope": {
+    "schema_version": "1.0",
+    "spec_id": "SPEC-CIAM-0001",
+    "agent": "ciam-intent-classifier",
+    "run_id": "9b7f5eea-0d2c-4045-be10-6bec29f2cca6",
+    "classified_at": "2026-08-24T10:05:25.965939+00:00",
+    "source": "jira",
+    "ticket_key": "RJT-33",
+    "raw_text_length": 144,
+    "intent": "BIRTHRIGHT_INQUIRY",
+    "confidence": 0.85,
+    "extracted_email": "brad.melchior@cencora.com",
+    "extracted_portal": "Community",
+    "invoke_agent_2": true,
+    "invoke_agent_3": true,
+    "invoke_agent_4": true,
+    "auto_escalate": false,
+    "escalation_reason": null,
+    "routing_warnings": []
+  },
+  "account_payload": null,
+  "auth0_payload": null,
+  "kb_payload": null,
+  "synthesis_payload": null,
+  "should_escalate_to_l2": false,
+  "escalation_reason": null,
+  "orchestration_warnings": [
+    "ciam-database-agent error: An error occurred (ResourceNotFoundException) when calling the InvokeAgentRuntime operation: No endpoint or agent found with qualifier 'DEFAULT' for agent 'arn:aws:bedrock-agentcore:us-east-1:786063285476:runtime/ciamDatabaseAgent-rme27a8env'",
+    "ciam-auth0-agent error: An error occurred (RuntimeClientError) when calling the InvokeAgentRuntime operation: Received error (500) from runtime. Please check your CloudWatch logs for more information.",
+    "ciam-kb-agent error: An error occurred (ResourceNotFoundException) when calling the InvokeAgentRuntime operation: No endpoint or agent found with qualifier 'DEFAULT' for agent 'arn:aws:bedrock-agentcore:us-east-1:786063285476:runtime/ciamKnowledgeBaseAgent-VdVt7x7TZ1'"
+  ],
+  "orchestration_error": null,
+  "agent_invocations": [
+    {
+      "agent_name": "ciam-intent-classifier",
+      "agent_arn": "arn:aws:bedrock-agentcore:us-east-1:786063285476:runtime/ciamintentclassifier-a0h3meCoOo",
+      "status": "success",
+      "response_time_ms": 6561.967134475708,
+      "response_payload": {
+        "schema_version": "1.0",
+        "spec_id": "SPEC-CIAM-0001",
+        "agent": "ciam-intent-classifier",
+        "run_id": "9b7f5eea-0d2c-4045-be10-6bec29f2cca6",
+        "classified_at": "2026-08-24T10:05:25.965939+00:00",
+        "source": "jira",
+        "ticket_key": "RJT-33",
+        "raw_text_length": 144,
+        "intent": "BIRTHRIGHT_INQUIRY",
+        "confidence": 0.85,
+        "extracted_email": "brad.melchior@cencora.com",
+        "extracted_portal": "Community",
+        "invoke_agent_2": true,
+        "invoke_agent_3": true,
+        "invoke_agent_4": true,
+        "auto_escalate": false,
+        "escalation_reason": null,
+        "routing_warnings": []
+      },
+      "error_message": null
+    },
+    {
+      "agent_name": "ciam-database-agent",
+      "agent_arn": "arn:aws:bedrock-agentcore:us-east-1:786063285476:runtime/ciamDatabaseAgent-rme27a8env",
+      "status": "error",
+      "response_time_ms": 837.4261856079102,
+      "response_payload": null,
+      "error_message": "An error occurred (ResourceNotFoundException) when calling the InvokeAgentRuntime operation: No endpoint or agent found with qualifier 'DEFAULT' for agent 'arn:aws:bedrock-agentcore:us-east-1:786063285476:runtime/ciamDatabaseAgent-rme27a8env'"
+    },
+    {
+      "agent_name": "ciam-auth0-agent",
+      "agent_arn": "arn:aws:bedrock-agentcore:us-east-1:786063285476:runtime/ciamAuth0Agent-lVu70L5GK4",
+      "status": "error",
+      "response_time_ms": 3290.1718616485596,
+      "response_payload": null,
+      "error_message": "An error occurred (RuntimeClientError) when calling the InvokeAgentRuntime operation: Received error (500) from runtime. Please check your CloudWatch logs for more information."
+    },
+    {
+      "agent_name": "ciam-kb-agent",
+      "agent_arn": "arn:aws:bedrock-agentcore:us-east-1:786063285476:runtime/ciamKnowledgeBaseAgent-VdVt7x7TZ1",
+      "status": "error",
+      "response_time_ms": 314.8777484893799,
+      "response_payload": null,
+      "error_message": "An error occurred (ResourceNotFoundException) when calling the InvokeAgentRuntime operation: No endpoint or agent found with qualifier 'DEFAULT' for agent 'arn:aws:bedrock-agentcore:us-east-1:786063285476:runtime/ciamKnowledgeBaseAgent-VdVt7x7TZ1'"
+    }
+  ]
+}

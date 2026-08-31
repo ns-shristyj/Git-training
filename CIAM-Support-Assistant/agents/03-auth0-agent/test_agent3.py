@@ -138,6 +138,32 @@ def test_ac3_empty_app_metadata_flagged():
     assert "no_metadata" in result["auth0_warnings"]
 
 
+def test_regression_empty_string_sync_fields_dont_crash():
+    """Regression: found live 2026-08-24 (RJT-34, brad.melchior@cencora.com)
+    -- real Auth0 app_metadata stores last_sync/last_daily_sync as an empty
+    string "" for a user who has never synced, NOT null/absent. Passing ""
+    straight into Auth0UserRecord's Optional[datetime] fields raised an
+    uncaught Pydantic ValidationError (Pydantic accepts None for Optional,
+    but rejects "" as an invalid datetime), crashing the whole request
+    handler as an unhandled HTTP 500."""
+    with patch("agent.get_secrets_client") as mock_sm, patch("agent.requests.post") as mock_post, \
+         patch("agent.requests.get") as mock_get:
+        mock_sm.return_value.get_secret_value.return_value = mock_secret_response()
+        mock_post.return_value = mock_token_response()
+        user = make_auth0_user("brad.melchior@cencora.com", "NetskopeID", last_sync="")
+        mock_get.side_effect = [
+            mock_users_response(200, [user]),
+            mock_users_response(200, []),
+        ]
+
+        result = fetch_auth0_data({"email": "brad.melchior@cencora.com"})
+
+    assert result["user_found"] is True
+    assert result["error"] is None
+    assert result["users"][0]["last_sync"] is None
+    assert result["users"][0]["last_daily_sync"] is None
+
+
 # AC-4: Sync staleness detected when last_sync exceeds 7 days
 def test_ac4_sync_staleness_detected():
     old_sync = (datetime.now(timezone.utc) - timedelta(days=8)).isoformat()
@@ -266,6 +292,30 @@ def test_regression_bad_credentials_token_failure_is_graceful():
     assert mock_post.call_count == 3  # exhausted all retries, per spec §8
 
 
+def test_regression_malformed_secret_shape_is_graceful():
+    """Regression: found live 2026-08-24 -- the ciam-agent/auth0 secret was
+    overwritten with a different key schema (auth0_client_id/
+    auth0_client_secret, both empty) than agent.py expects
+    (client_id/client_secret). creds["client_id"] then raised an uncaught
+    KeyError inside acquire_token(), which the entrypoint's try/except
+    didn't catch (only ClientError/TokenAcquisitionError) -- every live
+    invocation crashed with a raw, undiagnosable HTTP 500 instead of the
+    graceful error field every other Auth0 failure mode returns."""
+    with patch("agent.get_secrets_client") as mock_sm:
+        mock_sm.return_value.get_secret_value.return_value = {
+            "SecretString": json.dumps({
+                "auth0_domain": "netskope-dev.us.auth0.com",
+                "auth0_client_id": "",
+                "auth0_client_secret": "",
+            })
+        }
+
+        result = fetch_auth0_data({"email": "someone@example.com"})
+
+    assert result["user_found"] is False
+    assert result["error"] == "auth0_token_acquisition_failed"
+
+
 # AC-12: Secrets Manager unavailable returns structured error
 def test_ac12_secrets_manager_unavailable():
     from botocore.exceptions import ClientError
@@ -296,7 +346,7 @@ def test_ac13_rate_limit_on_tool1_exhausts_retries():
     assert mock_get.call_count == 3
 
 
-# HTTP posture guard: only nskp.auth0.com + allow-listed paths
+# HTTP posture guard: only AUTH0_DOMAIN + allow-listed paths
 def test_http_posture_denies_wrong_host():
     with pytest.raises(PostureViolationError):
         assert_http_posture("evil.example.com", "/oauth/token", "POST")
@@ -304,13 +354,13 @@ def test_http_posture_denies_wrong_host():
 
 def test_http_posture_denies_wrong_path():
     with pytest.raises(PostureViolationError):
-        assert_http_posture("nskp.auth0.com", "/api/v2/users", "POST")
+        assert_http_posture("netskope-dev.us.auth0.com", "/api/v2/users", "POST")
 
 
 def test_http_posture_allows_expected_paths():
-    assert_http_posture("nskp.auth0.com", "/oauth/token", "POST")
-    assert_http_posture("nskp.auth0.com", "/api/v2/users-by-email", "GET")
-    assert_http_posture("nskp.auth0.com", "/api/v2/users/abc123/logs", "GET")
+    assert_http_posture("netskope-dev.us.auth0.com", "/oauth/token", "POST")
+    assert_http_posture("netskope-dev.us.auth0.com", "/api/v2/users-by-email", "GET")
+    assert_http_posture("netskope-dev.us.auth0.com", "/api/v2/users/abc123/logs", "GET")
 
 
 def test_describe_login_type_mapping():

@@ -1,0 +1,25 @@
+python3: error: couldn't create cache file '/var/folders/ts/_xb4mkqj1gj3b5xnllp7mb4m0000gn/T/xcrun_db-zISP0sXF' (errno=Operation not permitted)
+/Users/shristyj/Library/Python/3.9/lib/python/site-packages/boto3/compat.py:89: PythonDeprecationWarning: Boto3 will no longer support Python 3.9 starting April 29, 2026. To continue receiving service updates, bug fixes, and security updates please upgrade to Python 3.10 or later. More information can be found here: https://aws.amazon.com/blogs/developer/python-support-policy-updates-for-aws-sdks-and-tools/
+  warnings.warn(warning, PythonDeprecationWarning)
+Fetched RJT-35: Issues with support portal access - brad.melchior@cencora.com
+Running through CIAM Orchestrator (live AgentCore invocations)...
+
+--- ciam-intent-classifier ---
+  status: success  (5551ms)
+
+--- ciam-database-agent ---
+  status: success  (3619ms)
+
+--- ciam-auth0-agent ---
+  status: success  (3937ms)
+
+--- ciam-kb-agent ---
+  status: success  (5270ms)
+
+--- ciam-response-generator ---
+  status: success  (4183ms)
+
+============================================================
+should_escalate_to_l2: False
+
+Full result saved to rjt-35_orchestrator_result.json

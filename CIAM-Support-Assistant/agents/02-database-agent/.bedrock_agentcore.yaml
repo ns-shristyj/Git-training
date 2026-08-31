@@ -9,7 +9,34 @@ bedrock_agentcore:
   # No foundation_model -- Agent 2 does deterministic DynamoDB lookups only,
   # no LLM reasoning. BedrockAgentCoreApp is the hosting framework only.
 
-  agent_id: ciamDatabaseAgent-rme27a8env
-  agent_arn: arn:aws:bedrock-agentcore:us-east-1:786063285476:runtime/ciamDatabaseAgent-rme27a8env
-  agent_runtime_version: '6'
+  agent_id: ciamDatabaseAgent-6kAarB3cge
+  agent_arn: arn:aws:bedrock-agentcore:us-east-1:786063285476:runtime/ciamDatabaseAgent-6kAarB3cge
+  agent_runtime_version: '2'
+  last_deployed: '2026-08-24T10:25:10Z'
   status: READY
+
+  # The runtime was recreated from scratch on 2026-08-24 (new ID, version
+  # reset to 1) by a process outside this session -- the old ID
+  # (ciamDatabaseAgent-rme27a8env, v6) no longer exists. That fresh v1
+  # deployment was broken: its package (ciam-database-agent/v2/agent2.zip)
+  # contained ONLY agent.py + a 47-byte requirements.txt (bedrock-agentcore,
+  # boto3, pydantic, requests) -- no bundled dependencies at all, relying on
+  # AgentCore installing them at cold start. That fails/times out because
+  # the public PyPI `bedrock-agentcore` package is a useless 0.0.1
+  # placeholder with no real exports (same landmine documented on Agent 5).
+  # Symptom: every invocation failed with "Runtime initialization time
+  # exceeded. Please make sure that initialization completes in 30s."
+  #
+  # Fixed by redeploying (v2) with the REAL SDK bundled directly in the
+  # zip, matching Agents 3/4/5's proven pattern -- sourced this time from
+  # ~/Downloads/myagent/ciam-intent-classifier/.bedrock_agentcore/ciamintentclassifier/dependencies.zip,
+  # a genuine dependency bundle produced by the actual `agentcore` CLI
+  # toolkit (contains bedrock_agentcore 1.17.0, boto3, pydantic, etc. for
+  # real -- this is the correct source to reuse for future agents needing
+  # a rebuild, now that no older working deployment .zip survives in S3
+  # to copy from). Verified live: statusCode 200, error=None, correct
+  # account_found=False for vshah@netskope.com.
+  #
+  # NOTE: Agent 4 (ciamKnowledgeBaseAgent) was recreated the same way at
+  # the same time (new ID JmWwft556Y, v1) and likely has the identical
+  # bug -- not yet confirmed/fixed as of this note.

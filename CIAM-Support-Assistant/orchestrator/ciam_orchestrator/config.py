@@ -16,7 +16,7 @@ AGENT_1_ARN = os.getenv(
 )
 AGENT_2_ARN = os.getenv(
     "AGENT_2_ARN",
-    "arn:aws:bedrock-agentcore:us-east-1:786063285476:runtime/ciamDatabaseAgent-rme27a8env",
+    "arn:aws:bedrock-agentcore:us-east-1:786063285476:runtime/ciamDatabaseAgent-6kAarB3cge",
 )
 AGENT_3_ARN = os.getenv(
     "AGENT_3_ARN",
@@ -26,7 +26,7 @@ AGENT_3_ARN = os.getenv(
 # error: "auth0_token_acquisition_failed" until real Auth0 M2M creds are set.
 AGENT_4_ARN = os.getenv(
     "AGENT_4_ARN",
-    "arn:aws:bedrock-agentcore:us-east-1:786063285476:runtime/ciamKnowledgeBaseAgent-VdVt7x7TZ1",
+    "arn:aws:bedrock-agentcore:us-east-1:786063285476:runtime/ciamKnowledgeBaseAgent-JmWwft556Y",
 )  # Deployed and tested live. Knowledge Base still holds placeholder docs
 # only -- see agents/04-knowledge-base-agent/README.md.
 AGENT_5_ARN = os.getenv(
